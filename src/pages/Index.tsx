@@ -59,33 +59,74 @@ const Index = () => {
       </header>
 
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Section - Single Circle */}
+        {/* Progress Section - Shows Timer when running, Progress when not */}
         <section className="glass rounded-2xl p-6 animate-scale-in">
           <div className="flex flex-col items-center gap-4">
-            {/* Daily Progress Circle */}
-            <ProgressCircle percentage={todayProgress} size={140} strokeWidth={10}>
-              <Flame className="w-5 h-5 text-primary mb-1" />
-              <span className="text-3xl font-bold">{todayProgress}%</span>
-              <span className="text-xs text-muted-foreground">Complete</span>
-            </ProgressCircle>
-            
-            <div className="text-center">
-              <p className="text-lg font-semibold text-primary">Today's Progress</p>
-              <p className="text-sm text-muted-foreground">{todayStats.completed} of {todayStats.total} sets completed</p>
-            </div>
+            {timer.isRunning || (timer.timeRemaining < timer.settings.restDuration && timer.timeRemaining > 0) ? (
+              <>
+                {/* Timer Display */}
+                <ProgressCircle percentage={timer.progress} size={140} strokeWidth={10}>
+                  <span className="text-3xl font-bold">{timer.formattedTime}</span>
+                  <span className="text-xs text-muted-foreground">Rest Timer</span>
+                </ProgressCircle>
+                
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-primary">Rest Time</p>
+                  <p className="text-sm text-muted-foreground">Take a breather before next set</p>
+                </div>
 
-            {/* Progress Bar */}
-            <div className="w-full">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-500 ease-out"
-                  style={{ 
-                    width: `${todayProgress}%`,
-                    boxShadow: todayProgress > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
-                  }}
-                />
-              </div>
-            </div>
+                <div className="flex gap-2">
+                  {timer.isRunning ? (
+                    <button 
+                      onClick={timer.pauseTimer}
+                      className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
+                    >
+                      Pause
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={timer.resumeTimer}
+                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
+                    >
+                      Resume
+                    </button>
+                  )}
+                  <button 
+                    onClick={timer.resetTimer}
+                    className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Daily Progress Circle */}
+                <ProgressCircle percentage={todayProgress} size={140} strokeWidth={10}>
+                  <Flame className="w-5 h-5 text-primary mb-1" />
+                  <span className="text-3xl font-bold">{todayProgress}%</span>
+                  <span className="text-xs text-muted-foreground">Complete</span>
+                </ProgressCircle>
+                
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-primary">Today's Progress</p>
+                  <p className="text-sm text-muted-foreground">{todayStats.completed} of {todayStats.total} sets completed</p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-500 ease-out"
+                      style={{ 
+                        width: `${todayProgress}%`,
+                        boxShadow: todayProgress > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -107,7 +148,7 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="today" className="mt-4">
-            <TodayWorkout />
+            <TodayWorkout onSetComplete={timer.startTimer} />
           </TabsContent>
 
           <TabsContent value="weekly" className="mt-4">
