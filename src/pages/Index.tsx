@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, RotateCcw, Zap, Target, CheckCircle, Clock, SkipForward, Pencil, Check, X } from 'lucide-react';
+import { Dumbbell, RotateCcw, Zap, Target, CheckCircle, Clock, SkipForward, Pencil, Check, X, Calendar, Flame } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useExercises } from '@/hooks/useExercises';
 import { useTimer } from '@/hooks/useTimer';
+import { useTodayProgress } from '@/hooks/useTodayProgress';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { ExerciseCard } from '@/components/ExerciseCard';
 import { RestTimer } from '@/components/RestTimer';
@@ -28,6 +29,7 @@ const Index = () => {
   } = useExercises();
 
   const timer = useTimer();
+  const { todayProgress, todayStats } = useTodayProgress();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   // Editable app title
@@ -120,51 +122,58 @@ const Index = () => {
       </header>
 
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Section */}
+        {/* Progress Section - Two Circles */}
         <section className="glass rounded-2xl p-6 animate-scale-in">
-          <div className="flex flex-col items-center gap-4">
-            <ProgressCircle percentage={completionPercentage} size={140} strokeWidth={10}>
-              <span className="text-3xl font-bold">{completionPercentage}%</span>
-              <span className="text-xs text-muted-foreground">Complete</span>
-            </ProgressCircle>
+          <div className="flex flex-col items-center gap-6">
+            {/* Dual Progress Circles */}
+            <div className="flex justify-center gap-6 w-full">
+              {/* Today/Daily Progress */}
+              <div className="flex flex-col items-center gap-2">
+                <ProgressCircle percentage={todayProgress} size={110} strokeWidth={8}>
+                  <Flame className="w-4 h-4 text-secondary mb-1" />
+                  <span className="text-2xl font-bold">{todayProgress}%</span>
+                </ProgressCircle>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-secondary">Daily</p>
+                  <p className="text-xs text-muted-foreground">{todayStats.completed}/{todayStats.total} sets</p>
+                </div>
+              </div>
 
-            <div className="grid grid-cols-4 gap-4 w-full">
+              {/* Custom Progress */}
+              <div className="flex flex-col items-center gap-2">
+                <ProgressCircle percentage={completionPercentage} size={110} strokeWidth={8}>
+                  <Dumbbell className="w-4 h-4 text-primary mb-1" />
+                  <span className="text-2xl font-bold">{completionPercentage}%</span>
+                </ProgressCircle>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-primary">Custom</p>
+                  <p className="text-xs text-muted-foreground">{stats.done}/{stats.total} done</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-4 gap-3 w-full">
               <div className="stat-card">
                 <Target className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xl font-bold">{stats.total}</span>
+                <span className="text-lg font-bold">{stats.total}</span>
                 <span className="text-xs text-muted-foreground">TOTAL</span>
               </div>
               <div className="stat-card">
                 <CheckCircle className="w-4 h-4 text-primary" />
-                <span className="text-xl font-bold text-primary">{stats.done}</span>
+                <span className="text-lg font-bold text-primary">{stats.done}</span>
                 <span className="text-xs text-muted-foreground">DONE</span>
               </div>
               <div className="stat-card">
                 <Clock className="w-4 h-4 text-secondary" />
-                <span className="text-xl font-bold text-secondary">{stats.pending}</span>
+                <span className="text-lg font-bold text-secondary">{stats.pending}</span>
                 <span className="text-xs text-muted-foreground">PENDING</span>
               </div>
               <div className="stat-card">
                 <SkipForward className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xl font-bold">{stats.skipped}</span>
+                <span className="text-lg font-bold">{stats.skipped}</span>
                 <span className="text-xs text-muted-foreground">SKIPPED</span>
               </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-500 ease-out"
-                  style={{ 
-                    width: `${completionPercentage}%`,
-                    boxShadow: completionPercentage > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
-                  }}
-                />
-              </div>
-              <p className="text-center text-sm text-muted-foreground mt-2">
-                {stats.done} of {stats.total} exercises completed
-              </p>
             </div>
           </div>
         </section>
