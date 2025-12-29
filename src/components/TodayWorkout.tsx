@@ -34,7 +34,11 @@ const dayColors: Record<string, string> = {
 
 const getTodayKey = () => new Date().toISOString().split('T')[0];
 
-export const TodayWorkout: React.FC = () => {
+interface TodayWorkoutProps {
+  onSetComplete?: () => void;
+}
+
+export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => {
   const { getTodaySchedule, getTodayName, useSameDaily, toggleUseSameDaily } = useWeeklySchedule();
   const [setProgress, setSetProgress] = useState<SetProgress>({});
   const todaySchedule = getTodaySchedule();
@@ -100,6 +104,11 @@ export const TodayWorkout: React.FC = () => {
     const currentSets = setProgress[exerciseId] || 0;
     const newSets = currentSets >= totalSets ? 0 : currentSets + 1;
     saveProgress({ ...setProgress, [exerciseId]: newSets });
+    
+    // Auto-start timer when completing a set (not when resetting to 0)
+    if (newSets > 0 && newSets < totalSets && onSetComplete) {
+      onSetComplete();
+    }
   };
 
   const resetProgress = () => {
