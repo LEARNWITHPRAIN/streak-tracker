@@ -9,6 +9,7 @@ import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { AddExerciseForm } from '@/components/AddExerciseForm';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
+import { TodayWorkout } from '@/components/TodayWorkout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -190,13 +191,16 @@ const Index = () => {
         )}
 
         {/* Tabs for Exercises and Calendar */}
-        <Tabs defaultValue="exercises" className="w-full">
+        <Tabs defaultValue="today" className="w-full">
           <TabsList className="w-full bg-muted/50 p-1">
+            <TabsTrigger value="today" className="flex-1 data-[state=active]:bg-card">
+              Today
+            </TabsTrigger>
             <TabsTrigger value="exercises" className="flex-1 data-[state=active]:bg-card">
-              Exercises
+              Custom
             </TabsTrigger>
             <TabsTrigger value="weekly" className="flex-1 data-[state=active]:bg-card">
-              Weekly Split
+              Weekly
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex-1 data-[state=active]:bg-card">
               Calendar
@@ -206,8 +210,12 @@ const Index = () => {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="today" className="mt-4">
+            <TodayWorkout />
+          </TabsContent>
+
           <TabsContent value="exercises" className="mt-4 space-y-3">
-            <h3 className="text-lg font-semibold">All Exercises</h3>
+            <h3 className="text-lg font-semibold">Custom Exercises</h3>
             
             <div className="space-y-2">
               {exercises.map((exercise) => (
