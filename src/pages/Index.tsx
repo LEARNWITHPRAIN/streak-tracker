@@ -27,11 +27,27 @@ const Index = () => {
     if (savedTitle) {
       setAppTitle(savedTitle);
     }
+    
     // Load calendar history
-    const savedHistory = localStorage.getItem('exercise-history');
-    if (savedHistory) {
-      setCalendarHistory(JSON.parse(savedHistory));
-    }
+    const loadHistory = () => {
+      const savedHistory = localStorage.getItem('exercise-history');
+      if (savedHistory) {
+        setCalendarHistory(JSON.parse(savedHistory));
+      }
+    };
+    
+    loadHistory();
+    
+    // Listen for progress updates to refresh calendar
+    const handleProgressUpdate = () => {
+      loadHistory();
+    };
+    
+    window.addEventListener('workout-progress-updated', handleProgressUpdate);
+    
+    return () => {
+      window.removeEventListener('workout-progress-updated', handleProgressUpdate);
+    };
   }, []);
 
   const handleEditTitle = () => {
