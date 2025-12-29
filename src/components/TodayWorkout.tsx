@@ -50,6 +50,8 @@ export const TodayWorkout: React.FC = () => {
   const saveProgress = (newProgress: SetProgress) => {
     setSetProgress(newProgress);
     localStorage.setItem(`today-workout-progress-${getTodayKey()}`, JSON.stringify(newProgress));
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event('workout-progress-updated'));
   };
 
   const handleSetClick = (exerciseId: string, totalSets: number) => {
