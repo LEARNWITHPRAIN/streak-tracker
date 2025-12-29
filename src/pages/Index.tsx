@@ -8,6 +8,7 @@ import { ExerciseCard } from '@/components/ExerciseCard';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { AddExerciseForm } from '@/components/AddExerciseForm';
+import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -192,7 +193,10 @@ const Index = () => {
         <Tabs defaultValue="exercises" className="w-full">
           <TabsList className="w-full bg-muted/50 p-1">
             <TabsTrigger value="exercises" className="flex-1 data-[state=active]:bg-card">
-              All Exercises
+              Exercises
+            </TabsTrigger>
+            <TabsTrigger value="weekly" className="flex-1 data-[state=active]:bg-card">
+              Weekly Split
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex-1 data-[state=active]:bg-card">
               Calendar
@@ -224,6 +228,10 @@ const Index = () => {
             <p className="text-center text-sm text-muted-foreground py-4">
               Keep pushing toward your one-arm pushup goal! 💪
             </p>
+          </TabsContent>
+
+          <TabsContent value="weekly" className="mt-4">
+            <WeeklySchedule />
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4">
