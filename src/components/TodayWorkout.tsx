@@ -40,48 +40,57 @@ export const TodayWorkout: React.FC = () => {
   const todaySchedule = getTodaySchedule();
   const todayName = getTodayName();
   
+  // Sync progress to calendar history
+  const syncToCalendar = (progress: SetProgress, schedule: DaySchedule | null) => {
+    if (!schedule) return;
+    
+    let totalSets = 0;
+    let completedSets = 0;
+    
+    schedule.exercises.forEach(ex => {
+      const sets = parseSets(ex.setsReps);
+      if (sets) {
+        totalSets += sets;
+        completedSets += Math.min(progress[ex.id] || 0, sets);
+      } else {
+        totalSets += 1;
+        if (progress[ex.id] && progress[ex.id] >= 1) {
+          completedSets += 1;
+        }
+      }
+    });
+    
+    const historyKey = 'exercise-history';
+    const savedHistory = localStorage.getItem(historyKey);
+    const history = savedHistory ? JSON.parse(savedHistory) : {};
+    
+    history[getTodayKey()] = {
+      date: getTodayKey(),
+      exercises: [],
+      totalExercises: totalSets,
+      completedExercises: completedSets,
+    };
+    
+    localStorage.setItem(historyKey, JSON.stringify(history));
+  };
+
   useEffect(() => {
     const savedProgress = localStorage.getItem(`today-workout-progress-${getTodayKey()}`);
     if (savedProgress) {
-      setSetProgress(JSON.parse(savedProgress));
+      const parsed = JSON.parse(savedProgress);
+      setSetProgress(parsed);
+      // Sync to calendar on load
+      syncToCalendar(parsed, todaySchedule);
+      window.dispatchEvent(new Event('workout-progress-updated'));
     }
-  }, []);
+  }, [todaySchedule]);
 
   const saveProgress = (newProgress: SetProgress) => {
     setSetProgress(newProgress);
     localStorage.setItem(`today-workout-progress-${getTodayKey()}`, JSON.stringify(newProgress));
     
-    // Update calendar history
-    if (todaySchedule) {
-      let totalSets = 0;
-      let completedSets = 0;
-      
-      todaySchedule.exercises.forEach(ex => {
-        const sets = parseSets(ex.setsReps);
-        if (sets) {
-          totalSets += sets;
-          completedSets += Math.min(newProgress[ex.id] || 0, sets);
-        } else {
-          totalSets += 1;
-          if (newProgress[ex.id] && newProgress[ex.id] >= 1) {
-            completedSets += 1;
-          }
-        }
-      });
-      
-      const historyKey = 'exercise-history';
-      const savedHistory = localStorage.getItem(historyKey);
-      const history = savedHistory ? JSON.parse(savedHistory) : {};
-      
-      history[getTodayKey()] = {
-        date: getTodayKey(),
-        exercises: [],
-        totalExercises: totalSets,
-        completedExercises: completedSets,
-      };
-      
-      localStorage.setItem(historyKey, JSON.stringify(history));
-    }
+    // Sync to calendar
+    syncToCalendar(newProgress, todaySchedule);
     
     // Dispatch custom event to notify other components
     window.dispatchEvent(new Event('workout-progress-updated'));
