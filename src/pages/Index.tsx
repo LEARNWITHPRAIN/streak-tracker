@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, Pencil, Check, X, Flame } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Dumbbell, Flame } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useTodayProgress } from '@/hooks/useTodayProgress';
 import { ProgressCircle } from '@/components/ProgressCircle';
@@ -8,7 +7,6 @@ import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Index = () => {
@@ -17,17 +15,7 @@ const Index = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
 
-  // Editable app title
-  const [appTitle, setAppTitle] = useState('One-Arm Pushup');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editTitleValue, setEditTitleValue] = useState('');
-
   useEffect(() => {
-    const savedTitle = localStorage.getItem('app-title');
-    if (savedTitle) {
-      setAppTitle(savedTitle);
-    }
-    
     // Load calendar history
     const loadHistory = () => {
       const savedHistory = localStorage.getItem('exercise-history');
@@ -50,24 +38,6 @@ const Index = () => {
     };
   }, []);
 
-  const handleEditTitle = () => {
-    setEditTitleValue(appTitle);
-    setIsEditingTitle(true);
-  };
-
-  const handleSaveTitle = () => {
-    if (editTitleValue.trim()) {
-      setAppTitle(editTitleValue.trim());
-      localStorage.setItem('app-title', editTitleValue.trim());
-    }
-    setIsEditingTitle(false);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditingTitle(false);
-    setEditTitleValue('');
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -78,32 +48,8 @@ const Index = () => {
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
                 <Dumbbell className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex-1">
-                {isEditingTitle ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={editTitleValue}
-                      onChange={(e) => setEditTitleValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveTitle();
-                        if (e.key === 'Escape') handleCancelEdit();
-                      }}
-                      className="h-8 text-lg font-bold bg-background/50"
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" onClick={handleSaveTitle} className="h-8 w-8">
-                      <Check className="w-4 h-4 text-primary" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={handleCancelEdit} className="h-8 w-8">
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 group cursor-pointer" onClick={handleEditTitle}>
-                    <h1 className="text-xl font-bold text-primary text-glow">{appTitle}</h1>
-                    <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                )}
+              <div>
+                <h1 className="text-xl font-bold text-primary text-glow">Yodha Mode</h1>
                 <p className="text-xs text-muted-foreground">Daily Progress Tracker</p>
               </div>
             </div>
