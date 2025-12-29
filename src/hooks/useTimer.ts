@@ -24,37 +24,58 @@ export const useTimer = () => {
     }
   }, []);
 
-  // Create audio context for beep
-  useEffect(() => {
-    // Create a simple beep using Web Audio API or use a data URL
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  // Create beep function using AudioContext
+  const playBeep = useCallback((isComplete: boolean = false) => {
+    if (!settings.soundEnabled) return;
     
-    // Create beep function
-    const playBeep = () => {
-      if (!settings.soundEnabled) return;
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      // Resume context if suspended (required for user interaction policy)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      const playTone = (frequency: number, delay: number, duration: number = 0.3) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
+        
+        const startTime = audioContext.currentTime + delay;
+        gainNode.gain.setValueAtTime(0.5, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
       
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
+      if (isComplete) {
+        // Play a more noticeable sound pattern for completion: 3 ascending beeps
+        playTone(600, 0, 0.15);
+        playTone(800, 0.2, 0.15);
+        playTone(1000, 0.4, 0.3);
+      } else {
+        // Single beep for countdown
+        playTone(800, 0, 0.2);
+      }
       
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    };
-
-    (window as any).playTimerBeep = playBeep;
-
-    return () => {
-      audioContext.close();
-    };
+      // Close context after sounds finish
+      setTimeout(() => audioContext.close(), 1000);
+    } catch (e) {
+      console.log('Audio playback failed:', e);
+    }
   }, [settings.soundEnabled]);
+
+  // Store playBeep in ref so it's accessible in timer effect
+  const playBeepRef = useRef(playBeep);
+  useEffect(() => {
+    playBeepRef.current = playBeep;
+  }, [playBeep]);
 
   // Timer logic
   useEffect(() => {
@@ -64,14 +85,13 @@ export const useTimer = () => {
           if (prev <= 1) {
             setIsRunning(false);
             setIsComplete(true);
-            if ((window as any).playTimerBeep) {
-              (window as any).playTimerBeep();
-            }
+            // Play completion sound (more prominent)
+            playBeepRef.current(true);
             return 0;
           }
           // Play tick sound at 3, 2, 1 seconds
-          if (prev <= 4 && (window as any).playTimerBeep) {
-            (window as any).playTimerBeep();
+          if (prev <= 4) {
+            playBeepRef.current(false);
           }
           return prev - 1;
         });
