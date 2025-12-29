@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Dumbbell, RotateCcw, Zap, Target, CheckCircle, Clock, SkipForward } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Dumbbell, RotateCcw, Zap, Target, CheckCircle, Clock, SkipForward, Pencil, Check, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useExercises } from '@/hooks/useExercises';
 import { useTimer } from '@/hooks/useTimer';
 import { ProgressCircle } from '@/components/ProgressCircle';
@@ -26,6 +27,36 @@ const Index = () => {
 
   const timer = useTimer();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  
+  // Editable app title
+  const [appTitle, setAppTitle] = useState('One-Arm Pushup');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState('');
+
+  useEffect(() => {
+    const savedTitle = localStorage.getItem('app-title');
+    if (savedTitle) {
+      setAppTitle(savedTitle);
+    }
+  }, []);
+
+  const handleEditTitle = () => {
+    setEditTitleValue(appTitle);
+    setIsEditingTitle(true);
+  };
+
+  const handleSaveTitle = () => {
+    if (editTitleValue.trim()) {
+      setAppTitle(editTitleValue.trim());
+      localStorage.setItem('app-title', editTitleValue.trim());
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingTitle(false);
+    setEditTitleValue('');
+  };
 
   const handleMarkDone = () => {
     if (nextExercise) {
@@ -44,8 +75,32 @@ const Index = () => {
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
                 <Dumbbell className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-primary text-glow">One-Arm Pushup</h1>
+              <div className="flex-1">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editTitleValue}
+                      onChange={(e) => setEditTitleValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveTitle();
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      className="h-8 text-lg font-bold bg-background/50"
+                      autoFocus
+                    />
+                    <Button size="icon" variant="ghost" onClick={handleSaveTitle} className="h-8 w-8">
+                      <Check className="w-4 h-4 text-primary" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={handleCancelEdit} className="h-8 w-8">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 group cursor-pointer" onClick={handleEditTitle}>
+                    <h1 className="text-xl font-bold text-primary text-glow">{appTitle}</h1>
+                    <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">Daily Progress Tracker</p>
               </div>
             </div>
