@@ -1,37 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, RotateCcw, Zap, Target, CheckCircle, Clock, SkipForward, Pencil, Check, X, Calendar, Flame } from 'lucide-react';
+import { Dumbbell, Pencil, Check, X, Flame } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useExercises } from '@/hooks/useExercises';
 import { useTimer } from '@/hooks/useTimer';
 import { useTodayProgress } from '@/hooks/useTodayProgress';
 import { ProgressCircle } from '@/components/ProgressCircle';
-import { ExerciseCard } from '@/components/ExerciseCard';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
-import { AddExerciseForm } from '@/components/AddExerciseForm';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Index = () => {
-  const {
-    exercises,
-    history,
-    stats,
-    completionPercentage,
-    nextExercise,
-    updateExerciseStatus,
-    addExercise,
-    editExercise,
-    deleteExercise,
-    resetToday,
-  } = useExercises();
-
   const timer = useTimer();
   const { todayProgress, todayStats } = useTodayProgress();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+  const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
+
   // Editable app title
   const [appTitle, setAppTitle] = useState('One-Arm Pushup');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -41,6 +26,11 @@ const Index = () => {
     const savedTitle = localStorage.getItem('app-title');
     if (savedTitle) {
       setAppTitle(savedTitle);
+    }
+    // Load calendar history
+    const savedHistory = localStorage.getItem('exercise-history');
+    if (savedHistory) {
+      setCalendarHistory(JSON.parse(savedHistory));
     }
   }, []);
 
@@ -60,13 +50,6 @@ const Index = () => {
   const handleCancelEdit = () => {
     setIsEditingTitle(false);
     setEditTitleValue('');
-  };
-
-  const handleMarkDone = () => {
-    if (nextExercise) {
-      updateExerciseStatus(nextExercise.id, 'done');
-      timer.startTimer();
-    }
   };
 
   return (
@@ -108,105 +91,47 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">Daily Progress Tracker</p>
               </div>
             </div>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={resetToday}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Reset
-            </Button>
+            <div className="w-10" /> {/* Spacer for alignment */}
           </div>
         </div>
       </header>
 
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Section - Two Circles */}
+        {/* Progress Section - Single Circle */}
         <section className="glass rounded-2xl p-6 animate-scale-in">
-          <div className="flex flex-col items-center gap-6">
-            {/* Dual Progress Circles */}
-            <div className="flex justify-center gap-6 w-full">
-              {/* Today/Daily Progress */}
-              <div className="flex flex-col items-center gap-2">
-                <ProgressCircle percentage={todayProgress} size={110} strokeWidth={8}>
-                  <Flame className="w-4 h-4 text-secondary mb-1" />
-                  <span className="text-2xl font-bold">{todayProgress}%</span>
-                </ProgressCircle>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-secondary">Daily</p>
-                  <p className="text-xs text-muted-foreground">{todayStats.completed}/{todayStats.total} sets</p>
-                </div>
-              </div>
-
-              {/* Custom Progress */}
-              <div className="flex flex-col items-center gap-2">
-                <ProgressCircle percentage={completionPercentage} size={110} strokeWidth={8}>
-                  <Dumbbell className="w-4 h-4 text-primary mb-1" />
-                  <span className="text-2xl font-bold">{completionPercentage}%</span>
-                </ProgressCircle>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-primary">Custom</p>
-                  <p className="text-xs text-muted-foreground">{stats.done}/{stats.total} done</p>
-                </div>
-              </div>
+          <div className="flex flex-col items-center gap-4">
+            {/* Daily Progress Circle */}
+            <ProgressCircle percentage={todayProgress} size={140} strokeWidth={10}>
+              <Flame className="w-5 h-5 text-primary mb-1" />
+              <span className="text-3xl font-bold">{todayProgress}%</span>
+              <span className="text-xs text-muted-foreground">Complete</span>
+            </ProgressCircle>
+            
+            <div className="text-center">
+              <p className="text-lg font-semibold text-primary">Today's Progress</p>
+              <p className="text-sm text-muted-foreground">{todayStats.completed} of {todayStats.total} sets completed</p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-4 gap-3 w-full">
-              <div className="stat-card">
-                <Target className="w-4 h-4 text-muted-foreground" />
-                <span className="text-lg font-bold">{stats.total}</span>
-                <span className="text-xs text-muted-foreground">TOTAL</span>
-              </div>
-              <div className="stat-card">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                <span className="text-lg font-bold text-primary">{stats.done}</span>
-                <span className="text-xs text-muted-foreground">DONE</span>
-              </div>
-              <div className="stat-card">
-                <Clock className="w-4 h-4 text-secondary" />
-                <span className="text-lg font-bold text-secondary">{stats.pending}</span>
-                <span className="text-xs text-muted-foreground">PENDING</span>
-              </div>
-              <div className="stat-card">
-                <SkipForward className="w-4 h-4 text-muted-foreground" />
-                <span className="text-lg font-bold">{stats.skipped}</span>
-                <span className="text-xs text-muted-foreground">SKIPPED</span>
+            {/* Progress Bar */}
+            <div className="w-full">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-500 ease-out"
+                  style={{ 
+                    width: `${todayProgress}%`,
+                    boxShadow: todayProgress > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
+                  }}
+                />
               </div>
             </div>
           </div>
         </section>
 
-        {/* Next Exercise Card */}
-        {nextExercise && (
-          <section className="bg-primary rounded-2xl p-6 glow-primary-intense animate-slide-up">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-primary-foreground" />
-              <span className="text-xs font-semibold text-primary-foreground/80 uppercase tracking-wide">
-                Next Exercise
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-primary-foreground mb-4">
-              {nextExercise.name}
-            </h2>
-            <Button 
-              onClick={handleMarkDone}
-              className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
-            >
-              Mark as Done →
-            </Button>
-          </section>
-        )}
-
-        {/* Tabs for Exercises and Calendar */}
+        {/* Tabs */}
         <Tabs defaultValue="today" className="w-full">
           <TabsList className="w-full bg-muted/50 p-1">
             <TabsTrigger value="today" className="flex-1 data-[state=active]:bg-card">
               Today
-            </TabsTrigger>
-            <TabsTrigger value="exercises" className="flex-1 data-[state=active]:bg-card">
-              Custom
             </TabsTrigger>
             <TabsTrigger value="weekly" className="flex-1 data-[state=active]:bg-card">
               Weekly
@@ -223,37 +148,13 @@ const Index = () => {
             <TodayWorkout />
           </TabsContent>
 
-          <TabsContent value="exercises" className="mt-4 space-y-3">
-            <h3 className="text-lg font-semibold">Custom Exercises</h3>
-            
-            <div className="space-y-2">
-              {exercises.map((exercise) => (
-                <ExerciseCard
-                  key={exercise.id}
-                  exercise={exercise}
-                  isNext={nextExercise?.id === exercise.id}
-                  onStatusChange={updateExerciseStatus}
-                  onEdit={editExercise}
-                  onDelete={deleteExercise}
-                  onTimerStart={timer.startTimer}
-                />
-              ))}
-            </div>
-
-            <AddExerciseForm onAdd={addExercise} />
-
-            <p className="text-center text-sm text-muted-foreground py-4">
-              Keep pushing toward your one-arm pushup goal! 💪
-            </p>
-          </TabsContent>
-
           <TabsContent value="weekly" className="mt-4">
             <WeeklySchedule />
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4">
             <CalendarView
-              history={history}
+              history={calendarHistory}
               currentMonth={currentMonth}
               onMonthChange={setCurrentMonth}
             />
