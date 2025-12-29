@@ -50,6 +50,39 @@ export const TodayWorkout: React.FC = () => {
   const saveProgress = (newProgress: SetProgress) => {
     setSetProgress(newProgress);
     localStorage.setItem(`today-workout-progress-${getTodayKey()}`, JSON.stringify(newProgress));
+    
+    // Update calendar history
+    if (todaySchedule) {
+      let totalSets = 0;
+      let completedSets = 0;
+      
+      todaySchedule.exercises.forEach(ex => {
+        const sets = parseSets(ex.setsReps);
+        if (sets) {
+          totalSets += sets;
+          completedSets += Math.min(newProgress[ex.id] || 0, sets);
+        } else {
+          totalSets += 1;
+          if (newProgress[ex.id] && newProgress[ex.id] >= 1) {
+            completedSets += 1;
+          }
+        }
+      });
+      
+      const historyKey = 'exercise-history';
+      const savedHistory = localStorage.getItem(historyKey);
+      const history = savedHistory ? JSON.parse(savedHistory) : {};
+      
+      history[getTodayKey()] = {
+        date: getTodayKey(),
+        exercises: [],
+        totalExercises: totalSets,
+        completedExercises: completedSets,
+      };
+      
+      localStorage.setItem(historyKey, JSON.stringify(history));
+    }
+    
     // Dispatch custom event to notify other components
     window.dispatchEvent(new Event('workout-progress-updated'));
   };
