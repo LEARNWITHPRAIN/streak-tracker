@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, Flame } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Dumbbell, Flame, LogOut } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useTodayProgress } from '@/hooks/useTodayProgress';
+import { useAuth } from '@/contexts/AuthContext';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
@@ -9,9 +11,34 @@ import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const Index = () => {
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, loading, signOut } = useAuth();
   const timer = useTimer();
   const { todayProgress, todayStats } = useTodayProgress();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
 
@@ -53,7 +80,13 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">Daily Progress Tracker</p>
               </div>
             </div>
-            <div className="w-10" /> {/* Spacer for alignment */}
+            <button
+              onClick={handleSignOut}
+              className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-5 h-5 text-muted-foreground" />
+            </button>
           </div>
         </div>
       </header>
@@ -191,4 +224,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Dashboard;
