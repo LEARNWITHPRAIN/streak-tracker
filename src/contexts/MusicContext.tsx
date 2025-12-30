@@ -1,11 +1,19 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from 'react';
+import { 
+  saveTrackToDB, 
+  removeTrackFromDB, 
+  getAllTracksFromDB, 
+  fileToArrayBuffer, 
+  arrayBufferToObjectUrl,
+  StoredTrack 
+} from '@/lib/musicStorage';
 
 export interface Track {
   id: string;
   name: string;
-  file: File;
   objectUrl: string;
   duration: number;
+  mimeType: string;
 }
 
 interface MusicContextType {
@@ -15,6 +23,7 @@ interface MusicContextType {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
+  isLoading: boolean;
   addTracks: (files: FileList | File[]) => void;
   removeTrack: (trackId: string) => void;
   playTrack: (index: number) => void;
@@ -44,6 +53,7 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleTimeUpdate = useCallback(() => {
@@ -72,6 +82,29 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
   }, [handleTimeUpdate, handleLoadedMetadata]);
+
+  // Load tracks from IndexedDB on mount
+  useEffect(() => {
+    const loadStoredTracks = async () => {
+      try {
+        const storedTracks = await getAllTracksFromDB();
+        const loadedTracks: Track[] = storedTracks.map((stored: StoredTrack) => ({
+          id: stored.id,
+          name: stored.name,
+          objectUrl: arrayBufferToObjectUrl(stored.fileData, stored.mimeType),
+          duration: 0,
+          mimeType: stored.mimeType,
+        }));
+        setTracks(loadedTracks);
+      } catch (error) {
+        console.error('Failed to load tracks from storage:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStoredTracks();
+  }, []);
 
   // Handle track end - auto-play next
   const handleTrackEnd = useCallback(() => {
@@ -118,7 +151,7 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
     }
   }, [currentTrackIndex, tracks]);
 
-  const addTracks = useCallback((files: FileList | File[]) => {
+  const addTracks = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     const audioFiles = fileArray.filter(file => 
       file.type.startsWith('audio/') || 
@@ -126,18 +159,48 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
       file.name.endsWith('.wav')
     );
 
-    const newTracks: Track[] = audioFiles.map(file => ({
-      id: `${file.name}-${Date.now()}-${Math.random()}`,
-      name: file.name.replace(/\.[^/.]+$/, ''),
-      file,
-      objectUrl: URL.createObjectURL(file),
-      duration: 0,
-    }));
+    const newTracks: Track[] = [];
+
+    for (const file of audioFiles) {
+      const id = `${file.name}-${Date.now()}-${Math.random()}`;
+      const mimeType = file.type || 'audio/mpeg';
+      
+      try {
+        // Convert file to ArrayBuffer for storage
+        const fileData = await fileToArrayBuffer(file);
+        
+        // Save to IndexedDB
+        await saveTrackToDB({
+          id,
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          fileData,
+          mimeType,
+        });
+
+        // Create object URL for playback
+        newTracks.push({
+          id,
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          objectUrl: URL.createObjectURL(file),
+          duration: 0,
+          mimeType,
+        });
+      } catch (error) {
+        console.error('Failed to save track:', error);
+      }
+    }
 
     setTracks(prev => [...prev, ...newTracks]);
   }, []);
 
-  const removeTrack = useCallback((trackId: string) => {
+  const removeTrack = useCallback(async (trackId: string) => {
+    // Remove from IndexedDB
+    try {
+      await removeTrackFromDB(trackId);
+    } catch (error) {
+      console.error('Failed to remove track from storage:', error);
+    }
+
     setTracks(prev => {
       const trackToRemove = prev.find(t => t.id === trackId);
       if (trackToRemove) {
@@ -233,6 +296,7 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
         isPlaying,
         currentTime,
         duration,
+        isLoading,
         addTracks,
         removeTrack,
         playTrack,
