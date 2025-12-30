@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, Flame, LogOut } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
-import { useTodayProgress } from '@/hooks/useTodayProgress';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserWorkouts } from '@/hooks/useUserWorkouts';
+import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
@@ -15,7 +16,26 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const timer = useTimer();
-  const { todayProgress, todayStats } = useTodayProgress();
+  const { getTodaySchedule, loading: scheduleLoading } = useUserWorkouts();
+  const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading } = useWorkoutLogs();
+  
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
+
+  const todaySchedule = getTodaySchedule();
+  const { percentage: todayProgress, completed, total } = calculateTotalProgress(todaySchedule);
+
+  // Fetch calendar history for current month
+  const loadCalendarHistory = useCallback(async () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    
+    const history = await fetchCalendarHistory(startDate, endDate);
+    setCalendarHistory(history);
+  }, [currentMonth, fetchCalendarHistory]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -23,12 +43,31 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (user) {
+      loadCalendarHistory();
+    }
+  }, [user, loadCalendarHistory]);
+
+  // Listen for progress updates to refresh calendar
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      loadCalendarHistory();
+    };
+    
+    window.addEventListener('workout-progress-updated', handleProgressUpdate);
+    
+    return () => {
+      window.removeEventListener('workout-progress-updated', handleProgressUpdate);
+    };
+  }, [loadCalendarHistory]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
-  if (loading) {
+  if (loading || scheduleLoading || progressLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -39,31 +78,6 @@ const Dashboard = () => {
   if (!user) {
     return null;
   }
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    // Load calendar history
-    const loadHistory = () => {
-      const savedHistory = localStorage.getItem('exercise-history');
-      if (savedHistory) {
-        setCalendarHistory(JSON.parse(savedHistory));
-      }
-    };
-    
-    loadHistory();
-    
-    // Listen for progress updates to refresh calendar
-    const handleProgressUpdate = () => {
-      loadHistory();
-    };
-    
-    window.addEventListener('workout-progress-updated', handleProgressUpdate);
-    
-    return () => {
-      window.removeEventListener('workout-progress-updated', handleProgressUpdate);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -143,7 +157,7 @@ const Dashboard = () => {
                 
                 <div className="text-center">
                   <p className="text-lg font-semibold text-primary">Today's Progress</p>
-                  <p className="text-sm text-muted-foreground">{todayStats.completed} of {todayStats.total} sets completed</p>
+                  <p className="text-sm text-muted-foreground">{completed} of {total} sets completed</p>
                 </div>
 
                 {/* Progress Bar */}
