@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_workouts: {
+        Row: {
+          created_at: string
+          day: string
+          exercises: Json
+          id: string
+          short_day: string
+          subtitle: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          exercises?: Json
+          id?: string
+          short_day: string
+          subtitle: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          exercises?: Json
+          id?: string
+          short_day?: string
+          subtitle?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workout_logs: {
+        Row: {
+          created_at: string
+          date: string
+          exercise_id: string
+          exercise_name: string
+          id: string
+          sets_completed: number
+          total_sets: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          exercise_id: string
+          exercise_name: string
+          id?: string
+          sets_completed?: number
+          total_sets: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          exercise_id?: string
+          exercise_name?: string
+          id?: string
+          sets_completed?: number
+          total_sets?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

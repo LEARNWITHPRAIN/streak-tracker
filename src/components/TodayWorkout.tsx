@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, RotateCcw, Repeat } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,11 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { useWeeklySchedule, parseSets, DaySchedule } from '@/hooks/useWeeklySchedule';
-
-interface SetProgress {
-  [exerciseId: string]: number; // Number of sets completed
-}
+import { useUserWorkouts, parseSets } from '@/hooks/useUserWorkouts';
+import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 
 const dayIcons: Record<string, React.ReactNode> = {
   monday: <Dumbbell className="w-5 h-5" />,
@@ -32,78 +29,22 @@ const dayColors: Record<string, string> = {
   sunday: 'text-muted-foreground',
 };
 
-const getTodayKey = () => new Date().toISOString().split('T')[0];
-
 interface TodayWorkoutProps {
   onSetComplete?: () => void;
 }
 
 export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => {
-  const { getTodaySchedule, getTodayName, useSameDaily, toggleUseSameDaily } = useWeeklySchedule();
-  const [setProgress, setSetProgress] = useState<SetProgress>({});
+  const { getTodaySchedule, getTodayName, useSameDaily, toggleUseSameDaily, loading: scheduleLoading } = useUserWorkouts();
+  const { todayProgress, updateSetProgress, resetTodayProgress, calculateTotalProgress, loading: progressLoading } = useWorkoutLogs();
+  
   const todaySchedule = getTodaySchedule();
   const todayName = getTodayName();
-  
-  // Sync progress to calendar history
-  const syncToCalendar = (progress: SetProgress, schedule: DaySchedule | null) => {
-    if (!schedule) return;
-    
-    let totalSets = 0;
-    let completedSets = 0;
-    
-    schedule.exercises.forEach(ex => {
-      const sets = parseSets(ex.setsReps);
-      if (sets) {
-        totalSets += sets;
-        completedSets += Math.min(progress[ex.id] || 0, sets);
-      } else {
-        totalSets += 1;
-        if (progress[ex.id] && progress[ex.id] >= 1) {
-          completedSets += 1;
-        }
-      }
-    });
-    
-    const historyKey = 'exercise-history';
-    const savedHistory = localStorage.getItem(historyKey);
-    const history = savedHistory ? JSON.parse(savedHistory) : {};
-    
-    history[getTodayKey()] = {
-      date: getTodayKey(),
-      exercises: [],
-      totalExercises: totalSets,
-      completedExercises: completedSets,
-    };
-    
-    localStorage.setItem(historyKey, JSON.stringify(history));
-  };
 
-  useEffect(() => {
-    const savedProgress = localStorage.getItem(`today-workout-progress-${getTodayKey()}`);
-    if (savedProgress) {
-      const parsed = JSON.parse(savedProgress);
-      setSetProgress(parsed);
-      // Sync to calendar on load
-      syncToCalendar(parsed, todaySchedule);
-      window.dispatchEvent(new Event('workout-progress-updated'));
-    }
-  }, [todaySchedule]);
-
-  const saveProgress = (newProgress: SetProgress) => {
-    setSetProgress(newProgress);
-    localStorage.setItem(`today-workout-progress-${getTodayKey()}`, JSON.stringify(newProgress));
-    
-    // Sync to calendar
-    syncToCalendar(newProgress, todaySchedule);
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new Event('workout-progress-updated'));
-  };
-
-  const handleSetClick = (exerciseId: string, totalSets: number) => {
-    const currentSets = setProgress[exerciseId] || 0;
+  const handleSetClick = async (exerciseId: string, exerciseName: string, totalSets: number) => {
+    const currentSets = todayProgress[exerciseId] || 0;
     const newSets = currentSets >= totalSets ? 0 : currentSets + 1;
-    saveProgress({ ...setProgress, [exerciseId]: newSets });
+    
+    await updateSetProgress(exerciseId, exerciseName, newSets, totalSets);
     
     // Auto-start timer when completing a set (not when resetting to 0)
     if (newSets > 0 && newSets < totalSets && onSetComplete) {
@@ -111,37 +52,20 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
     }
   };
 
-  const resetProgress = () => {
-    saveProgress({});
-  };
-
   const getExerciseProgress = (exerciseId: string, totalSets: number): number => {
-    const completed = setProgress[exerciseId] || 0;
+    const completed = todayProgress[exerciseId] || 0;
     return Math.round((completed / totalSets) * 100);
   };
 
-  const getTotalProgress = (): number => {
-    if (!todaySchedule || todaySchedule.exercises.length === 0) return 0;
-    
-    let totalSets = 0;
-    let completedSets = 0;
-    
-    todaySchedule.exercises.forEach(ex => {
-      const sets = parseSets(ex.setsReps);
-      if (sets) {
-        totalSets += sets;
-        completedSets += Math.min(setProgress[ex.id] || 0, sets);
-      } else {
-        // For time-based exercises, count as 1 set
-        totalSets += 1;
-        if (setProgress[ex.id] && setProgress[ex.id] >= 1) {
-          completedSets += 1;
-        }
-      }
-    });
-    
-    return totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
-  };
+  const { percentage: totalProgress } = calculateTotalProgress(todaySchedule);
+
+  if (scheduleLoading || progressLoading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground animate-pulse">Loading workout...</p>
+      </div>
+    );
+  }
 
   if (!todaySchedule) {
     return (
@@ -152,7 +76,6 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
   }
 
   const dayKey = todaySchedule.day;
-  const totalProgress = getTotalProgress();
 
   return (
     <div className="space-y-4">
@@ -188,7 +111,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
         <Button 
           size="sm" 
           variant="ghost" 
-          onClick={resetProgress}
+          onClick={resetTodayProgress}
           className="text-muted-foreground hover:text-foreground"
         >
           <RotateCcw className="w-4 h-4 mr-1" />
@@ -210,7 +133,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
         <div className="grid gap-2">
           {todaySchedule.exercises.map((exercise) => {
             const totalSets = parseSets(exercise.setsReps);
-            const completedSets = setProgress[exercise.id] || 0;
+            const completedSets = todayProgress[exercise.id] || 0;
             const isCompleted = totalSets ? completedSets >= totalSets : completedSets >= 1;
             const progressPercent = totalSets 
               ? getExerciseProgress(exercise.id, totalSets)
@@ -222,7 +145,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
                 className={`transition-all duration-200 cursor-pointer ${
                   isCompleted ? 'bg-primary/10 border-primary/30' : 'bg-card/50 hover:bg-card/80'
                 }`}
-                onClick={() => handleSetClick(exercise.id, totalSets || 1)}
+                onClick={() => handleSetClick(exercise.id, exercise.name, totalSets || 1)}
               >
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center gap-3">

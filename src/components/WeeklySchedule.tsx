@@ -1,105 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, Pencil, Trash2, Plus, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
-interface Exercise {
-  id: string;
-  name: string;
-  setsReps: string;
-}
-
-interface DaySchedule {
-  day: string;
-  shortDay: string;
-  title: string;
-  subtitle: string;
-  exercises: Exercise[];
-}
-
-const defaultSchedule: DaySchedule[] = [
-  {
-    day: 'monday',
-    shortDay: 'Mon',
-    title: 'Push Day',
-    subtitle: 'Chest & Triceps',
-    exercises: [
-      { id: 'mon-1', name: 'Bench Press', setsReps: '4x8' },
-      { id: 'mon-2', name: 'Incline Dumbbell Press', setsReps: '3x10' },
-      { id: 'mon-3', name: 'Dips', setsReps: '3x12' },
-      { id: 'mon-4', name: 'Tricep Pushdowns', setsReps: '3x15' },
-    ],
-  },
-  {
-    day: 'tuesday',
-    shortDay: 'Tue',
-    title: 'Pull Day',
-    subtitle: 'Back & Biceps',
-    exercises: [
-      { id: 'tue-1', name: 'Pull-ups', setsReps: '4x8' },
-      { id: 'tue-2', name: 'Barbell Rows', setsReps: '4x10' },
-      { id: 'tue-3', name: 'Face Pulls', setsReps: '3x15' },
-      { id: 'tue-4', name: 'Bicep Curls', setsReps: '3x12' },
-    ],
-  },
-  {
-    day: 'wednesday',
-    shortDay: 'Wed',
-    title: 'Active Recovery',
-    subtitle: 'Mobility & Light Cardio',
-    exercises: [
-      { id: 'wed-1', name: 'Yoga Flow', setsReps: '20 min' },
-      { id: 'wed-2', name: 'Light Cardio', setsReps: '15 min' },
-      { id: 'wed-3', name: 'Stretching', setsReps: '10 min' },
-    ],
-  },
-  {
-    day: 'thursday',
-    shortDay: 'Thu',
-    title: 'Legs & Core',
-    subtitle: 'Lower Body Power',
-    exercises: [
-      { id: 'thu-1', name: 'Squats', setsReps: '4x8' },
-      { id: 'thu-2', name: 'Romanian Deadlifts', setsReps: '3x10' },
-      { id: 'thu-3', name: 'Walking Lunges', setsReps: '3x12' },
-      { id: 'thu-4', name: 'Plank Hold', setsReps: '3x45s' },
-    ],
-  },
-  {
-    day: 'friday',
-    shortDay: 'Fri',
-    title: 'Upper Body Focus',
-    subtitle: 'Shoulders & Arms',
-    exercises: [
-      { id: 'fri-1', name: 'Overhead Press', setsReps: '4x8' },
-      { id: 'fri-2', name: 'Lateral Raises', setsReps: '3x12' },
-      { id: 'fri-3', name: 'Hammer Curls', setsReps: '3x10' },
-      { id: 'fri-4', name: 'Skull Crushers', setsReps: '3x12' },
-    ],
-  },
-  {
-    day: 'saturday',
-    shortDay: 'Sat',
-    title: 'Full Body Intensity',
-    subtitle: 'Compound Movements',
-    exercises: [
-      { id: 'sat-1', name: 'Deadlifts', setsReps: '5x5' },
-      { id: 'sat-2', name: 'Clean & Press', setsReps: '4x6' },
-      { id: 'sat-3', name: 'Burpees', setsReps: '3x15' },
-    ],
-  },
-  {
-    day: 'sunday',
-    shortDay: 'Sun',
-    title: 'Rest Day',
-    subtitle: 'Recovery & Relaxation',
-    exercises: [],
-  },
-];
+import { useUserWorkouts, Exercise, DaySchedule } from '@/hooks/useUserWorkouts';
 
 const dayIcons: Record<string, React.ReactNode> = {
   monday: <Dumbbell className="w-5 h-5" />,
@@ -122,8 +28,7 @@ const dayColors: Record<string, string> = {
 };
 
 export const WeeklySchedule: React.FC = () => {
-  const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
-  const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
+  const { schedule, loading, updateDayWorkout } = useUserWorkouts();
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: '', subtitle: '' });
@@ -133,57 +38,16 @@ export const WeeklySchedule: React.FC = () => {
   
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
-  useEffect(() => {
-    const savedSchedule = localStorage.getItem('weekly-schedule');
-    if (savedSchedule) {
-      setSchedule(JSON.parse(savedSchedule));
-    }
-    
-    const saved = localStorage.getItem('weekly-completed-exercises');
-    if (saved) {
-      const savedDate = localStorage.getItem('weekly-completed-date');
-      const currentWeek = getWeekNumber(new Date());
-      if (savedDate !== currentWeek.toString()) {
-        localStorage.setItem('weekly-completed-date', currentWeek.toString());
-        localStorage.removeItem('weekly-completed-exercises');
-      } else {
-        setCompletedExercises(new Set(JSON.parse(saved)));
-      }
-    }
-  }, []);
-
-  const saveSchedule = (newSchedule: DaySchedule[]) => {
-    setSchedule(newSchedule);
-    localStorage.setItem('weekly-schedule', JSON.stringify(newSchedule));
-  };
-
-  const getWeekNumber = (date: Date) => {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  };
-
-  const toggleExercise = (exerciseId: string) => {
-    const newCompleted = new Set(completedExercises);
-    if (newCompleted.has(exerciseId)) {
-      newCompleted.delete(exerciseId);
-    } else {
-      newCompleted.add(exerciseId);
-    }
-    setCompletedExercises(newCompleted);
-    localStorage.setItem('weekly-completed-exercises', JSON.stringify([...newCompleted]));
-  };
-
   const startEditDay = (day: DaySchedule) => {
     setEditForm({ title: day.title, subtitle: day.subtitle });
     setEditingDay(day.day);
   };
 
-  const saveEditDay = (dayName: string) => {
-    const newSchedule = schedule.map(d => 
-      d.day === dayName ? { ...d, title: editForm.title, subtitle: editForm.subtitle } : d
-    );
-    saveSchedule(newSchedule);
+  const saveEditDay = async (dayName: string) => {
+    const day = schedule.find(d => d.day === dayName);
+    if (day) {
+      await updateDayWorkout(dayName, { ...day, title: editForm.title, subtitle: editForm.subtitle });
+    }
     setEditingDay(null);
   };
 
@@ -192,52 +56,49 @@ export const WeeklySchedule: React.FC = () => {
     setEditingExercise(exercise.id);
   };
 
-  const saveEditExercise = (dayName: string, exerciseId: string) => {
-    const newSchedule = schedule.map(d => {
-      if (d.day === dayName) {
-        return {
-          ...d,
-          exercises: d.exercises.map(e => 
-            e.id === exerciseId ? { ...e, name: exerciseForm.name, setsReps: exerciseForm.setsReps } : e
-          )
-        };
-      }
-      return d;
-    });
-    saveSchedule(newSchedule);
+  const saveEditExercise = async (dayName: string, exerciseId: string) => {
+    const day = schedule.find(d => d.day === dayName);
+    if (day) {
+      const updatedExercises = day.exercises.map(e => 
+        e.id === exerciseId ? { ...e, name: exerciseForm.name, setsReps: exerciseForm.setsReps } : e
+      );
+      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+    }
     setEditingExercise(null);
   };
 
-  const deleteExercise = (dayName: string, exerciseId: string) => {
-    const newSchedule = schedule.map(d => {
-      if (d.day === dayName) {
-        return { ...d, exercises: d.exercises.filter(e => e.id !== exerciseId) };
-      }
-      return d;
-    });
-    saveSchedule(newSchedule);
+  const deleteExercise = async (dayName: string, exerciseId: string) => {
+    const day = schedule.find(d => d.day === dayName);
+    if (day) {
+      const updatedExercises = day.exercises.filter(e => e.id !== exerciseId);
+      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+    }
   };
 
-  const addExercise = (dayName: string) => {
+  const addExercise = async (dayName: string) => {
     if (!newExercise.name.trim()) return;
     
-    const newSchedule = schedule.map(d => {
-      if (d.day === dayName) {
-        return {
-          ...d,
-          exercises: [...d.exercises, {
-            id: `${dayName}-${Date.now()}`,
-            name: newExercise.name,
-            setsReps: newExercise.setsReps || '3x10'
-          }]
-        };
-      }
-      return d;
-    });
-    saveSchedule(newSchedule);
+    const day = schedule.find(d => d.day === dayName);
+    if (day) {
+      const newEx: Exercise = {
+        id: `${dayName}-${Date.now()}`,
+        name: newExercise.name,
+        setsReps: newExercise.setsReps || '3×10'
+      };
+      const updatedExercises = [...day.exercises, newEx];
+      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+    }
     setNewExercise({ name: '', setsReps: '' });
     setAddingExercise(null);
   };
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground animate-pulse">Loading schedule...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -312,7 +173,6 @@ export const WeeklySchedule: React.FC = () => {
             {day.exercises.length > 0 || addingExercise === day.day ? (
               <div className="grid gap-2">
                 {day.exercises.map((exercise) => {
-                  const isCompleted = completedExercises.has(exercise.id);
                   const isEditing = editingExercise === exercise.id;
                   
                   if (isEditing) {
@@ -329,7 +189,7 @@ export const WeeklySchedule: React.FC = () => {
                             value={exerciseForm.setsReps}
                             onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value })}
                             className="w-20 h-8 bg-background/50 text-center"
-                            placeholder="3x10"
+                            placeholder="3×10"
                           />
                           <Button size="icon" variant="ghost" onClick={() => saveEditExercise(day.day, exercise.id)} className="h-8 w-8">
                             <Check className="w-4 h-4 text-primary" />
@@ -345,21 +205,14 @@ export const WeeklySchedule: React.FC = () => {
                   return (
                     <Card
                       key={exercise.id}
-                      className={`transition-all duration-200 group ${
-                        isCompleted ? 'bg-primary/10 border-primary/30' : 'bg-card/50 hover:bg-card/80'
-                      }`}
+                      className="transition-all duration-200 group bg-card/50 hover:bg-card/80"
                     >
                       <CardContent className="p-3 flex items-center gap-3">
-                        <Checkbox
-                          checked={isCompleted}
-                          onCheckedChange={() => toggleExercise(exercise.id)}
-                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                        />
                         <div className={`w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center ${dayColors[day.day]}`}>
                           <Dumbbell className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
-                          <p className={`text-sm font-medium ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          <p className="text-sm font-medium text-foreground">
                             {exercise.name}
                           </p>
                         </div>
@@ -374,7 +227,6 @@ export const WeeklySchedule: React.FC = () => {
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
-                        {isCompleted && <Check className="w-4 h-4 text-primary" />}
                       </CardContent>
                     </Card>
                   );
@@ -396,7 +248,7 @@ export const WeeklySchedule: React.FC = () => {
                         value={newExercise.setsReps}
                         onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value })}
                         className="w-20 h-8 bg-background/50 text-center"
-                        placeholder="3x10"
+                        placeholder="3×10"
                         onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
                       />
                       <Button size="icon" variant="ghost" onClick={() => addExercise(day.day)} className="h-8 w-8">
