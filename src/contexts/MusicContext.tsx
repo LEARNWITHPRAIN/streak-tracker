@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from 'react';
 
 export interface Track {
   id: string;
@@ -8,7 +8,37 @@ export interface Track {
   duration: number;
 }
 
-export const useMusicPlayer = () => {
+interface MusicContextType {
+  tracks: Track[];
+  currentTrack: Track | null;
+  currentTrackIndex: number;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  addTracks: (files: FileList | File[]) => void;
+  removeTrack: (trackId: string) => void;
+  playTrack: (index: number) => void;
+  togglePlayPause: () => void;
+  playNext: () => void;
+  playPrevious: () => void;
+  seekTo: (time: number) => void;
+}
+
+const MusicContext = createContext<MusicContextType | undefined>(undefined);
+
+export const useMusicContext = () => {
+  const context = useContext(MusicContext);
+  if (!context) {
+    throw new Error('useMusicContext must be used within a MusicProvider');
+  }
+  return context;
+};
+
+interface MusicProviderProps {
+  children: ReactNode;
+}
+
+export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -16,48 +46,65 @@ export const useMusicPlayer = () => {
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize audio element
-  useEffect(() => {
-    audioRef.current = new Audio();
-    audioRef.current.addEventListener('ended', handleTrackEnd);
-    audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
-    audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', handleTrackEnd);
-        audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
-        audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      }
-      // Cleanup object URLs
-      tracks.forEach(track => URL.revokeObjectURL(track.objectUrl));
-    };
+  const handleTimeUpdate = useCallback(() => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
   }, []);
 
+  const handleLoadedMetadata = useCallback(() => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  }, []);
+
+  // Initialize audio element once
+  useEffect(() => {
+    audioRef.current = new Audio();
+    const audio = audioRef.current;
+    
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
+  }, [handleTimeUpdate, handleLoadedMetadata]);
+
+  // Handle track end - auto-play next
   const handleTrackEnd = useCallback(() => {
-    // Auto-play next track
     setCurrentTrackIndex(prev => {
       const nextIndex = prev + 1;
       if (nextIndex < tracks.length) {
+        setTimeout(() => {
+          audioRef.current?.play().catch(console.error);
+        }, 100);
         return nextIndex;
+      }
+      // Loop back to first track
+      if (tracks.length > 0) {
+        setTimeout(() => {
+          audioRef.current?.play().catch(console.error);
+        }, 100);
+        return 0;
       }
       setIsPlaying(false);
       return -1;
     });
   }, [tracks.length]);
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
+  // Add ended listener when tracks change
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
+    audio.addEventListener('ended', handleTrackEnd);
+    return () => {
+      audio.removeEventListener('ended', handleTrackEnd);
+    };
+  }, [handleTrackEnd]);
 
   // Load and play track when currentTrackIndex changes
   useEffect(() => {
@@ -81,7 +128,7 @@ export const useMusicPlayer = () => {
 
     const newTracks: Track[] = audioFiles.map(file => ({
       id: `${file.name}-${Date.now()}-${Math.random()}`,
-      name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+      name: file.name.replace(/\.[^/.]+$/, ''),
       file,
       objectUrl: URL.createObjectURL(file),
       duration: 0,
@@ -98,7 +145,6 @@ export const useMusicPlayer = () => {
       }
       const newTracks = prev.filter(t => t.id !== trackId);
       
-      // Adjust current track index if needed
       const removedIndex = prev.findIndex(t => t.id === trackId);
       if (removedIndex === currentTrackIndex) {
         setIsPlaying(false);
@@ -118,7 +164,6 @@ export const useMusicPlayer = () => {
   const playTrack = useCallback((index: number) => {
     if (index >= 0 && index < tracks.length) {
       if (index === currentTrackIndex) {
-        // Toggle play/pause for same track
         if (isPlaying) {
           audioRef.current?.pause();
           setIsPlaying(false);
@@ -179,19 +224,25 @@ export const useMusicPlayer = () => {
 
   const currentTrack = currentTrackIndex >= 0 ? tracks[currentTrackIndex] : null;
 
-  return {
-    tracks,
-    currentTrack,
-    currentTrackIndex,
-    isPlaying,
-    currentTime,
-    duration,
-    addTracks,
-    removeTrack,
-    playTrack,
-    togglePlayPause,
-    playNext,
-    playPrevious,
-    seekTo,
-  };
+  return (
+    <MusicContext.Provider
+      value={{
+        tracks,
+        currentTrack,
+        currentTrackIndex,
+        isPlaying,
+        currentTime,
+        duration,
+        addTracks,
+        removeTrack,
+        playTrack,
+        togglePlayPause,
+        playNext,
+        playPrevious,
+        seekTo,
+      }}
+    >
+      {children}
+    </MusicContext.Provider>
+  );
 };

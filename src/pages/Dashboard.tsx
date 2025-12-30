@@ -5,12 +5,14 @@ import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
+import { useMusicContext } from '@/contexts/MusicContext';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
 import { MusicPlayer } from '@/components/MusicPlayer';
+import { MiniPlayer } from '@/components/MiniPlayer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Dashboard = () => {
@@ -19,6 +21,8 @@ const Dashboard = () => {
   const timer = useTimer();
   const { getTodaySchedule, loading: scheduleLoading } = useUserWorkouts();
   const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading } = useWorkoutLogs();
+  const { currentTrack } = useMusicContext();
+  const [activeTab, setActiveTab] = useState('today');
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
@@ -179,7 +183,7 @@ const Dashboard = () => {
         </section>
 
         {/* Tabs */}
-        <Tabs defaultValue="today" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full bg-muted/50 p-1">
             <TabsTrigger value="today" className="flex-1 data-[state=active]:bg-card">
               Today
@@ -237,8 +241,11 @@ const Dashboard = () => {
         </Tabs>
       </main>
 
-      {/* Footer */}
-      <footer className="container max-w-2xl mx-auto px-4 py-8 text-center">
+      {/* Mini Player - hidden when on music tab */}
+      <MiniPlayer hidden={activeTab === 'music'} />
+
+      {/* Footer - add padding when mini player is visible */}
+      <footer className={`container max-w-2xl mx-auto px-4 py-8 text-center ${currentTrack && activeTab !== 'music' ? 'pb-24' : ''}`}>
         <p className="text-sm text-muted-foreground">
           Built with dedication 🔥
         </p>
