@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import { Headphones, Upload, Play, Pause, SkipBack, SkipForward, Trash2, Music } from 'lucide-react';
-import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import { useMusicContext } from '@/contexts/MusicContext';
 import { cn } from '@/lib/utils';
 
 const formatTime = (seconds: number): string => {
@@ -25,7 +25,7 @@ export const MusicPlayer: React.FC = () => {
     playNext,
     playPrevious,
     seekTo,
-  } = useMusicPlayer();
+  } = useMusicContext();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
