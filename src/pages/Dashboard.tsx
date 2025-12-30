@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -10,6 +10,7 @@ import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
+import { MusicPlayer } from '@/components/MusicPlayer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Dashboard = () => {
@@ -192,6 +193,10 @@ const Dashboard = () => {
             <TabsTrigger value="timer" className="flex-1 data-[state=active]:bg-card">
               Timer
             </TabsTrigger>
+            <TabsTrigger value="music" className="flex-1 data-[state=active]:bg-card">
+              <Headphones className="w-4 h-4 mr-1" />
+              Music
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="today" className="mt-4">
@@ -224,6 +229,10 @@ const Dashboard = () => {
               onReset={timer.resetTimer}
               onUpdateSettings={timer.updateSettings}
             />
+          </TabsContent>
+
+          <TabsContent value="music" className="mt-4">
+            <MusicPlayer />
           </TabsContent>
         </Tabs>
       </main>
