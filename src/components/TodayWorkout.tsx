@@ -44,7 +44,14 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
     const currentSets = todayProgress[exerciseId] || 0;
     const newSets = currentSets >= totalSets ? 0 : currentSets + 1;
     
-    await updateSetProgress(exerciseId, exerciseName, newSets, totalSets);
+    // Build all exercises list to sync all to database for accurate calendar display
+    const allExercises = todaySchedule?.exercises.map(ex => ({
+      id: ex.id,
+      name: ex.name,
+      totalSets: parseSets(ex.setsReps) || 1
+    })) || [];
+    
+    await updateSetProgress(exerciseId, exerciseName, newSets, totalSets, allExercises);
     
     // Auto-start timer ONLY when completing the LAST set of an exercise (not when resetting to 0)
     if (newSets === totalSets && onSetComplete) {

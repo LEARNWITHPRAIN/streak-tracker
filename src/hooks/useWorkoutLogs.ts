@@ -56,27 +56,48 @@ export const useWorkoutLogs = () => {
     exerciseId: string,
     exerciseName: string,
     setsCompleted: number,
-    totalSets: number
+    totalSets: number,
+    allExercises?: { id: string; name: string; totalSets: number }[]
   ) => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('workout_logs')
-        .upsert(
-          {
-            user_id: user.id,
-            date: getTodayKey(),
-            exercise_id: exerciseId,
-            exercise_name: exerciseName,
-            sets_completed: setsCompleted,
-            total_sets: totalSets,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,date,exercise_id' }
-        );
+      // If allExercises is provided, ensure all exercises are logged to keep calendar in sync
+      if (allExercises && allExercises.length > 0) {
+        const upserts = allExercises.map(ex => ({
+          user_id: user.id,
+          date: getTodayKey(),
+          exercise_id: ex.id,
+          exercise_name: ex.name,
+          sets_completed: ex.id === exerciseId ? setsCompleted : (todayProgress[ex.id] || 0),
+          total_sets: ex.totalSets,
+          updated_at: new Date().toISOString(),
+        }));
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from('workout_logs')
+          .upsert(upserts, { onConflict: 'user_id,date,exercise_id' });
+
+        if (error) throw error;
+      } else {
+        // Fallback to single exercise update
+        const { error } = await supabase
+          .from('workout_logs')
+          .upsert(
+            {
+              user_id: user.id,
+              date: getTodayKey(),
+              exercise_id: exerciseId,
+              exercise_name: exerciseName,
+              sets_completed: setsCompleted,
+              total_sets: totalSets,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,date,exercise_id' }
+          );
+
+        if (error) throw error;
+      }
 
       // Update local state
       setTodayProgress(prev => ({
@@ -138,7 +159,7 @@ export const useWorkoutLogs = () => {
   };
 
   // Fetch calendar history for a date range
-  const fetchCalendarHistory = async (startDate: string, endDate: string) => {
+  const fetchCalendarHistory = useCallback(async (startDate: string, endDate: string) => {
     if (!user) return {};
 
     try {
@@ -151,7 +172,7 @@ export const useWorkoutLogs = () => {
 
       if (error) throw error;
 
-      // Group by date
+      // Group by date - sum all sets across exercises
       const history: Record<string, { totalExercises: number; completedExercises: number }> = {};
       
       if (data) {
@@ -169,7 +190,7 @@ export const useWorkoutLogs = () => {
       console.error('Error fetching calendar history:', error);
       return {};
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchTodayLogs();
