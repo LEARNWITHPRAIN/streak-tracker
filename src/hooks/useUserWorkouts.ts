@@ -106,10 +106,12 @@ export const parseSets = (setsReps: string): number | null => {
 };
 
 const SAME_DAILY_KEY = 'yodha-same-daily';
+const CUSTOM_ROUTINE_KEY = 'custom';
 
 export const useUserWorkouts = () => {
   const { user } = useAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
+  const [customRoutine, setCustomRoutine] = useState<DaySchedule | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Initialize useSameDaily from localStorage
@@ -138,7 +140,7 @@ export const useUserWorkouts = () => {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // Map database data to schedule format
+        // Map database data to schedule format (exclude custom)
         const dbSchedule = defaultSchedule.map(defaultDay => {
           const dbDay = data.find(d => d.day === defaultDay.day);
           if (dbDay) {
@@ -153,6 +155,18 @@ export const useUserWorkouts = () => {
           return defaultDay;
         });
         setSchedule(dbSchedule);
+
+        // Check for custom routine
+        const customData = data.find(d => d.day === CUSTOM_ROUTINE_KEY);
+        if (customData) {
+          setCustomRoutine({
+            day: CUSTOM_ROUTINE_KEY,
+            shortDay: 'Daily',
+            title: customData.title,
+            subtitle: customData.subtitle,
+            exercises: customData.exercises as unknown as Exercise[],
+          });
+        }
       } else {
         // Initialize with default schedule for new users
         await initializeDefaultSchedule();
@@ -204,22 +218,26 @@ export const useUserWorkouts = () => {
       if (error) throw error;
 
       // Update local state
-      setSchedule(prev =>
-        prev.map(d => (d.day === dayName ? { ...d, ...updates } : d))
-      );
+      if (dayName === CUSTOM_ROUTINE_KEY) {
+        setCustomRoutine(prev => prev ? { ...prev, ...updates } : null);
+      } else {
+        setSchedule(prev =>
+          prev.map(d => (d.day === dayName ? { ...d, ...updates } : d))
+        );
+      }
     } catch (error) {
       console.error('Error updating workout:', error);
     }
   };
 
-  // Get today's schedule
-  const getTodaySchedule = (): DaySchedule | null => {
-    if (useSameDaily) {
-      return schedule.find(d => d.day === 'monday') || null;
+  // Get today's schedule - returns custom routine if useSameDaily, otherwise day-specific
+  const getTodaySchedule = useCallback((): DaySchedule | null => {
+    if (useSameDaily && customRoutine) {
+      return customRoutine;
     }
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     return schedule.find(d => d.day === today) || null;
-  };
+  }, [useSameDaily, customRoutine, schedule]);
 
   const getTodayName = (): string => {
     return new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -243,6 +261,7 @@ export const useUserWorkouts = () => {
 
   return {
     schedule,
+    customRoutine,
     loading,
     useSameDaily,
     updateDayWorkout,

@@ -53,8 +53,8 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
     
     await updateSetProgress(exerciseId, exerciseName, newSets, totalSets, allExercises);
     
-    // Auto-start timer ONLY when completing the LAST set of an exercise (not when resetting to 0)
-    if (newSets === totalSets && onSetComplete) {
+    // Auto-start timer when completing ANY set (not when resetting to 0)
+    if (newSets > 0 && newSets > currentSets && onSetComplete) {
       onSetComplete();
     }
   };
