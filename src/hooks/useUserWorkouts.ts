@@ -105,11 +105,22 @@ export const parseSets = (setsReps: string): number | null => {
   return null;
 };
 
+const SAME_DAILY_KEY = 'yodha-same-daily';
+
 export const useUserWorkouts = () => {
   const { user } = useAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
   const [loading, setLoading] = useState(true);
-  const [useSameDaily, setUseSameDaily] = useState(false);
+  
+  // Initialize useSameDaily from localStorage
+  const [useSameDaily, setUseSameDaily] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SAME_DAILY_KEY);
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Fetch user's workout schedule from database
   const fetchSchedule = useCallback(async () => {
@@ -215,7 +226,15 @@ export const useUserWorkouts = () => {
   };
 
   const toggleUseSameDaily = () => {
-    setUseSameDaily(prev => !prev);
+    setUseSameDaily(prev => {
+      const newValue = !prev;
+      try {
+        localStorage.setItem(SAME_DAILY_KEY, String(newValue));
+      } catch {
+        // Ignore localStorage errors
+      }
+      return newValue;
+    });
   };
 
   useEffect(() => {
