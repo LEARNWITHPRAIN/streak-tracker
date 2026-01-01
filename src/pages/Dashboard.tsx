@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -11,16 +11,18 @@ import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
+import { CustomRoutine } from '@/components/CustomRoutine';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const timer = useTimer();
-  const { getTodaySchedule, useSameDaily, loading: scheduleLoading } = useUserWorkouts();
+  const { getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
   const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -34,6 +36,9 @@ const Dashboard = () => {
   const todayProgressPercent = progressData.percentage;
   const completed = progressData.completed;
   const total = progressData.total;
+
+  // Check if timer is active (running or paused mid-timer)
+  const isTimerActive = timer.isRunning || (timer.timeRemaining < timer.settings.restDuration && timer.timeRemaining > 0);
 
   // Fetch calendar history for current month
   const loadCalendarHistory = useCallback(async () => {
@@ -72,6 +77,13 @@ const Dashboard = () => {
     };
   }, [loadCalendarHistory]);
 
+  // Refetch schedule when switching back to today tab (to get updated custom routine)
+  useEffect(() => {
+    if (activeTab === 'today') {
+      refetch();
+    }
+  }, [activeTab, refetch]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -93,43 +105,43 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-border/50">
-        <div className="container max-w-2xl mx-auto px-4 py-4">
+        <div className="container max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Dumbbell className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-primary text-glow">Yodha Mode</h1>
-                <p className="text-xs text-muted-foreground">Daily Progress Tracker</p>
+                <h1 className="text-lg font-bold text-primary text-glow">Yodha Mode</h1>
+                <p className="text-[10px] text-muted-foreground">Daily Progress Tracker</p>
               </div>
             </div>
             <button
               onClick={handleSignOut}
-              className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+              className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
               title="Sign Out"
             >
-              <LogOut className="w-5 h-5 text-muted-foreground" />
+              <LogOut className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="container max-w-2xl mx-auto px-4 py-4 space-y-4">
         {/* Progress Section - Shows Timer when running, Progress when not */}
-        <section className="glass rounded-2xl p-6 animate-scale-in">
-          <div className="flex flex-col items-center gap-4">
-            {timer.isRunning || (timer.timeRemaining < timer.settings.restDuration && timer.timeRemaining > 0) ? (
+        <section className="glass rounded-2xl p-4 animate-scale-in">
+          <div className="flex flex-col items-center gap-3">
+            {isTimerActive ? (
               <>
                 {/* Timer Display */}
-                <ProgressCircle percentage={timer.progress} size={140} strokeWidth={10}>
-                  <span className="text-3xl font-bold">{timer.formattedTime}</span>
-                  <span className="text-xs text-muted-foreground">Rest Timer</span>
+                <ProgressCircle percentage={timer.progress} size={120} strokeWidth={8}>
+                  <span className="text-2xl font-bold">{timer.formattedTime}</span>
+                  <span className="text-[10px] text-muted-foreground">Rest Timer</span>
                 </ProgressCircle>
                 
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-primary">Rest Time</p>
-                  <p className="text-sm text-muted-foreground">Take a breather before next set</p>
+                  <p className="text-base font-semibold text-primary">Rest Time</p>
+                  <p className="text-xs text-muted-foreground">Take a breather before next set</p>
                 </div>
 
                 <div className="flex gap-2">
@@ -159,15 +171,15 @@ const Dashboard = () => {
             ) : (
               <>
                 {/* Daily Progress Circle */}
-                <ProgressCircle percentage={todayProgressPercent} size={140} strokeWidth={10}>
-                  <Flame className="w-5 h-5 text-primary mb-1" />
-                  <span className="text-3xl font-bold">{todayProgressPercent}%</span>
-                  <span className="text-xs text-muted-foreground">Complete</span>
+                <ProgressCircle percentage={todayProgressPercent} size={120} strokeWidth={8}>
+                  <Flame className="w-4 h-4 text-primary mb-1" />
+                  <span className="text-2xl font-bold">{todayProgressPercent}%</span>
+                  <span className="text-[10px] text-muted-foreground">Complete</span>
                 </ProgressCircle>
                 
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-primary">Today's Progress</p>
-                  <p className="text-sm text-muted-foreground">{completed} of {total} sets completed</p>
+                  <p className="text-base font-semibold text-primary">Today's Progress</p>
+                  <p className="text-xs text-muted-foreground">{completed} of {total} sets completed</p>
                 </div>
 
                 {/* Progress Bar */}
@@ -187,33 +199,48 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* Tabs */}
+        {/* Tabs - Scrollable for mobile */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full bg-muted/50 p-1">
-            <TabsTrigger value="today" className="flex-1 data-[state=active]:bg-card">
-              Today
-            </TabsTrigger>
-            <TabsTrigger value="weekly" className="flex-1 data-[state=active]:bg-card">
-              Weekly
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex-1 data-[state=active]:bg-card">
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="timer" className="flex-1 data-[state=active]:bg-card">
-              Timer
-            </TabsTrigger>
-            <TabsTrigger value="music" className="flex-1 data-[state=active]:bg-card">
-              <Headphones className="w-4 h-4 mr-1" />
-              Music
-            </TabsTrigger>
-            <TabsTrigger value="fuel" className="flex-1 data-[state=active]:bg-card">
-              <Zap className="w-4 h-4 mr-1" />
-              Fuel
-            </TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <TabsList className="inline-flex w-max bg-muted/50 p-1 gap-1">
+              <TabsTrigger value="today" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <Dumbbell className="w-3.5 h-3.5 mr-1" />
+                Today
+              </TabsTrigger>
+              <TabsTrigger value="custom" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <Repeat className="w-3.5 h-3.5 mr-1" />
+                Custom
+              </TabsTrigger>
+              <TabsTrigger value="weekly" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <LayoutGrid className="w-3.5 h-3.5 mr-1" />
+                Weekly
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <Calendar className="w-3.5 h-3.5 mr-1" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger value="timer" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <Clock className="w-3.5 h-3.5 mr-1" />
+                Timer
+              </TabsTrigger>
+              <TabsTrigger value="music" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <Headphones className="w-3.5 h-3.5 mr-1" />
+                Music
+              </TabsTrigger>
+              <TabsTrigger value="fuel" className="px-3 py-2 text-xs data-[state=active]:bg-card">
+                <Zap className="w-3.5 h-3.5 mr-1" />
+                Fuel
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" className="invisible" />
+          </ScrollArea>
 
           <TabsContent value="today" className="mt-4">
             <TodayWorkout onSetComplete={timer.startTimer} />
+          </TabsContent>
+
+          <TabsContent value="custom" className="mt-4">
+            <CustomRoutine />
           </TabsContent>
 
           <TabsContent value="weekly" className="mt-4">
@@ -258,9 +285,9 @@ const Dashboard = () => {
       <MiniPlayer hidden={activeTab === 'music'} />
 
       {/* Footer - add padding when mini player is visible */}
-      <footer className={`container max-w-2xl mx-auto px-4 py-8 text-center ${currentTrack && activeTab !== 'music' ? 'pb-24' : ''}`}>
-        <p className="text-sm text-muted-foreground">
-          Built with dedication 🔥
+      <footer className={`container max-w-2xl mx-auto px-4 py-6 text-center ${currentTrack && activeTab !== 'music' ? 'pb-20' : ''}`}>
+        <p className="text-xs text-muted-foreground">
+          Built with dedication
         </p>
       </footer>
     </div>
