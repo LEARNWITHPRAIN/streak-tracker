@@ -127,15 +127,6 @@ export const useTimer = () => {
     setTimeRemaining(settings.restDuration);
   }, [settings.restDuration]);
 
-  const addTime = useCallback((seconds: number = 30) => {
-    setTimeRemaining(prev => prev + seconds);
-    // Resume if timer was complete
-    if (isComplete) {
-      setIsComplete(false);
-      setIsRunning(true);
-    }
-  }, [isComplete]);
-
   const updateSettings = useCallback((newSettings: Partial<TimerSettings>) => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
@@ -167,7 +158,6 @@ export const useTimer = () => {
     pauseTimer,
     resumeTimer,
     resetTimer,
-    addTime,
     updateSettings,
   };
 };
