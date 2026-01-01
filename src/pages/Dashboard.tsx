@@ -20,7 +20,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const timer = useTimer();
-  const { getTodaySchedule, loading: scheduleLoading } = useUserWorkouts();
+  const { getTodaySchedule, useSameDaily, loading: scheduleLoading } = useUserWorkouts();
   const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -28,8 +28,12 @@ const Dashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
 
+  // Get today's schedule - this will update when useSameDaily changes
   const todaySchedule = getTodaySchedule();
-  const { percentage: todayProgress, completed, total } = calculateTotalProgress(todaySchedule);
+  const progressData = calculateTotalProgress(todaySchedule);
+  const todayProgressPercent = progressData.percentage;
+  const completed = progressData.completed;
+  const total = progressData.total;
 
   // Fetch calendar history for current month
   const loadCalendarHistory = useCallback(async () => {
@@ -155,9 +159,9 @@ const Dashboard = () => {
             ) : (
               <>
                 {/* Daily Progress Circle */}
-                <ProgressCircle percentage={todayProgress} size={140} strokeWidth={10}>
+                <ProgressCircle percentage={todayProgressPercent} size={140} strokeWidth={10}>
                   <Flame className="w-5 h-5 text-primary mb-1" />
-                  <span className="text-3xl font-bold">{todayProgress}%</span>
+                  <span className="text-3xl font-bold">{todayProgressPercent}%</span>
                   <span className="text-xs text-muted-foreground">Complete</span>
                 </ProgressCircle>
                 
@@ -172,8 +176,8 @@ const Dashboard = () => {
                     <div 
                       className="h-full bg-primary transition-all duration-500 ease-out"
                       style={{ 
-                        width: `${todayProgress}%`,
-                        boxShadow: todayProgress > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
+                        width: `${todayProgressPercent}%`,
+                        boxShadow: todayProgressPercent > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
                       }}
                     />
                   </div>
