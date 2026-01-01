@@ -13,6 +13,7 @@ import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { MiniTimerBar } from '@/components/MiniTimerBar';
 import { FuelPlayer } from '@/components/FuelPlayer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -116,74 +117,33 @@ const Dashboard = () => {
       </header>
 
       <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Section - Shows Timer when running, Progress when not */}
+        {/* Progress Section - Always shows progress, timer is in floating bar */}
         <section className="glass rounded-2xl p-6 animate-scale-in">
           <div className="flex flex-col items-center gap-4">
-            {timer.isRunning || (timer.timeRemaining < timer.settings.restDuration && timer.timeRemaining > 0) ? (
-              <>
-                {/* Timer Display */}
-                <ProgressCircle percentage={timer.progress} size={140} strokeWidth={10}>
-                  <span className="text-3xl font-bold">{timer.formattedTime}</span>
-                  <span className="text-xs text-muted-foreground">Rest Timer</span>
-                </ProgressCircle>
-                
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-primary">Rest Time</p>
-                  <p className="text-sm text-muted-foreground">Take a breather before next set</p>
-                </div>
+            {/* Daily Progress Circle - Always visible */}
+            <ProgressCircle percentage={todayProgressPercent} size={140} strokeWidth={10}>
+              <Flame className="w-5 h-5 text-primary mb-1" />
+              <span className="text-3xl font-bold">{todayProgressPercent}%</span>
+              <span className="text-xs text-muted-foreground">Complete</span>
+            </ProgressCircle>
+            
+            <div className="text-center">
+              <p className="text-lg font-semibold text-primary">Today's Progress</p>
+              <p className="text-sm text-muted-foreground">{completed} of {total} sets completed</p>
+            </div>
 
-                <div className="flex gap-2">
-                  {timer.isRunning ? (
-                    <button 
-                      onClick={timer.pauseTimer}
-                      className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
-                    >
-                      Pause
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={timer.resumeTimer}
-                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
-                    >
-                      Resume
-                    </button>
-                  )}
-                  <button 
-                    onClick={timer.resetTimer}
-                    className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
-                  >
-                    Skip
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Daily Progress Circle */}
-                <ProgressCircle percentage={todayProgressPercent} size={140} strokeWidth={10}>
-                  <Flame className="w-5 h-5 text-primary mb-1" />
-                  <span className="text-3xl font-bold">{todayProgressPercent}%</span>
-                  <span className="text-xs text-muted-foreground">Complete</span>
-                </ProgressCircle>
-                
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-primary">Today's Progress</p>
-                  <p className="text-sm text-muted-foreground">{completed} of {total} sets completed</p>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-500 ease-out"
-                      style={{ 
-                        width: `${todayProgressPercent}%`,
-                        boxShadow: todayProgressPercent > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Progress Bar */}
+            <div className="w-full">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-500 ease-out"
+                  style={{ 
+                    width: `${todayProgressPercent}%`,
+                    boxShadow: todayProgressPercent > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -254,11 +214,23 @@ const Dashboard = () => {
         </Tabs>
       </main>
 
-      {/* Mini Player - hidden when on music tab */}
-      <MiniPlayer hidden={activeTab === 'music'} />
+      {/* Mini Timer Bar - floating at bottom when timer is active */}
+      <MiniTimerBar
+        formattedTime={timer.formattedTime}
+        isRunning={timer.isRunning}
+        isComplete={timer.isComplete}
+        onSkip={timer.resetTimer}
+        onAddTime={() => timer.addTime(30)}
+        hidden={activeTab === 'timer'}
+      />
 
-      {/* Footer - add padding when mini player is visible */}
-      <footer className={`container max-w-2xl mx-auto px-4 py-8 text-center ${currentTrack && activeTab !== 'music' ? 'pb-24' : ''}`}>
+      {/* Mini Player - hidden when on music tab or when timer bar is showing */}
+      <MiniPlayer hidden={activeTab === 'music' || timer.isRunning || timer.isComplete} />
+
+      {/* Footer - add padding when mini player/timer bar is visible */}
+      <footer className={`container max-w-2xl mx-auto px-4 py-8 text-center ${
+        (currentTrack && activeTab !== 'music') || timer.isRunning || timer.isComplete ? 'pb-24' : ''
+      }`}>
         <p className="text-sm text-muted-foreground">
           Built with dedication 🔥
         </p>
