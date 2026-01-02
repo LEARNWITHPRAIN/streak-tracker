@@ -72,7 +72,7 @@ export const Chatbot: React.FC = () => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I could not connect. Please try again.',
+        content: 'Connection failed. The webhook server may be offline or blocking requests. Please ensure the ngrok tunnel is running.',
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
