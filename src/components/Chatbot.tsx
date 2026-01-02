@@ -10,7 +10,7 @@ interface Message {
   content: string;
 }
 
-const WEBHOOK_URL = 'https://otis-unfactional-underzealously.ngrok-free.dev/webhook-test/0ae7085d-eab9-43b2-9aeb-9a45f5e872df';
+const WEBHOOK_URL = 'https://otis-unfactional-underzealously.ngrok-free.dev/webhook/0ae7085d-eab9-43b2-9aeb-9a45f5e872df';
 
 export const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
