@@ -1,4 +1,4 @@
 project_id = "tlglgjdbatuigcqpmuym"
 
 [functions.chatbot-proxy]
-verify_jwt = true
+verify_jwt = false
