@@ -3,14 +3,13 @@ import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
 }
-
-const WEBHOOK_URL = 'https://otis-unfactional-underzealously.ngrok-free.dev/webhook-test/0ae7085d-eab9-43b2-9aeb-9a45f5e872df';
 
 export const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,27 +38,20 @@ export const Chatbot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('chatbot-proxy', {
+        body: {
           message: userMessage.content,
           messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content,
           })),
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
+      if (error) {
+        throw new Error(error.message || 'Failed to get response');
       }
 
-      const data = await response.json();
-      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -72,7 +64,7 @@ export const Chatbot: React.FC = () => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Connection failed. The webhook server may be offline or blocking requests. Please ensure the ngrok tunnel is running.',
+        content: 'Connection failed. Please try again later.',
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
