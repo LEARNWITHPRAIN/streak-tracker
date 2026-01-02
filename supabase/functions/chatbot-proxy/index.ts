@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,25 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError?.message || 'No user found');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id);
+
     const webhookUrl = Deno.env.get('CHATBOT_WEBHOOK_URL');
     
     if (!webhookUrl) {
@@ -23,7 +43,7 @@ serve(async (req) => {
 
     const { message, messages } = await req.json();
 
-    console.log('Proxying request to webhook:', { messageLength: message?.length });
+    console.log('Proxying request to webhook:', { userId: user.id, messageLength: message?.length });
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -31,7 +51,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
       },
-      body: JSON.stringify({ message, messages }),
+      body: JSON.stringify({ message, messages, userId: user.id }),
     });
 
     if (!response.ok) {
@@ -43,7 +63,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Webhook response received');
+    console.log('Webhook response received for user:', user.id);
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
