@@ -12,24 +12,43 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authentication
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
     
-    if (authError || !user) {
-      console.error('Auth error:', authError?.message || 'No user found');
+    if (!authHeader) {
+      console.error('No Authorization header provided');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'No authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', user.id);
+    // Verify authentication
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError) {
+      console.error('Auth error details:', authError.message, authError.status);
+      return new Response(
+        JSON.stringify({ error: 'Authentication failed', details: authError.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!user) {
+      console.error('No user found with provided token');
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id, user.email);
 
     const webhookUrl = Deno.env.get('CHATBOT_WEBHOOK_URL');
     
