@@ -4,13 +4,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Exercise } from '@/hooks/useUserWorkouts';
 import { Json } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
 const CUSTOM_ROUTINE_KEY = 'custom';
+
+// Validation schemas
+const exerciseSchema = z.object({
+  name: z.string().trim().min(1, 'Exercise name is required').max(100, 'Exercise name must be 100 characters or less'),
+  setsReps: z.string().trim().min(1, 'Sets/reps is required').max(20, 'Sets/reps must be 20 characters or less'),
+});
+
+const routineHeaderSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(100, 'Title must be 100 characters or less'),
+  subtitle: z.string().trim().min(1, 'Subtitle is required').max(200, 'Subtitle must be 200 characters or less'),
+});
 
 interface CustomRoutineData {
   title: string;
@@ -62,7 +74,6 @@ export const CustomRoutine: React.FC = () => {
           exercises: data.exercises as unknown as Exercise[],
         });
       } else {
-        // Initialize custom routine for new users
         await initializeCustomRoutine();
       }
     } catch (error) {
@@ -113,6 +124,7 @@ export const CustomRoutine: React.FC = () => {
       setRoutine(updatedRoutine);
     } catch (error) {
       console.error('Error updating custom routine:', error);
+      toast.error('Failed to update routine');
     }
   };
 
@@ -126,7 +138,12 @@ export const CustomRoutine: React.FC = () => {
   };
 
   const saveEditHeader = async () => {
-    await updateRoutine({ title: editForm.title, subtitle: editForm.subtitle });
+    const validation = routineHeaderSchema.safeParse(editForm);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+    await updateRoutine({ title: validation.data.title, subtitle: validation.data.subtitle });
     setEditingHeader(false);
   };
 
@@ -136,8 +153,13 @@ export const CustomRoutine: React.FC = () => {
   };
 
   const saveEditExercise = async (exerciseId: string) => {
+    const validation = exerciseSchema.safeParse(exerciseForm);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
     const updatedExercises = routine.exercises.map(e =>
-      e.id === exerciseId ? { ...e, name: exerciseForm.name, setsReps: exerciseForm.setsReps } : e
+      e.id === exerciseId ? { ...e, name: validation.data.name, setsReps: validation.data.setsReps } : e
     );
     await updateRoutine({ exercises: updatedExercises });
     setEditingExercise(null);
@@ -149,12 +171,20 @@ export const CustomRoutine: React.FC = () => {
   };
 
   const addExercise = async () => {
-    if (!newExercise.name.trim()) return;
+    const validation = exerciseSchema.safeParse({
+      name: newExercise.name,
+      setsReps: newExercise.setsReps || '3×10',
+    });
+    
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
 
     const newEx: Exercise = {
       id: `custom-${Date.now()}`,
-      name: newExercise.name,
-      setsReps: newExercise.setsReps || '3×10',
+      name: validation.data.name,
+      setsReps: validation.data.setsReps,
     };
     const updatedExercises = [...routine.exercises, newEx];
     await updateRoutine({ exercises: updatedExercises });
@@ -191,15 +221,17 @@ export const CustomRoutine: React.FC = () => {
           <div className="flex-1 space-y-1">
             <Input
               value={editForm.title}
-              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value.slice(0, 100) })}
               className="h-8 font-bold bg-background/50"
               placeholder="Routine title"
+              maxLength={100}
             />
             <Input
               value={editForm.subtitle}
-              onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value })}
+              onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value.slice(0, 200) })}
               className="h-7 text-xs bg-background/50"
               placeholder="Subtitle"
+              maxLength={200}
             />
           </div>
           <Button size="icon" variant="ghost" onClick={saveEditHeader} className="h-8 w-8">
@@ -240,15 +272,17 @@ export const CustomRoutine: React.FC = () => {
                 <CardContent className="p-3 flex items-center gap-2">
                   <Input
                     value={exerciseForm.name}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
+                    onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value.slice(0, 100) })}
                     className="flex-1 h-8 bg-background/50"
                     placeholder="Exercise name"
+                    maxLength={100}
                   />
                   <Input
                     value={exerciseForm.setsReps}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value })}
+                    onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value.slice(0, 20) })}
                     className="w-20 h-8 bg-background/50 text-center"
                     placeholder="3×10"
+                    maxLength={20}
                   />
                   <Button size="icon" variant="ghost" onClick={() => saveEditExercise(exercise.id)} className="h-8 w-8">
                     <Check className="w-4 h-4 text-primary" />
@@ -295,17 +329,19 @@ export const CustomRoutine: React.FC = () => {
             <CardContent className="p-3 flex items-center gap-2">
               <Input
                 value={newExercise.name}
-                onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
+                onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value.slice(0, 100) })}
                 className="flex-1 h-8 bg-background/50"
                 placeholder="Exercise name"
                 autoFocus
+                maxLength={100}
                 onKeyDown={(e) => e.key === 'Enter' && addExercise()}
               />
               <Input
                 value={newExercise.setsReps}
-                onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value })}
+                onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value.slice(0, 20) })}
                 className="w-20 h-8 bg-background/50 text-center"
                 placeholder="3×10"
+                maxLength={20}
                 onKeyDown={(e) => e.key === 'Enter' && addExercise()}
               />
               <Button size="icon" variant="ghost" onClick={addExercise} className="h-8 w-8">
