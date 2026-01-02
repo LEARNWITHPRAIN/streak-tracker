@@ -38,6 +38,13 @@ export const Chatbot: React.FC = () => {
     setIsLoading(true);
 
     try {
+      // Check for valid session before making the request
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('AUTH_REQUIRED');
+      }
+
       const { data, error } = await supabase.functions.invoke('chatbot-proxy', {
         body: {
           message: userMessage.content,
@@ -49,6 +56,10 @@ export const Chatbot: React.FC = () => {
       });
 
       if (error) {
+        // Check if it's an auth error
+        if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+          throw new Error('AUTH_REQUIRED');
+        }
         throw new Error(error.message || 'Failed to get response');
       }
 
@@ -61,10 +72,16 @@ export const Chatbot: React.FC = () => {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Chatbot error:', error);
+      
+      let errorContent = 'Connection failed. Please try again later.';
+      if (error instanceof Error && error.message === 'AUTH_REQUIRED') {
+        errorContent = 'Please sign in to use the assistant.';
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Connection failed. Please try again later.',
+        content: errorContent,
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
