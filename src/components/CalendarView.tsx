@@ -205,7 +205,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <span className="text-muted-foreground">Completed</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-secondary/20 border border-secondary/30" />
+            <div className="w-3 h-3 rounded bg-primary/20 border border-primary/30" />
             <span className="text-muted-foreground">Partial</span>
           </div>
         </div>
