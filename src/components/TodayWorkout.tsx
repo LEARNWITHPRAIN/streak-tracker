@@ -21,11 +21,11 @@ const dayIcons: Record<string, React.ReactNode> = {
 
 const dayColors: Record<string, string> = {
   monday: 'text-primary',
-  tuesday: 'text-secondary',
-  wednesday: 'text-accent',
+  tuesday: 'text-primary',
+  wednesday: 'text-primary',
   thursday: 'text-primary',
-  friday: 'text-secondary',
-  saturday: 'text-accent',
+  friday: 'text-primary',
+  saturday: 'text-primary',
   sunday: 'text-muted-foreground',
 };
 
