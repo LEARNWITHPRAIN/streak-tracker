@@ -31,6 +31,42 @@ const Dashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
 
+  // Calculate streak from calendar history
+  const calculateStreak = useCallback(() => {
+    const dates = Object.keys(calendarHistory).sort().reverse();
+    let streak = 0;
+    const today = new Date();
+    
+    for (let i = 0; i < 365; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const checkKey = checkDate.toISOString().split('T')[0];
+      const progress = calendarHistory[checkKey];
+      
+      if (progress) {
+        const percentage = progress.totalExercises > 0 
+          ? (progress.completedExercises / progress.totalExercises) * 100 
+          : 0;
+        
+        if (percentage >= 100) {
+          streak++;
+        } else if (i === 0 && percentage > 0) {
+          // Today in progress doesn't break streak
+          continue;
+        } else {
+          break;
+        }
+      } else if (i > 0) {
+        // Missing day breaks streak (except today)
+        break;
+      }
+    }
+    
+    return streak;
+  }, [calendarHistory]);
+
+  const streak = calculateStreak();
+
   // Get today's schedule - this will update when useSameDaily changes
   const todaySchedule = getTodaySchedule();
   const progressData = calculateTotalProgress(todaySchedule);
@@ -117,13 +153,24 @@ const Dashboard = () => {
                 <p className="text-[10px] text-muted-foreground">Daily Progress Tracker</p>
               </div>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4 text-muted-foreground" />
-            </button>
+            
+            <div className="flex items-center gap-2">
+              {/* Streak Counter */}
+              {streak > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/20">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-bold text-orange-500">{streak}</span>
+                </div>
+              )}
+              
+              <button
+                onClick={handleSignOut}
+                className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
