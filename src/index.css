@@ -195,6 +195,6 @@
   }
 
   .calendar-day-partial {
-    @apply bg-secondary/20 text-secondary border border-secondary/30;
+    @apply bg-primary/20 text-primary border border-primary/30;
   }
 }
