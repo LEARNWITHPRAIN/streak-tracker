@@ -132,7 +132,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
           <span className="text-muted-foreground">Today's Progress</span>
           <span className="font-semibold text-primary">{totalProgress}%</span>
         </div>
-        <Progress value={totalProgress} className="h-2" />
+        <Progress value={totalProgress} className="h-2" activeOnProgress />
       </div>
 
       {/* Exercises List */}
@@ -183,6 +183,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
                       <Progress 
                         value={progressPercent} 
                         className="h-1.5"
+                        activeOnProgress
                       />
                       <div className="flex justify-between">
                         {Array.from({ length: totalSets }).map((_, idx) => (
