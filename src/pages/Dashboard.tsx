@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -162,6 +162,14 @@ const Dashboard = () => {
                   <span className="text-sm font-bold text-orange-500">{streak}</span>
                 </div>
               )}
+              
+              <button
+                onClick={() => navigate('/profile')}
+                className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                title="Profile Settings"
+              >
+                <User className="w-4 h-4 text-muted-foreground" />
+              </button>
               
               <button
                 onClick={handleSignOut}
