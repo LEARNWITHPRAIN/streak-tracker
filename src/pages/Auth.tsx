@@ -3,15 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().trim().email('Please enter a valid email address').max(255);
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
-type AuthMode = 'signin' | 'signup' | 'verify' | 'forgot' | 'reset';
+type AuthMode = 'signin' | 'signup' | 'magiclink-sent' | 'forgot' | 'reset';
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -19,13 +18,12 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
-  const { signIn, signUp, sendOtp, verifyOtp, signInWithGoogle, resetPassword, updatePassword, user, loading } = useAuth();
+  const { signIn, sendMagicLink, signInWithGoogle, resetPassword, updatePassword, user, loading } = useAuth();
   const { toast } = useToast();
 
   // Check URL for reset mode
@@ -66,45 +64,16 @@ const Auth = () => {
       return;
     }
 
-    // First send OTP to verify email
-    const { error: otpError } = await sendOtp(email);
-    if (otpError) {
-      if (otpError.message.includes('rate limit') || otpError.message.includes('security purposes')) {
-        setError('Please wait 15 seconds before requesting another code.');
+    // Send magic link for email verification
+    const { error: magicLinkError } = await sendMagicLink(email);
+    if (magicLinkError) {
+      if (magicLinkError.message.includes('rate limit') || magicLinkError.message.includes('security purposes')) {
+        setError('Please wait before requesting another link.');
       } else {
-        setError(otpError.message);
+        setError(magicLinkError.message);
       }
     } else {
-      toast({
-        title: 'Verification code sent!',
-        description: 'Please check your email for the 6-digit code.',
-      });
-      setMode('verify');
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) {
-      setError('Please enter the complete 6-digit code');
-      return;
-    }
-
-    // Verify OTP - this will create/sign in the user
-    const { error: verifyError } = await verifyOtp(email, otp);
-    if (verifyError) {
-      setError('Invalid or expired code. Please try again.');
-    } else {
-      // Now update the password for the user
-      const { error: pwError } = await updatePassword(password);
-      if (pwError) {
-        console.error('Failed to set password:', pwError);
-      }
-      
-      toast({
-        title: 'Welcome to Yodha Mode!',
-        description: 'Your account has been verified successfully.',
-      });
-      navigate('/dashboard');
+      setMode('magiclink-sent');
     }
   };
 
@@ -196,9 +165,6 @@ const Auth = () => {
         case 'signup':
           await handleSignUp();
           break;
-        case 'verify':
-          await handleVerifyOtp();
-          break;
         case 'forgot':
           await handleForgotPassword();
           break;
@@ -212,9 +178,8 @@ const Auth = () => {
   };
 
   const handleBack = () => {
-    if (mode === 'verify') {
+    if (mode === 'magiclink-sent') {
       setMode('signup');
-      setOtp('');
     } else if (mode === 'forgot') {
       setMode('signin');
     } else {
@@ -227,26 +192,25 @@ const Auth = () => {
     setError(null);
     setPassword('');
     setConfirmPassword('');
-    setOtp('');
   };
 
-  const handleResendCode = async () => {
+  const handleResendLink = async () => {
     setIsLoading(true);
     setError(null);
     
-    const { error } = await sendOtp(email);
+    const { error } = await sendMagicLink(email);
     setIsLoading(false);
     
     if (error) {
       if (error.message.includes('rate limit') || error.message.includes('security purposes')) {
-        setError('Please wait 15 seconds before requesting another code.');
+        setError('Please wait before requesting another link.');
       } else {
         setError(error.message);
       }
     } else {
       toast({
-        title: 'Code resent!',
-        description: 'Check your email for the new verification code.',
+        title: 'Link resent!',
+        description: 'Check your email for the new sign-in link.',
       });
     }
   };
@@ -265,8 +229,8 @@ const Auth = () => {
         return { title: 'Welcome Back', subtitle: 'Sign in to continue your journey', icon: Mail };
       case 'signup':
         return { title: 'Create Account', subtitle: 'Join Yodha Mode and start your journey', icon: Mail };
-      case 'verify':
-        return { title: 'Verify Email', subtitle: `Enter the 6-digit code sent to ${email}`, icon: KeyRound };
+      case 'magiclink-sent':
+        return { title: 'Check Your Email', subtitle: `We sent a sign-in link to ${email}`, icon: CheckCircle };
       case 'forgot':
         return { title: 'Forgot Password', subtitle: 'Enter your email to receive a reset link', icon: Lock };
       case 'reset':
@@ -280,16 +244,14 @@ const Auth = () => {
     if (isLoading) {
       switch (mode) {
         case 'signin': return 'Signing in...';
-        case 'signup': return 'Sending code...';
-        case 'verify': return 'Verifying...';
+        case 'signup': return 'Sending link...';
         case 'forgot': return 'Sending...';
         case 'reset': return 'Updating...';
       }
     }
     switch (mode) {
       case 'signin': return 'Sign In';
-      case 'signup': return 'Send Verification Code';
-      case 'verify': return 'Verify & Create Account';
+      case 'signup': return 'Send Magic Link';
       case 'forgot': return 'Send Reset Link';
       case 'reset': return 'Update Password';
     }
@@ -300,9 +262,9 @@ const Auth = () => {
     switch (mode) {
       case 'signin': return !email || !password;
       case 'signup': return !email || !password || !confirmPassword;
-      case 'verify': return otp.length !== 6;
       case 'forgot': return !email;
       case 'reset': return !password || !confirmPassword;
+      default: return false;
     }
   };
 
@@ -332,6 +294,41 @@ const Auth = () => {
           <h1 className="text-3xl font-bold text-foreground mb-2">{title}</h1>
           <p className="text-muted-foreground">{subtitle}</p>
         </div>
+
+        {/* Magic Link Sent View */}
+        {mode === 'magiclink-sent' && (
+          <div className="space-y-6 text-center">
+            <p className="text-muted-foreground">
+              Click the link in your email to complete sign up. The link will sign you in automatically.
+            </p>
+            
+            <div className="space-y-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResendLink}
+                disabled={isLoading}
+                className="w-full h-14 text-lg font-medium rounded-xl border-muted-foreground/20"
+              >
+                {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+                Resend Link
+              </Button>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setMode('signup')}
+                className="w-full text-muted-foreground"
+              >
+                Use a different email
+              </Button>
+            </div>
+
+            {error && (
+              <p className="text-sm text-destructive font-medium">{error}</p>
+            )}
+          </div>
+        )}
 
         {/* Google Sign-In Button (signin and signup modes only) */}
         {['signin', 'signup'].includes(mode) && (
@@ -376,149 +373,112 @@ const Auth = () => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email (signin, signup, forgot) */}
-          {['signin', 'signup', 'forgot'].includes(mode) && (
-            <div className="space-y-2">
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  className="h-14 pl-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
-                  disabled={isLoading}
-                  autoFocus
-                />
+        {mode !== 'magiclink-sent' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email (signin, signup, forgot) */}
+            {['signin', 'signup', 'forgot'].includes(mode) && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    className="h-14 pl-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* OTP Input (verify mode) */}
-          {mode === 'verify' && (
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(value) => {
-                  setOtp(value);
-                  if (error) setError(null);
-                }}
-                disabled={isLoading}
-              >
-                <InputOTPGroup className="gap-2">
-                  {[0, 1, 2, 3, 4, 5].map((index) => (
-                    <InputOTPSlot
-                      key={index}
-                      index={index}
-                      className="w-12 h-14 text-xl bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground"
-                    />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-          )}
+            {/* Password (signin, signup, reset) */}
+            {['signin', 'signup', 'reset'].includes(mode) && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder={mode === 'reset' ? 'New password' : 'Password'}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    className="h-14 pl-12 pr-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
+                    disabled={isLoading}
+                    autoFocus={mode === 'reset'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
-          {/* Password (signin, signup, reset) */}
-          {['signin', 'signup', 'reset'].includes(mode) && (
-            <div className="space-y-2">
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={mode === 'reset' ? 'New password' : 'Password'}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  className="h-14 pl-12 pr-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
-                  disabled={isLoading}
-                  autoFocus={mode === 'reset'}
-                />
+            {/* Confirm Password (signup, reset) */}
+            {['signup', 'reset'].includes(mode) && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    className="h-14 pl-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <p className="text-sm text-destructive font-medium text-center">{error}</p>
+            )}
+
+            {/* Forgot Password Link (signin only) */}
+            {mode === 'signin' && (
+              <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => {
+                    setMode('forgot');
+                    setError(null);
+                  }}
+                  className="text-sm text-primary hover:underline"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  Forgot password?
                 </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Confirm Password (signup, reset) */}
-          {['signup', 'reset'].includes(mode) && (
-            <div className="space-y-2">
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  className="h-14 pl-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <p className="text-sm text-destructive font-medium text-center">{error}</p>
-          )}
-
-          {/* Forgot Password Link (signin only) */}
-          {mode === 'signin' && (
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('forgot');
-                  setError(null);
-                }}
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </button>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl mt-6"
-            disabled={isButtonDisabled()}
-          >
-            {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-            {getButtonText()}
-          </Button>
-
-          {/* Resend code (verify mode) */}
-          {mode === 'verify' && (
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={handleResendCode}
-                className="text-sm text-primary hover:underline"
-                disabled={isLoading}
-              >
-                Didn't receive the code? Resend
-              </button>
-            </div>
-          )}
-        </form>
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl mt-6"
+              disabled={isButtonDisabled()}
+            >
+              {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+              {getButtonText()}
+            </Button>
+          </form>
+        )}
 
         {/* Toggle mode (signin/signup only) */}
         {['signin', 'signup'].includes(mode) && (
