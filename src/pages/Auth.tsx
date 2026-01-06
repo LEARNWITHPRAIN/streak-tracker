@@ -4,13 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().trim().email('Please enter a valid email address').max(255);
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
-type AuthMode = 'signin' | 'signup' | 'magiclink-sent' | 'forgot' | 'reset';
+type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -23,7 +23,7 @@ const Auth = () => {
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
-  const { signIn, sendMagicLink, signInWithGoogle, resetPassword, updatePassword, user, loading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword, user, loading } = useAuth();
   const { toast } = useToast();
 
   // Check URL for reset mode
@@ -64,16 +64,19 @@ const Auth = () => {
       return;
     }
 
-    // Send magic link for email verification
-    const { error: magicLinkError } = await sendMagicLink(email);
-    if (magicLinkError) {
-      if (magicLinkError.message.includes('rate limit') || magicLinkError.message.includes('security purposes')) {
-        setError('Please wait before requesting another link.');
+    const { error: signUpError } = await signUp(email, password);
+    if (signUpError) {
+      if (signUpError.message.includes('already registered')) {
+        setError('This email is already registered. Please sign in.');
       } else {
-        setError(magicLinkError.message);
+        setError(signUpError.message);
       }
     } else {
-      setMode('magiclink-sent');
+      toast({
+        title: 'Account created!',
+        description: 'Welcome to Yodha Mode!',
+      });
+      navigate('/dashboard');
     }
   };
 
@@ -178,9 +181,7 @@ const Auth = () => {
   };
 
   const handleBack = () => {
-    if (mode === 'magiclink-sent') {
-      setMode('signup');
-    } else if (mode === 'forgot') {
+    if (mode === 'forgot') {
       setMode('signin');
     } else {
       navigate('/');
@@ -194,26 +195,6 @@ const Auth = () => {
     setConfirmPassword('');
   };
 
-  const handleResendLink = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    const { error } = await sendMagicLink(email);
-    setIsLoading(false);
-    
-    if (error) {
-      if (error.message.includes('rate limit') || error.message.includes('security purposes')) {
-        setError('Please wait before requesting another link.');
-      } else {
-        setError(error.message);
-      }
-    } else {
-      toast({
-        title: 'Link resent!',
-        description: 'Check your email for the new sign-in link.',
-      });
-    }
-  };
 
   if (loading) {
     return (
@@ -229,8 +210,6 @@ const Auth = () => {
         return { title: 'Welcome Back', subtitle: 'Sign in to continue your journey', icon: Mail };
       case 'signup':
         return { title: 'Create Account', subtitle: 'Join Yodha Mode and start your journey', icon: Mail };
-      case 'magiclink-sent':
-        return { title: 'Check Your Email', subtitle: `We sent a sign-in link to ${email}`, icon: CheckCircle };
       case 'forgot':
         return { title: 'Forgot Password', subtitle: 'Enter your email to receive a reset link', icon: Lock };
       case 'reset':
@@ -244,14 +223,14 @@ const Auth = () => {
     if (isLoading) {
       switch (mode) {
         case 'signin': return 'Signing in...';
-        case 'signup': return 'Sending link...';
+        case 'signup': return 'Creating account...';
         case 'forgot': return 'Sending...';
         case 'reset': return 'Updating...';
       }
     }
     switch (mode) {
       case 'signin': return 'Sign In';
-      case 'signup': return 'Send Magic Link';
+      case 'signup': return 'Create Account';
       case 'forgot': return 'Send Reset Link';
       case 'reset': return 'Update Password';
     }
@@ -295,40 +274,6 @@ const Auth = () => {
           <p className="text-muted-foreground">{subtitle}</p>
         </div>
 
-        {/* Magic Link Sent View */}
-        {mode === 'magiclink-sent' && (
-          <div className="space-y-6 text-center">
-            <p className="text-muted-foreground">
-              Click the link in your email to complete sign up. The link will sign you in automatically.
-            </p>
-            
-            <div className="space-y-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleResendLink}
-                disabled={isLoading}
-                className="w-full h-14 text-lg font-medium rounded-xl border-muted-foreground/20"
-              >
-                {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-                Resend Link
-              </Button>
-              
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setMode('signup')}
-                className="w-full text-muted-foreground"
-              >
-                Use a different email
-              </Button>
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive font-medium">{error}</p>
-            )}
-          </div>
-        )}
 
         {/* Google Sign-In Button (signin and signup modes only) */}
         {['signin', 'signup'].includes(mode) && (
@@ -373,8 +318,7 @@ const Auth = () => {
         )}
 
         {/* Form */}
-        {mode !== 'magiclink-sent' && (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email (signin, signup, forgot) */}
             {['signin', 'signup', 'forgot'].includes(mode) && (
               <div className="space-y-2">
@@ -478,7 +422,6 @@ const Auth = () => {
               {getButtonText()}
             </Button>
           </form>
-        )}
 
         {/* Toggle mode (signin/signup only) */}
         {['signin', 'signup'].includes(mode) && (
