@@ -10,6 +10,29 @@ import { z } from 'zod';
 const emailSchema = z.string().trim().email('Please enter a valid email address').max(255);
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
+type PasswordStrength = 'weak' | 'medium' | 'strong';
+
+const getPasswordStrength = (password: string): { strength: PasswordStrength; score: number; feedback: string } => {
+  if (!password) return { strength: 'weak', score: 0, feedback: '' };
+  
+  let score = 0;
+  
+  // Length checks
+  if (password.length >= 6) score += 1;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  
+  // Character variety checks
+  if (/[a-z]/.test(password)) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 1;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+  
+  if (score <= 2) return { strength: 'weak', score: 1, feedback: 'Add numbers and special characters' };
+  if (score <= 4) return { strength: 'medium', score: 2, feedback: 'Add uppercase and special characters' };
+  return { strength: 'strong', score: 3, feedback: 'Strong password!' };
+};
+
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
 
 const Auth = () => {
@@ -367,6 +390,37 @@ const Auth = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                
+                {/* Password Strength Indicator */}
+                {['signup', 'reset'].includes(mode) && password && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex gap-1">
+                      {[1, 2, 3].map((level) => {
+                        const { score, strength } = getPasswordStrength(password);
+                        const isActive = level <= score;
+                        const colorClass = 
+                          strength === 'weak' ? 'bg-destructive' :
+                          strength === 'medium' ? 'bg-yellow-500' :
+                          'bg-green-500';
+                        return (
+                          <div
+                            key={level}
+                            className={`h-1 flex-1 rounded-full transition-all ${
+                              isActive ? colorClass : 'bg-muted-foreground/20'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <p className={`text-xs ${
+                      getPasswordStrength(password).strength === 'weak' ? 'text-destructive' :
+                      getPasswordStrength(password).strength === 'medium' ? 'text-yellow-500' :
+                      'text-green-500'
+                    }`}>
+                      {getPasswordStrength(password).feedback}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
