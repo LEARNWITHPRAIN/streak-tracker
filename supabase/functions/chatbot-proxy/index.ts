@@ -13,56 +13,59 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    console.log('Auth header present:', !!authHeader);
     
-    if (!authHeader) {
-      console.error('No Authorization header provided');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('Missing or invalid authorization header');
       return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
+        JSON.stringify({ error: 'Authentication failed' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify authentication
+    // Create Supabase client and verify JWT using getClaims
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
     
-    if (authError) {
-      console.error('Auth error details:', authError.message, authError.status);
+    if (claimsError || !claimsData?.claims) {
+      console.error('JWT validation failed:', claimsError?.message);
       return new Response(
-        JSON.stringify({ error: 'Authentication failed', details: authError.message }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!user) {
-      console.error('No user found with provided token');
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
+        JSON.stringify({ error: 'Authentication failed' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', user.id, user.email);
+    const userId = claimsData.claims.sub;
+    const userEmail = claimsData.claims.email;
+    
+    if (!userId) {
+      console.error('No user ID in JWT claims');
+      return new Response(
+        JSON.stringify({ error: 'Authentication failed' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', userId);
 
     const webhookUrl = Deno.env.get('CHATBOT_WEBHOOK_URL');
     
     if (!webhookUrl) {
-      console.error('CHATBOT_WEBHOOK_URL is not configured');
+      console.error('Webhook URL not configured');
       return new Response(
-        JSON.stringify({ error: 'Webhook not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Service unavailable' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const { message, messages } = await req.json();
 
-    console.log('Proxying request to webhook:', { userId: user.id, messageLength: message?.length });
+    console.log('Proxying request for user:', userId);
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -70,27 +73,28 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
       },
-      body: JSON.stringify({ message, messages, userId: user.id }),
+      body: JSON.stringify({ message, messages, userId }),
     });
 
     if (!response.ok) {
-      console.error('Webhook error:', response.status, await response.text());
+      const errorText = await response.text();
+      console.error('Upstream request failed:', response.status, errorText);
       return new Response(
-        JSON.stringify({ error: 'Webhook request failed' }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Request failed' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const data = await response.json();
-    console.log('Webhook response received for user:', user.id);
+    console.log('Request completed for user:', userId);
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Chatbot proxy error:', error);
+    console.error('Internal error:', error instanceof Error ? error.message : 'Unknown error');
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
