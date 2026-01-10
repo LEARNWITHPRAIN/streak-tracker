@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -44,15 +45,24 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword, user, loading } = useAuth();
   const { toast } = useToast();
 
-  // Check URL for reset mode
+  // Check URL for reset mode and referral code
   useEffect(() => {
     if (searchParams.get('mode') === 'reset') {
       setMode('reset');
+    }
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      // Auto-switch to signup if coming from referral
+      if (!searchParams.get('mode')) {
+        setMode('signup');
+      }
     }
   }, [searchParams]);
 
@@ -95,9 +105,36 @@ const Auth = () => {
         setError(signUpError.message);
       }
     } else {
+      // If there's a referral code, link the new user to the referrer
+      if (referralCode) {
+        try {
+          // Get the referrer's profile ID
+          const { data: referrerProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('referral_code', referralCode)
+            .maybeSingle();
+
+          if (referrerProfile) {
+            // Get current user's session
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              // Update the new user's profile with the referrer
+              await supabase
+                .from('profiles')
+                .update({ referred_by: referrerProfile.id })
+                .eq('user_id', session.user.id);
+            }
+          }
+        } catch (error) {
+          console.error('Error linking referral:', error);
+          // Don't block signup if referral linking fails
+        }
+      }
+
       toast({
         title: 'Account created!',
-        description: 'Welcome to Yodha Mode!',
+        description: referralCode ? 'Welcome to the Yodha Army!' : 'Welcome to Yodha Mode!',
       });
       navigate('/dashboard');
     }
@@ -106,6 +143,11 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Store referral code in localStorage for Google OAuth flow
+    if (referralCode) {
+      localStorage.setItem('pending_referral_code', referralCode);
+    }
     
     const { error: googleError } = await signInWithGoogle();
     

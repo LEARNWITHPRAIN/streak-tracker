@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid, User, Users } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useMusicContext } from '@/contexts/MusicContext';
+import { supabase } from '@/integrations/supabase/client';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
@@ -16,9 +17,9 @@ import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
 import { Chatbot } from '@/components/Chatbot';
+import { MyArmyModal } from '@/components/MyArmyModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
@@ -27,6 +28,7 @@ const Dashboard = () => {
   const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
+  const [showArmyModal, setShowArmyModal] = useState(false);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
@@ -95,6 +97,49 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
+  // Handle pending referral code from OAuth flow
+  useEffect(() => {
+    const handlePendingReferral = async () => {
+      if (!user) return;
+      
+      const pendingRef = localStorage.getItem('pending_referral_code');
+      if (!pendingRef) return;
+      
+      // Remove the pending code immediately to prevent duplicate processing
+      localStorage.removeItem('pending_referral_code');
+      
+      try {
+        // Get the referrer's profile ID
+        const { data: referrerProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('referral_code', pendingRef)
+          .maybeSingle();
+
+        if (referrerProfile) {
+          // Check if this user already has a referrer
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('referred_by')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          // Only update if they don't already have a referrer
+          if (currentProfile && !currentProfile.referred_by) {
+            await supabase
+              .from('profiles')
+              .update({ referred_by: referrerProfile.id })
+              .eq('user_id', user.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error linking referral:', error);
+      }
+    };
+
+    handlePendingReferral();
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       loadCalendarHistory();
@@ -162,6 +207,15 @@ const Dashboard = () => {
                   <span className="text-sm font-bold text-orange-500">{streak}</span>
                 </div>
               )}
+              
+              {/* My Army Button */}
+              <button
+                onClick={() => setShowArmyModal(true)}
+                className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                title="My Army"
+              >
+                <Users className="w-4 h-4 text-primary" />
+              </button>
               
               <button
                 onClick={() => navigate('/profile')}
@@ -339,6 +393,9 @@ const Dashboard = () => {
 
       {/* Mini Player - hidden when on music tab */}
       <MiniPlayer hidden={activeTab === 'music'} />
+
+      {/* My Army Modal */}
+      <MyArmyModal open={showArmyModal} onOpenChange={setShowArmyModal} />
 
       {/* Chatbot */}
       <Chatbot />
