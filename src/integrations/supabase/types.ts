@@ -16,44 +16,27 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
-          army_size: number
           created_at: string
           display_name: string | null
           id: string
-          referral_code: string | null
-          referred_by: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          army_size?: number
           created_at?: string
           display_name?: string | null
           id?: string
-          referral_code?: string | null
-          referred_by?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          army_size?: number
           created_at?: string
           display_name?: string | null
           id?: string
-          referral_code?: string | null
-          referred_by?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_referred_by_fkey"
-            columns: ["referred_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_workouts: {
         Row: {
