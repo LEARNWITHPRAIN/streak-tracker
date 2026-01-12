@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import yodhaLogo from '@/assets/yodha-logo.jpg';
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -25,8 +26,8 @@ const Welcome = () => {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       <div className="text-center space-y-8 max-w-md">
         {/* Logo/Icon */}
-        <div className="w-20 h-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-          <span className="text-4xl">💪</span>
+        <div className="w-28 h-28 mx-auto rounded-2xl overflow-hidden shadow-lg shadow-primary/30 ring-2 ring-primary/50">
+          <img src={yodhaLogo} alt="Yodha Logo" className="w-full h-full object-cover" />
         </div>
 
         {/* Headline */}
