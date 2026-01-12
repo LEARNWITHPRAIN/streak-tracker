@@ -3,6 +3,7 @@ import { Utensils, Plus, Trash2, Apple, Camera, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProgressCircle } from '@/components/ProgressCircle';
+import { MacroCircle } from '@/components/MacroCircle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,11 +26,23 @@ interface MealLog {
   created_at: string;
 }
 
+interface NutritionGoals {
+  calorie_goal: number;
+  protein_goal: number;
+  carbs_goal: number;
+  fats_goal: number;
+}
+
 export const DietTracker: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [meals, setMeals] = useState<MealLog[]>([]);
-  const [calorieGoal, setCalorieGoal] = useState(2500);
+  const [goals, setGoals] = useState<NutritionGoals>({
+    calorie_goal: 2500,
+    protein_goal: 150,
+    carbs_goal: 250,
+    fats_goal: 65,
+  });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mealName, setMealName] = useState('');
@@ -67,34 +80,39 @@ export const DietTracker: React.FC = () => {
     }
   }, [user, today]);
 
-  const fetchCalorieGoal = useCallback(async () => {
+  const fetchGoals = useCallback(async () => {
     if (!user) return;
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('calorie_goal')
+      .select('calorie_goal, protein_goal, carbs_goal, fats_goal')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!error && data?.calorie_goal) {
-      setCalorieGoal(data.calorie_goal);
+    if (!error && data) {
+      setGoals({
+        calorie_goal: data.calorie_goal || 2500,
+        protein_goal: data.protein_goal || 150,
+        carbs_goal: data.carbs_goal || 250,
+        fats_goal: data.fats_goal || 65,
+      });
     }
   }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchMeals(), fetchCalorieGoal()]);
+      await Promise.all([fetchMeals(), fetchGoals()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchMeals, fetchCalorieGoal]);
+  }, [fetchMeals, fetchGoals]);
 
   const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
   const totalProtein = meals.reduce((sum, meal) => sum + meal.protein, 0);
   const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
   const totalFats = meals.reduce((sum, meal) => sum + meal.fats, 0);
-  const progressPercentage = Math.min((totalCalories / calorieGoal) * 100, 100);
+  const progressPercentage = Math.min((totalCalories / goals.calorie_goal) * 100, 100);
 
   const resetForm = () => {
     setMealName('');
@@ -266,38 +284,45 @@ export const DietTracker: React.FC = () => {
         </div>
       </div>
 
-      {/* Calorie Progress Circle */}
+      {/* Progress Section */}
       <div className="glass rounded-2xl p-6">
         <div className="flex flex-col items-center gap-4">
-          <ProgressCircle percentage={progressPercentage} size={140} strokeWidth={10}>
-            <Apple className="w-5 h-5 text-primary mb-1" />
-            <span className="text-2xl font-bold">{totalCalories}</span>
-            <span className="text-[10px] text-muted-foreground">of {calorieGoal} kcal</span>
+          {/* Main Calorie Circle */}
+          <ProgressCircle percentage={progressPercentage} size={120} strokeWidth={10}>
+            <Apple className="w-4 h-4 text-primary mb-0.5" />
+            <span className="text-xl font-bold">{totalCalories}</span>
+            <span className="text-[9px] text-muted-foreground">/{goals.calorie_goal} kcal</span>
           </ProgressCircle>
           
           <div className="text-center">
-            <p className="text-base font-semibold text-primary">Daily Calories</p>
+            <p className="text-sm font-semibold text-primary">Daily Calories</p>
             <p className="text-xs text-muted-foreground">
-              {calorieGoal - totalCalories > 0 
-                ? `${calorieGoal - totalCalories} kcal remaining` 
-                : 'Goal reached!'}
+              {goals.calorie_goal - totalCalories > 0 
+                ? `${goals.calorie_goal - totalCalories} kcal remaining` 
+                : 'Goal reached! 🎉'}
             </p>
           </div>
 
-          {/* Macros Summary */}
-          <div className="flex gap-4 w-full justify-center">
-            <div className="text-center px-4 py-2 rounded-xl bg-muted/50">
-              <p className="text-lg font-bold text-foreground">{totalProtein}g</p>
-              <p className="text-xs text-muted-foreground">Protein</p>
-            </div>
-            <div className="text-center px-4 py-2 rounded-xl bg-muted/50">
-              <p className="text-lg font-bold text-foreground">{totalCarbs}g</p>
-              <p className="text-xs text-muted-foreground">Carbs</p>
-            </div>
-            <div className="text-center px-4 py-2 rounded-xl bg-muted/50">
-              <p className="text-lg font-bold text-foreground">{totalFats}g</p>
-              <p className="text-xs text-muted-foreground">Fats</p>
-            </div>
+          {/* Macro Circles */}
+          <div className="flex justify-center gap-6 pt-2">
+            <MacroCircle
+              label="Protein"
+              current={totalProtein}
+              goal={goals.protein_goal}
+              color="hsl(142, 76%, 36%)"
+            />
+            <MacroCircle
+              label="Carbs"
+              current={totalCarbs}
+              goal={goals.carbs_goal}
+              color="hsl(38, 92%, 50%)"
+            />
+            <MacroCircle
+              label="Fats"
+              current={totalFats}
+              goal={goals.fats_goal}
+              color="hsl(346, 77%, 49%)"
+            />
           </div>
         </div>
       </div>
@@ -315,7 +340,7 @@ export const DietTracker: React.FC = () => {
             <p className="text-sm text-muted-foreground/70">Start logging your nutrition</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
             {meals.map((meal) => (
               <div
                 key={meal.id}

@@ -60,9 +60,12 @@ export type Database = {
         Row: {
           army_size: number
           calorie_goal: number
+          carbs_goal: number
           created_at: string
           display_name: string | null
+          fats_goal: number
           id: string
+          protein_goal: number
           referral_code: string | null
           referred_by: string | null
           updated_at: string
@@ -71,9 +74,12 @@ export type Database = {
         Insert: {
           army_size?: number
           calorie_goal?: number
+          carbs_goal?: number
           created_at?: string
           display_name?: string | null
+          fats_goal?: number
           id?: string
+          protein_goal?: number
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
@@ -82,9 +88,12 @@ export type Database = {
         Update: {
           army_size?: number
           calorie_goal?: number
+          carbs_goal?: number
           created_at?: string
           display_name?: string | null
+          fats_goal?: number
           id?: string
+          protein_goal?: number
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
