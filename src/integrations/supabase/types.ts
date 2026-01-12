@@ -17,28 +17,40 @@ export type Database = {
       meal_logs: {
         Row: {
           calories: number
+          carbs: number | null
           created_at: string
           date: string
+          fats: number | null
           id: string
+          image_url: string | null
           meal_name: string
+          protein: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           calories: number
+          carbs?: number | null
           created_at?: string
           date?: string
+          fats?: number | null
           id?: string
+          image_url?: string | null
           meal_name: string
+          protein?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           calories?: number
+          carbs?: number | null
           created_at?: string
           date?: string
+          fats?: number | null
           id?: string
+          image_url?: string | null
           meal_name?: string
+          protein?: number | null
           updated_at?: string
           user_id?: string
         }
