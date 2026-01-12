@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Utensils, Plus, Trash2, Apple, Camera, Loader2 } from 'lucide-react';
+import { Utensils, Plus, Trash2, Apple, Camera, Loader2, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProgressCircle } from '@/components/ProgressCircle';
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -52,6 +53,12 @@ export const DietTracker: React.FC = () => {
   const [mealFats, setMealFats] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  
+  // Goal editing state
+  const [editGoalDialog, setEditGoalDialog] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<'calories' | 'protein' | 'carbs' | 'fats' | null>(null);
+  const [editGoalValue, setEditGoalValue] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -120,6 +127,77 @@ export const DietTracker: React.FC = () => {
     setMealProtein('');
     setMealCarbs('');
     setMealFats('');
+  };
+
+  const openEditGoal = (type: 'calories' | 'protein' | 'carbs' | 'fats') => {
+    setEditingGoal(type);
+    const goalMap = {
+      calories: goals.calorie_goal,
+      protein: goals.protein_goal,
+      carbs: goals.carbs_goal,
+      fats: goals.fats_goal,
+    };
+    setEditGoalValue(String(goalMap[type]));
+    setEditGoalDialog(true);
+  };
+
+  const handleSaveGoal = async () => {
+    if (!user || !editingGoal) return;
+
+    const value = parseInt(editGoalValue, 10);
+    if (isNaN(value) || value <= 0) {
+      toast({
+        title: 'Invalid value',
+        description: 'Please enter a valid number',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSavingGoal(true);
+
+    const columnMap = {
+      calories: 'calorie_goal',
+      protein: 'protein_goal',
+      carbs: 'carbs_goal',
+      fats: 'fats_goal',
+    } as const;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ [columnMap[editingGoal]]: value })
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update goal',
+        variant: 'destructive',
+      });
+    } else {
+      setGoals(prev => ({
+        ...prev,
+        [columnMap[editingGoal]]: value,
+      }));
+      toast({
+        title: 'Goal Updated',
+        description: `${editingGoal.charAt(0).toUpperCase() + editingGoal.slice(1)} goal set to ${value}${editingGoal === 'calories' ? ' kcal' : 'g'}`,
+      });
+      setEditGoalDialog(false);
+    }
+
+    setSavingGoal(false);
+  };
+
+  const getGoalLabel = () => {
+    if (!editingGoal) return '';
+    const labels = {
+      calories: 'Daily Calorie Goal (kcal)',
+      protein: 'Daily Protein Goal (g)',
+      carbs: 'Daily Carbs Goal (g)',
+      fats: 'Daily Fats Goal (g)',
+    };
+    return labels[editingGoal];
   };
 
   const handleAddMeal = async () => {
@@ -288,11 +366,20 @@ export const DietTracker: React.FC = () => {
       <div className="glass rounded-2xl p-6">
         <div className="flex flex-col items-center gap-4">
           {/* Main Calorie Circle */}
-          <ProgressCircle percentage={progressPercentage} size={120} strokeWidth={10}>
-            <Apple className="w-4 h-4 text-primary mb-0.5" />
-            <span className="text-xl font-bold">{totalCalories}</span>
-            <span className="text-[9px] text-muted-foreground">/{goals.calorie_goal} kcal</span>
-          </ProgressCircle>
+          <div className="relative group">
+            <ProgressCircle percentage={progressPercentage} size={120} strokeWidth={10}>
+              <Apple className="w-4 h-4 text-primary mb-0.5" />
+              <span className="text-xl font-bold">{totalCalories}</span>
+              <span className="text-[9px] text-muted-foreground">/{goals.calorie_goal} kcal</span>
+            </ProgressCircle>
+            <button
+              onClick={() => openEditGoal('calories')}
+              className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-primary/20 hover:bg-primary/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              title="Edit calorie goal"
+            >
+              <Pencil className="w-3 h-3 text-primary" />
+            </button>
+          </div>
           
           <div className="text-center">
             <p className="text-sm font-semibold text-primary">Daily Calories</p>
@@ -310,22 +397,61 @@ export const DietTracker: React.FC = () => {
               current={totalProtein}
               goal={goals.protein_goal}
               color="hsl(142, 76%, 36%)"
+              onEdit={() => openEditGoal('protein')}
             />
             <MacroCircle
               label="Carbs"
               current={totalCarbs}
               goal={goals.carbs_goal}
               color="hsl(38, 92%, 50%)"
+              onEdit={() => openEditGoal('carbs')}
             />
             <MacroCircle
               label="Fats"
               current={totalFats}
               goal={goals.fats_goal}
               color="hsl(346, 77%, 49%)"
+              onEdit={() => openEditGoal('fats')}
             />
           </div>
         </div>
       </div>
+
+      {/* Edit Goal Dialog */}
+      <Dialog open={editGoalDialog} onOpenChange={setEditGoalDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-primary">
+              Edit Daily Target
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="goal-value">{getGoalLabel()}</Label>
+              <Input
+                id="goal-value"
+                type="number"
+                value={editGoalValue}
+                onChange={(e) => setEditGoalValue(e.target.value)}
+                placeholder="Enter target"
+              />
+            </div>
+            <div className="flex gap-2">
+              <DialogClose asChild>
+                <Button variant="outline" className="flex-1">Cancel</Button>
+              </DialogClose>
+              <Button
+                onClick={handleSaveGoal}
+                disabled={savingGoal || !editGoalValue}
+                className="flex-1"
+                variant="glow"
+              >
+                {savingGoal ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Today's Meals */}
       <div className="space-y-3">
