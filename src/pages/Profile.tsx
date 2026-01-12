@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save } from 'lucide-react';
+import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, Apple } from 'lucide-react';
 import { z } from 'zod';
 
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -16,10 +16,12 @@ const Profile = () => {
   const { toast } = useToast();
 
   const [displayName, setDisplayName] = useState('');
+  const [calorieGoal, setCalorieGoal] = useState('2500');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isSavingCalories, setIsSavingCalories] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -36,12 +38,13 @@ const Profile = () => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name')
+        .select('display_name, calorie_goal')
         .eq('user_id', user.id)
         .single();
 
       if (data) {
         setDisplayName(data.display_name || '');
+        setCalorieGoal(String(data.calorie_goal || 2500));
       }
       
       // If no profile exists, create one
@@ -54,6 +57,42 @@ const Profile = () => {
 
     fetchProfile();
   }, [user]);
+
+  const handleSaveCalorieGoal = async () => {
+    if (!user) return;
+    
+    const goal = parseInt(calorieGoal, 10);
+    if (isNaN(goal) || goal < 500 || goal > 10000) {
+      toast({
+        title: 'Invalid goal',
+        description: 'Please enter a value between 500 and 10,000 kcal',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsSavingCalories(true);
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ calorie_goal: goal })
+      .eq('user_id', user.id);
+
+    setIsSavingCalories(false);
+
+    if (updateError) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update calorie goal',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Goal updated!',
+        description: `Your daily calorie goal is now ${goal} kcal`,
+      });
+    }
+  };
 
   const handleSaveDisplayName = async () => {
     if (!user) return;
@@ -184,7 +223,48 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Change Password Section */}
+        {/* Calorie Goal Section */}
+        <div className="glass rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Apple className="w-5 h-5 text-primary" />
+            Daily Calorie Goal
+          </h2>
+          
+          <div className="space-y-4">
+            <Input
+              type="number"
+              placeholder="Enter your daily calorie goal"
+              value={calorieGoal}
+              onChange={(e) => setCalorieGoal(e.target.value)}
+              className="h-14 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
+              disabled={isSavingCalories}
+              min={500}
+              max={10000}
+            />
+            <p className="text-xs text-muted-foreground">
+              Set your daily calorie target (500 - 10,000 kcal)
+            </p>
+            
+            <Button
+              onClick={handleSaveCalorieGoal}
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold"
+              disabled={isSavingCalories}
+            >
+              {isSavingCalories ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5 mr-2" />
+                  Save Goal
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
         <div className="glass rounded-2xl p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" />
