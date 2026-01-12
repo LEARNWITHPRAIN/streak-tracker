@@ -14,9 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      meal_logs: {
+        Row: {
+          calories: number
+          created_at: string
+          date: string
+          id: string
+          meal_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calories: number
+          created_at?: string
+          date?: string
+          id?: string
+          meal_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calories?: number
+          created_at?: string
+          date?: string
+          id?: string
+          meal_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           army_size: number
+          calorie_goal: number
           created_at: string
           display_name: string | null
           id: string
@@ -27,6 +58,7 @@ export type Database = {
         }
         Insert: {
           army_size?: number
+          calorie_goal?: number
           created_at?: string
           display_name?: string | null
           id?: string
@@ -37,6 +69,7 @@ export type Database = {
         }
         Update: {
           army_size?: number
+          calorie_goal?: number
           created_at?: string
           display_name?: string | null
           id?: string
