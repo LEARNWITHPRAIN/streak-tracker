@@ -17,11 +17,14 @@ const Profile = () => {
 
   const [displayName, setDisplayName] = useState('');
   const [calorieGoal, setCalorieGoal] = useState('2500');
+  const [proteinGoal, setProteinGoal] = useState('150');
+  const [carbsGoal, setCarbsGoal] = useState('250');
+  const [fatsGoal, setFatsGoal] = useState('65');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
-  const [isSavingCalories, setIsSavingCalories] = useState(false);
+  const [isSavingNutrition, setIsSavingNutrition] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -38,13 +41,16 @@ const Profile = () => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, calorie_goal')
+        .select('display_name, calorie_goal, protein_goal, carbs_goal, fats_goal')
         .eq('user_id', user.id)
         .single();
 
       if (data) {
         setDisplayName(data.display_name || '');
         setCalorieGoal(String(data.calorie_goal || 2500));
+        setProteinGoal(String(data.protein_goal || 150));
+        setCarbsGoal(String(data.carbs_goal || 250));
+        setFatsGoal(String(data.fats_goal || 65));
       }
       
       // If no profile exists, create one
@@ -58,38 +64,56 @@ const Profile = () => {
     fetchProfile();
   }, [user]);
 
-  const handleSaveCalorieGoal = async () => {
+  const handleSaveNutritionGoals = async () => {
     if (!user) return;
     
-    const goal = parseInt(calorieGoal, 10);
-    if (isNaN(goal) || goal < 500 || goal > 10000) {
+    const calGoal = parseInt(calorieGoal, 10);
+    const protGoal = parseInt(proteinGoal, 10);
+    const carbGoal = parseInt(carbsGoal, 10);
+    const fatGoal = parseInt(fatsGoal, 10);
+
+    if (isNaN(calGoal) || calGoal < 500 || calGoal > 10000) {
       toast({
-        title: 'Invalid goal',
+        title: 'Invalid calorie goal',
         description: 'Please enter a value between 500 and 10,000 kcal',
         variant: 'destructive',
       });
       return;
     }
+
+    if (isNaN(protGoal) || protGoal < 0 || protGoal > 500) {
+      toast({
+        title: 'Invalid protein goal',
+        description: 'Please enter a value between 0 and 500g',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    setIsSavingCalories(true);
+    setIsSavingNutrition(true);
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ calorie_goal: goal })
+      .update({ 
+        calorie_goal: calGoal,
+        protein_goal: protGoal,
+        carbs_goal: carbGoal,
+        fats_goal: fatGoal,
+      })
       .eq('user_id', user.id);
 
-    setIsSavingCalories(false);
+    setIsSavingNutrition(false);
 
     if (updateError) {
       toast({
         title: 'Error',
-        description: 'Failed to update calorie goal',
+        description: 'Failed to update nutrition goals',
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Goal updated!',
-        description: `Your daily calorie goal is now ${goal} kcal`,
+        title: 'Goals updated!',
+        description: 'Your nutrition goals have been saved',
       });
     }
   };
@@ -223,34 +247,70 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Calorie Goal Section */}
+        {/* Nutrition Goals Section */}
         <div className="glass rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Apple className="w-5 h-5 text-primary" />
-            Daily Calorie Goal
+            Daily Nutrition Goals
           </h2>
           
           <div className="space-y-4">
-            <Input
-              type="number"
-              placeholder="Enter your daily calorie goal"
-              value={calorieGoal}
-              onChange={(e) => setCalorieGoal(e.target.value)}
-              className="h-14 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground placeholder:text-muted-foreground/50"
-              disabled={isSavingCalories}
-              min={500}
-              max={10000}
-            />
-            <p className="text-xs text-muted-foreground">
-              Set your daily calorie target (500 - 10,000 kcal)
-            </p>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Calories (kcal)</label>
+              <Input
+                type="number"
+                placeholder="2500"
+                value={calorieGoal}
+                onChange={(e) => setCalorieGoal(e.target.value)}
+                className="h-12 text-lg bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground"
+                disabled={isSavingNutrition}
+                min={500}
+                max={10000}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Protein (g)</label>
+                <Input
+                  type="number"
+                  placeholder="150"
+                  value={proteinGoal}
+                  onChange={(e) => setProteinGoal(e.target.value)}
+                  className="h-12 bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground"
+                  disabled={isSavingNutrition}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Carbs (g)</label>
+                <Input
+                  type="number"
+                  placeholder="250"
+                  value={carbsGoal}
+                  onChange={(e) => setCarbsGoal(e.target.value)}
+                  className="h-12 bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground"
+                  disabled={isSavingNutrition}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Fats (g)</label>
+                <Input
+                  type="number"
+                  placeholder="65"
+                  value={fatsGoal}
+                  onChange={(e) => setFatsGoal(e.target.value)}
+                  className="h-12 bg-muted/50 border-muted-foreground/20 rounded-xl text-foreground"
+                  disabled={isSavingNutrition}
+                />
+              </div>
+            </div>
             
             <Button
-              onClick={handleSaveCalorieGoal}
+              onClick={handleSaveNutritionGoals}
               className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold"
-              disabled={isSavingCalories}
+              disabled={isSavingNutrition}
             >
-              {isSavingCalories ? (
+              {isSavingNutrition ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   Saving...
@@ -258,7 +318,7 @@ const Profile = () => {
               ) : (
                 <>
                   <Save className="w-5 h-5 mr-2" />
-                  Save Goal
+                  Save Goals
                 </>
               )}
             </Button>
