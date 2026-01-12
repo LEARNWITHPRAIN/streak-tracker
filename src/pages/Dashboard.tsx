@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useMusicContext } from '@/contexts/MusicContext';
+import { supabase } from '@/integrations/supabase/client';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
@@ -30,6 +31,7 @@ const Dashboard = () => {
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   // Calculate streak from calendar history
   const calculateStreak = useCallback(() => {
@@ -98,6 +100,16 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       loadCalendarHistory();
+      // Fetch display name from profile
+      const fetchDisplayName = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .single();
+        setDisplayName(data?.display_name || null);
+      };
+      fetchDisplayName();
     }
   }, [user, loadCalendarHistory]);
 
@@ -150,7 +162,9 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-primary text-glow">Yodha Mode</h1>
-                <p className="text-[10px] text-muted-foreground">Daily Progress Tracker</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {displayName ? `Welcome back, ${displayName}` : 'Welcome Back Yodha'}
+                </p>
               </div>
             </div>
             
