@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
+import welcomeBgVideo from '@/assets/welcome-bg.mp4';
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -23,8 +24,23 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
-      <div className="text-center space-y-8 max-w-md">
+    <div className="min-h-screen relative flex flex-col items-center justify-center px-6 overflow-hidden">
+      {/* Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0"
+      >
+        <source src={welcomeBgVideo} type="video/mp4" />
+      </video>
+      
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-black/60 z-10" />
+      
+      {/* Content */}
+      <div className="relative z-20 text-center space-y-8 max-w-md">
         {/* Logo/Icon */}
         <div className="w-28 h-28 mx-auto rounded-2xl overflow-hidden shadow-lg shadow-primary/30 ring-2 ring-primary/50">
           <img src={yodhaLogo} alt="Yodha Logo" className="w-full h-full object-cover" />
@@ -32,10 +48,10 @@ const Welcome = () => {
 
         {/* Headline */}
         <div className="space-y-3">
-          <h1 className="text-4xl font-bold text-foreground tracking-tight">
+          <h1 className="text-4xl font-bold text-white tracking-tight">
             Yodha Mode
           </h1>
-          <p className="text-xl text-muted-foreground font-medium">
+          <p className="text-xl text-white/80 font-medium">
             Master Your Routine.
           </p>
         </div>
@@ -52,7 +68,7 @@ const Welcome = () => {
           <Button
             onClick={() => navigate('/auth?mode=signup')}
             variant="outline"
-            className="w-full h-12 text-base font-semibold"
+            className="w-full h-12 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20"
             size="lg"
           >
             Create Account
@@ -60,7 +76,7 @@ const Welcome = () => {
         </div>
 
         {/* Footer text */}
-        <p className="text-sm text-muted-foreground pt-4">
+        <p className="text-sm text-white/60 pt-4">
           Sync your progress across all devices
         </p>
       </div>
