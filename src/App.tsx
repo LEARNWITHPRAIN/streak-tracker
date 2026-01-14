@@ -8,6 +8,7 @@ import { MusicProvider } from "@/contexts/MusicContext";
 import { FuelProvider } from "@/contexts/FuelContext";
 import Welcome from "./pages/Welcome";
 import Auth from "./pages/Auth";
+import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Welcome />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

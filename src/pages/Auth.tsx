@@ -68,7 +68,12 @@ const Auth = () => {
       if (signInError.message.includes('Invalid login credentials')) {
         setError('Invalid email or password. Please try again.');
       } else if (signInError.message.includes('Email not confirmed')) {
-        setError('Please verify your email first.');
+        toast({
+          title: 'Email not verified',
+          description: 'Redirecting to verification page...',
+        });
+        navigate('/verify-email');
+        return;
       } else {
         setError(signInError.message);
       }
@@ -96,10 +101,10 @@ const Auth = () => {
       }
     } else {
       toast({
-        title: 'Account created!',
-        description: 'Welcome to Yodha Mode!',
+        title: 'Verification email sent!',
+        description: 'Please check your email to verify your account.',
       });
-      navigate('/dashboard');
+      navigate('/verify-email');
     }
   };
 
