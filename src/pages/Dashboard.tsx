@@ -17,7 +17,7 @@ import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
 import { DietTracker } from '@/components/DietTracker';
-import { Chatbot } from '@/components/Chatbot';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
@@ -366,8 +366,6 @@ const Dashboard = () => {
       {/* Mini Player - hidden when on music tab */}
       <MiniPlayer hidden={activeTab === 'music'} />
 
-      {/* Chatbot */}
-      <Chatbot />
 
       {/* Footer - add padding when mini player is visible */}
       <footer className={`container max-w-2xl mx-auto px-4 py-6 text-center ${currentTrack && activeTab !== 'music' ? 'pb-20' : ''}`}>
