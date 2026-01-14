@@ -95,6 +95,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (!loading && !user) {
       navigate('/');
+    } else if (!loading && user && !user.email_confirmed_at) {
+      // Redirect unverified users to verification page
+      navigate('/verify-email');
     }
   }, [user, loading, navigate]);
 
