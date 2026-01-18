@@ -66,8 +66,10 @@ export type Database = {
           fats_goal: number
           id: string
           protein_goal: number
+          razorpay_payment_id: string | null
           referral_code: string | null
           referred_by: string | null
+          subscription_status: string
           updated_at: string
           user_id: string
         }
@@ -80,8 +82,10 @@ export type Database = {
           fats_goal?: number
           id?: string
           protein_goal?: number
+          razorpay_payment_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          subscription_status?: string
           updated_at?: string
           user_id: string
         }
@@ -94,8 +98,10 @@ export type Database = {
           fats_goal?: number
           id?: string
           protein_goal?: number
+          razorpay_payment_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          subscription_status?: string
           updated_at?: string
           user_id?: string
         }
