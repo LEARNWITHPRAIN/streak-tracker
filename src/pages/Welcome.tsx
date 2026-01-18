@@ -24,7 +24,7 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-center px-6 overflow-hidden">
+    <div className="min-h-screen relative flex flex-col items-center justify-center px-6 overflow-hidden bg-black">
       {/* Video Background */}
       <video
         autoPlay
@@ -36,8 +36,10 @@ const Welcome = () => {
         <source src={welcomeBgVideo} type="video/mp4" />
       </video>
       
-      {/* Dark Overlay */}
+      {/* Dark Overlay with edge blending */}
       <div className="absolute inset-0 bg-black/60 z-10" />
+      <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent z-10" />
+      <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent z-10" />
       
       {/* Content */}
       <div className="relative z-20 text-center space-y-8 max-w-md w-full">
