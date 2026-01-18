@@ -1,82 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
 import welcomeBgVideo from '@/assets/welcome-bg.mp4';
-import { Loader2 } from 'lucide-react';
 
 const Welcome = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
-
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleSignupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const trimmedEmail = email.trim();
-    
-    if (!trimmedEmail) {
-      toast({
-        title: "Error",
-        description: "Please enter your email address",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!validateEmail(trimmedEmail)) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await fetch('https://n8n.techyyyodha.online/webhook/form-signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        mode: 'no-cors',
-        body: JSON.stringify({ email: trimmedEmail }),
-      });
-
-      toast({
-        title: "Thanks for signing up!",
-        description: "We'll keep you updated with the latest news.",
-      });
-      setEmail('');
-    } catch (error) {
-      console.error('Error submitting email:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -119,30 +56,8 @@ const Welcome = () => {
           </p>
         </div>
 
-        {/* Email Signup Form */}
-        <form onSubmit={handleSignupSubmit} className="space-y-3 pt-2">
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 h-12 bg-white/10 border-white/30 text-white placeholder:text-white/50 focus:border-primary"
-              disabled={isSubmitting}
-            />
-            <Button
-              type="submit"
-              className="h-12 px-6"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join'}
-            </Button>
-          </div>
-          <p className="text-xs text-white/50">Get early access & updates</p>
-        </form>
-
         {/* Buttons */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3 pt-4">
           <Button
             onClick={() => navigate('/auth?mode=login')}
             className="w-full h-12 text-base font-semibold"
