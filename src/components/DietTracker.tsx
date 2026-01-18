@@ -64,6 +64,7 @@ export const DietTracker: React.FC = () => {
   // Subscription state
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [dailyScansUsed, setDailyScansUsed] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +111,12 @@ export const DietTracker: React.FC = () => {
       });
       setSubscriptionStatus(data.subscription_status || 'inactive');
     }
-  }, [user]);
+    
+    // Check daily scan usage from localStorage
+    const scanKey = `scans_${today}`;
+    const storedScans = localStorage.getItem(scanKey);
+    setDailyScansUsed(storedScans ? parseInt(storedScans, 10) : 0);
+  }, [user, today]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -299,6 +305,11 @@ export const DietTracker: React.FC = () => {
           setMealProtein(String(data.protein || ''));
           setMealCarbs(String(data.carbs || ''));
           setMealFats(String(data.fats || ''));
+          
+          // Increment scan count for non-subscribed users
+          if (subscriptionStatus !== 'active') {
+            incrementDailyScanCount();
+          }
 
           toast({
             title: 'Food Analyzed!',
@@ -330,12 +341,27 @@ export const DietTracker: React.FC = () => {
     e.target.value = '';
   };
 
+  const FREE_SCANS_PER_DAY = 1;
+  const hasFreeScanAvailable = dailyScansUsed < FREE_SCANS_PER_DAY;
+
   const handleScanMealClick = () => {
-    if (subscriptionStatus !== 'active') {
-      setUpgradeModalOpen(true);
-    } else {
+    if (subscriptionStatus === 'active') {
+      // Subscribed users get unlimited scans
       cameraInputRef.current?.click();
+    } else if (hasFreeScanAvailable) {
+      // Non-subscribed users get 1 free scan per day
+      cameraInputRef.current?.click();
+    } else {
+      // Free scan used, show upgrade modal
+      setUpgradeModalOpen(true);
     }
+  };
+  
+  const incrementDailyScanCount = () => {
+    const scanKey = `scans_${today}`;
+    const newCount = dailyScansUsed + 1;
+    localStorage.setItem(scanKey, String(newCount));
+    setDailyScansUsed(newCount);
   };
 
   const handleSubscriptionSuccess = () => {
@@ -343,6 +369,7 @@ export const DietTracker: React.FC = () => {
   };
 
   const isSubscribed = subscriptionStatus === 'active';
+  const showLockIcon = !isSubscribed && !hasFreeScanAvailable;
 
   if (loading) {
     return (
@@ -539,15 +566,15 @@ export const DietTracker: React.FC = () => {
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               Analyzing...
             </>
-          ) : isSubscribed ? (
+          ) : showLockIcon ? (
             <>
-              <Camera className="w-5 h-5 mr-2" />
+              <Lock className="w-5 h-5 mr-2" />
               Scan Meal
             </>
           ) : (
             <>
-              <Lock className="w-5 h-5 mr-2" />
-              Scan Meal
+              <Camera className="w-5 h-5 mr-2" />
+              Scan Meal {!isSubscribed && `(${FREE_SCANS_PER_DAY - dailyScansUsed} free)`}
             </>
           )}
         </Button>
