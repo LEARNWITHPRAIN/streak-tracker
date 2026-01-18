@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Sparkles, X } from 'lucide-react';
+import { Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -99,15 +99,30 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
         throw new Error('Failed to load Razorpay');
       }
 
+      // Create subscription via edge function
+      const { data, error } = await supabase.functions.invoke('create-razorpay-subscription', {
+        body: {
+          planId: RAZORPAY_PLAN_ID,
+          customerEmail: user.email,
+          customerName: user.user_metadata?.display_name || '',
+        },
+      });
+
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || 'Failed to create subscription');
+      }
+
+      const subscriptionId = data.subscriptionId;
+
       const options: RazorpayOptions = {
         key: RAZORPAY_KEY_ID,
-        subscription_id: RAZORPAY_PLAN_ID,
+        subscription_id: subscriptionId,
         name: 'Yodha Pro',
         description: 'AI Nutrition Command - $1/month',
         handler: async (response: RazorpayResponse) => {
           try {
             // Update user's subscription status in Supabase
-            const { error } = await supabase
+            const { error: updateError } = await supabase
               .from('profiles')
               .update({
                 subscription_status: 'active',
@@ -115,8 +130,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
               })
               .eq('user_id', user.id);
 
-            if (error) {
-              throw error;
+            if (updateError) {
+              throw updateError;
             }
 
             toast({
@@ -155,7 +170,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
       console.error('Razorpay error:', err);
       toast({
         title: 'Error',
-        description: 'Failed to initialize payment. Please try again.',
+        description: err instanceof Error ? err.message : 'Failed to initialize payment. Please try again.',
         variant: 'destructive',
       });
       setLoading(false);

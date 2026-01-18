@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.analyze-food]
 verify_jwt = false
+
+[functions.create-razorpay-subscription]
+verify_jwt = false
