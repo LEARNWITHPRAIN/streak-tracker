@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Utensils, Plus, Trash2, Apple, Camera, Loader2, Pencil } from 'lucide-react';
+import { Utensils, Plus, Trash2, Apple, Camera, Loader2, Pencil, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProgressCircle } from '@/components/ProgressCircle';
@@ -16,6 +16,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 interface MealLog {
   id: string;
@@ -60,6 +61,10 @@ export const DietTracker: React.FC = () => {
   const [editGoalValue, setEditGoalValue] = useState('');
   const [savingGoal, setSavingGoal] = useState(false);
   
+  // Subscription state
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,7 +97,7 @@ export const DietTracker: React.FC = () => {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('calorie_goal, protein_goal, carbs_goal, fats_goal')
+      .select('calorie_goal, protein_goal, carbs_goal, fats_goal, subscription_status')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -103,6 +108,7 @@ export const DietTracker: React.FC = () => {
         carbs_goal: data.carbs_goal || 250,
         fats_goal: data.fats_goal || 65,
       });
+      setSubscriptionStatus(data.subscription_status || 'inactive');
     }
   }, [user]);
 
@@ -324,6 +330,20 @@ export const DietTracker: React.FC = () => {
     e.target.value = '';
   };
 
+  const handleScanMealClick = () => {
+    if (subscriptionStatus !== 'active') {
+      setUpgradeModalOpen(true);
+    } else {
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const handleSubscriptionSuccess = () => {
+    setSubscriptionStatus('active');
+  };
+
+  const isSubscribed = subscriptionStatus === 'active';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -499,10 +519,17 @@ export const DietTracker: React.FC = () => {
         )}
       </div>
 
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        onSuccess={handleSubscriptionSuccess}
+      />
+
       {/* Action Buttons */}
       <div className="flex gap-3">
         <Button 
-          onClick={() => cameraInputRef.current?.click()}
+          onClick={handleScanMealClick}
           className="flex-1 h-14 text-lg font-semibold" 
           variant="glow"
           disabled={analyzing}
@@ -512,9 +539,14 @@ export const DietTracker: React.FC = () => {
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               Analyzing...
             </>
-          ) : (
+          ) : isSubscribed ? (
             <>
               <Camera className="w-5 h-5 mr-2" />
+              Scan Meal
+            </>
+          ) : (
+            <>
+              <Lock className="w-5 h-5 mr-2" />
               Scan Meal
             </>
           )}
