@@ -39,12 +39,15 @@ interface RazorpayOptions {
   };
   modal?: {
     ondismiss?: () => void;
+    escape?: boolean;
+    confirm_close?: boolean;
   };
 }
 
 interface RazorpayInstance {
   open: () => void;
   close: () => void;
+  on: (event: string, callback: (response: { error: { description: string } }) => void) => void;
 }
 
 interface RazorpayResponse {
@@ -165,6 +168,17 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
       };
 
       const razorpay = new window.Razorpay(options);
+      
+      razorpay.on('payment.failed', (response: { error: { description: string } }) => {
+        console.error('Payment failed:', response.error);
+        toast({
+          title: 'Payment Failed',
+          description: response.error.description || 'Payment could not be completed. Please try again.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+      });
+      
       razorpay.open();
     } catch (err) {
       console.error('Razorpay error:', err);
