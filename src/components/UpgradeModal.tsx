@@ -53,9 +53,8 @@ interface RazorpayResponse {
   razorpay_signature: string;
 }
 
-// IMPORTANT: Replace these with your actual Razorpay credentials
-const RAZORPAY_KEY_ID = 'YOUR_RAZORPAY_KEY_ID'; // Replace with your key
-const RAZORPAY_PLAN_ID = 'YOUR_RAZORPAY_PLAN_ID'; // Replace with your plan ID
+const RAZORPAY_KEY_ID = 'rzp_live_S5JRjwdzyEJ8k0';
+const RAZORPAY_PLAN_ID = 'plan_S5JvNVfJj4lsbv';
 
 export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   open,
