@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Utensils, Plus, Trash2, Apple, Camera, Loader2, Pencil, Lock } from 'lucide-react';
+import { Utensils, Plus, Trash2, Apple, Camera, Loader2, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProgressCircle } from '@/components/ProgressCircle';
@@ -16,7 +16,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UpgradeModal } from '@/components/UpgradeModal';
 
 interface MealLog {
   id: string;
@@ -61,11 +60,6 @@ export const DietTracker: React.FC = () => {
   const [editGoalValue, setEditGoalValue] = useState('');
   const [savingGoal, setSavingGoal] = useState(false);
   
-  // Subscription state
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [dailyScansUsed, setDailyScansUsed] = useState(0);
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,7 +92,7 @@ export const DietTracker: React.FC = () => {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('calorie_goal, protein_goal, carbs_goal, fats_goal, subscription_status')
+      .select('calorie_goal, protein_goal, carbs_goal, fats_goal')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -109,14 +103,8 @@ export const DietTracker: React.FC = () => {
         carbs_goal: data.carbs_goal || 250,
         fats_goal: data.fats_goal || 65,
       });
-      setSubscriptionStatus(data.subscription_status || 'inactive');
     }
-    
-    // Check daily scan usage from localStorage
-    const scanKey = `scans_${today}`;
-    const storedScans = localStorage.getItem(scanKey);
-    setDailyScansUsed(storedScans ? parseInt(storedScans, 10) : 0);
-  }, [user, today]);
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -305,11 +293,6 @@ export const DietTracker: React.FC = () => {
           setMealProtein(String(data.protein || ''));
           setMealCarbs(String(data.carbs || ''));
           setMealFats(String(data.fats || ''));
-          
-          // Increment scan count for non-subscribed users
-          if (subscriptionStatus !== 'active') {
-            incrementDailyScanCount();
-          }
 
           toast({
             title: 'Food Analyzed!',
@@ -341,35 +324,9 @@ export const DietTracker: React.FC = () => {
     e.target.value = '';
   };
 
-  const FREE_SCANS_PER_DAY = 1;
-  const hasFreeScanAvailable = dailyScansUsed < FREE_SCANS_PER_DAY;
-
   const handleScanMealClick = () => {
-    if (subscriptionStatus === 'active') {
-      // Subscribed users get unlimited scans
-      cameraInputRef.current?.click();
-    } else if (hasFreeScanAvailable) {
-      // Non-subscribed users get 1 free scan per day
-      cameraInputRef.current?.click();
-    } else {
-      // Free scan used, show upgrade modal
-      setUpgradeModalOpen(true);
-    }
+    cameraInputRef.current?.click();
   };
-  
-  const incrementDailyScanCount = () => {
-    const scanKey = `scans_${today}`;
-    const newCount = dailyScansUsed + 1;
-    localStorage.setItem(scanKey, String(newCount));
-    setDailyScansUsed(newCount);
-  };
-
-  const handleSubscriptionSuccess = () => {
-    setSubscriptionStatus('active');
-  };
-
-  const isSubscribed = subscriptionStatus === 'active';
-  const showLockIcon = !isSubscribed && !hasFreeScanAvailable;
 
   if (loading) {
     return (
@@ -546,13 +503,6 @@ export const DietTracker: React.FC = () => {
         )}
       </div>
 
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        open={upgradeModalOpen}
-        onOpenChange={setUpgradeModalOpen}
-        onSuccess={handleSubscriptionSuccess}
-      />
-
       {/* Action Buttons */}
       <div className="flex gap-3">
         <Button 
@@ -566,15 +516,10 @@ export const DietTracker: React.FC = () => {
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               Analyzing...
             </>
-          ) : showLockIcon ? (
-            <>
-              <Lock className="w-5 h-5 mr-2" />
-              Scan Meal
-            </>
           ) : (
             <>
               <Camera className="w-5 h-5 mr-2" />
-              Scan Meal {!isSubscribed && `(${FREE_SCANS_PER_DAY - dailyScansUsed} free)`}
+              Scan Meal
             </>
           )}
         </Button>
