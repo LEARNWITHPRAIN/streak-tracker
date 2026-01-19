@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { Headphones, Upload, Play, Pause, SkipBack, SkipForward, Trash2, Music } from 'lucide-react';
 import { useMusicContext } from '@/contexts/MusicContext';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,8 @@ export const MusicPlayer: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -59,13 +61,49 @@ export const MusicPlayer: React.FC = () => {
     dropZoneRef.current?.classList.remove('border-primary', 'bg-primary/10');
   }, []);
 
-  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = percentage * duration;
-    seekTo(newTime);
+  const handleSeek = useCallback((clientX: number) => {
+    if (!progressRef.current || duration <= 0) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const percentage = x / rect.width;
+    seekTo(percentage * duration);
   }, [duration, seekTo]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    handleSeek(e.clientX);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      handleSeek(moveEvent.clientX);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [handleSeek]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setIsDragging(true);
+    handleSeek(e.touches[0].clientX);
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      handleSeek(moveEvent.touches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+  }, [handleSeek]);
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -173,16 +211,28 @@ export const MusicPlayer: React.FC = () => {
       {tracks.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border">
           <div className="container max-w-2xl mx-auto">
-            {/* Progress Bar */}
+            {/* Progress Bar - Draggable */}
             <div 
-              onClick={handleProgressClick}
-              className="h-1 bg-muted cursor-pointer group"
+              ref={progressRef}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+              className="h-2 bg-muted cursor-pointer group relative"
             >
               <div 
-                className="h-full bg-primary transition-all duration-100"
+                className="h-full bg-primary"
                 style={{ 
                   width: `${progressPercentage}%`,
-                  boxShadow: '0 0 10px hsl(var(--primary) / 0.7)'
+                  boxShadow: '0 0 10px hsl(var(--primary) / 0.7)',
+                  transition: isDragging ? 'none' : 'width 0.1s'
+                }}
+              />
+              {/* Draggable thumb */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ 
+                  left: `calc(${progressPercentage}% - 8px)`,
+                  boxShadow: '0 0 10px hsl(var(--primary) / 0.8)',
+                  opacity: isDragging ? 1 : undefined
                 }}
               />
             </div>
