@@ -108,22 +108,25 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
 
   // Handle track end - auto-play next
   const handleTrackEnd = useCallback(() => {
-    if (tracks.length === 0) {
+    setCurrentTrackIndex(prev => {
+      const nextIndex = prev + 1;
+      if (nextIndex < tracks.length) {
+        setTimeout(() => {
+          audioRef.current?.play().catch(console.error);
+        }, 100);
+        return nextIndex;
+      }
+      // Loop back to first track
+      if (tracks.length > 0) {
+        setTimeout(() => {
+          audioRef.current?.play().catch(console.error);
+        }, 100);
+        return 0;
+      }
       setIsPlaying(false);
-      return;
-    }
-    
-    const nextIndex = currentTrackIndex + 1 < tracks.length ? currentTrackIndex + 1 : 0;
-    const nextTrack = tracks[nextIndex];
-    
-    if (audioRef.current && nextTrack) {
-      audioRef.current.src = nextTrack.objectUrl;
-      audioRef.current.load();
-      setCurrentTrackIndex(nextIndex);
-      setIsPlaying(true);
-      audioRef.current.play().catch(console.error);
-    }
-  }, [tracks, currentTrackIndex]);
+      return -1;
+    });
+  }, [tracks.length]);
 
   // Add ended listener when tracks change
   useEffect(() => {
@@ -136,15 +139,12 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
     };
   }, [handleTrackEnd]);
 
-  // Load and play track when currentTrackIndex changes (manual selection)
+  // Load and play track when currentTrackIndex changes
   useEffect(() => {
     if (currentTrackIndex >= 0 && currentTrackIndex < tracks.length && audioRef.current) {
       const track = tracks[currentTrackIndex];
-      // Only update src if it's different (avoids interrupting autoplay)
-      if (audioRef.current.src !== track.objectUrl) {
-        audioRef.current.src = track.objectUrl;
-        audioRef.current.load();
-      }
+      audioRef.current.src = track.objectUrl;
+      audioRef.current.load();
       if (isPlaying) {
         audioRef.current.play().catch(console.error);
       }

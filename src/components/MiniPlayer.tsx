@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React from 'react';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { useMusicContext } from '@/contexts/MusicContext';
 
@@ -7,9 +7,7 @@ interface MiniPlayerProps {
 }
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ hidden = false }) => {
-  const { currentTrack, isPlaying, togglePlayPause, playNext, playPrevious, currentTime, duration, seekTo } = useMusicContext();
-  const progressRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const { currentTrack, isPlaying, togglePlayPause, playNext, playPrevious, currentTime, duration } = useMusicContext();
 
   // Don't show if no track is playing or loaded, or if hidden
   if (!currentTrack || hidden) {
@@ -18,74 +16,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ hidden = false }) => {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const handleSeek = useCallback((clientX: number) => {
-    if (!progressRef.current || duration <= 0) return;
-    const rect = progressRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-    const percentage = x / rect.width;
-    seekTo(percentage * duration);
-  }, [duration, seekTo]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    handleSeek(e.clientX);
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      handleSeek(moveEvent.clientX);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [handleSeek]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    setIsDragging(true);
-    handleSeek(e.touches[0].clientX);
-
-    const handleTouchMove = (moveEvent: TouchEvent) => {
-      handleSeek(moveEvent.touches[0].clientX);
-    };
-
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-
-    document.addEventListener('touchmove', handleTouchMove);
-    document.addEventListener('touchend', handleTouchEnd);
-  }, [handleSeek]);
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border/50">
-      {/* Progress bar at top - draggable */}
-      <div 
-        ref={progressRef}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        className="h-2 bg-muted cursor-pointer group relative"
-      >
+      {/* Progress bar at top */}
+      <div className="h-1 bg-muted">
         <div
-          className="h-full bg-primary transition-all"
+          className="h-full bg-primary transition-all duration-200"
           style={{ 
             width: `${progress}%`,
-            boxShadow: '0 0 8px hsl(var(--primary) / 0.6)',
-            transition: isDragging ? 'none' : 'width 0.2s'
-          }}
-        />
-        {/* Draggable thumb */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ 
-            left: `calc(${progress}% - 8px)`,
-            boxShadow: '0 0 10px hsl(var(--primary) / 0.8)',
-            opacity: isDragging ? 1 : undefined
+            boxShadow: '0 0 8px hsl(var(--primary) / 0.6)'
           }}
         />
       </div>

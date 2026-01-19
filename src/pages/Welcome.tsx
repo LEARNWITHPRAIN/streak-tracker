@@ -24,7 +24,7 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-center px-6 overflow-hidden bg-black">
+    <div className="min-h-screen relative flex flex-col items-center justify-center px-6 overflow-hidden">
       {/* Video Background */}
       <video
         autoPlay
@@ -36,13 +36,11 @@ const Welcome = () => {
         <source src={welcomeBgVideo} type="video/mp4" />
       </video>
       
-      {/* Dark Overlay with edge blending */}
+      {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black/60 z-10" />
-      <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent z-10" />
-      <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent z-10" />
       
       {/* Content */}
-      <div className="relative z-20 text-center space-y-8 max-w-md w-full">
+      <div className="relative z-20 text-center space-y-8 max-w-md">
         {/* Logo/Icon */}
         <div className="w-28 h-28 mx-auto rounded-2xl overflow-hidden shadow-lg shadow-primary/30 ring-2 ring-primary/50">
           <img src={yodhaLogo} alt="Yodha Logo" className="w-full h-full object-cover" />

@@ -51,21 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: redirectUrl
       }
     });
-    
-    // Trigger n8n webhook on successful signup
-    if (!error) {
-      try {
-        await fetch('https://n8n.techyyyodha.online/webhook/form-signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          mode: 'no-cors',
-          body: JSON.stringify({ email }),
-        });
-      } catch (webhookError) {
-        console.error('Webhook trigger failed:', webhookError);
-      }
-    }
-    
     return { error };
   };
 

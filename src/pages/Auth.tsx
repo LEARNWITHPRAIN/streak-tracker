@@ -49,15 +49,10 @@ const Auth = () => {
   const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword, user, loading } = useAuth();
   const { toast } = useToast();
 
-  // Check URL for mode parameter
+  // Check URL for reset mode
   useEffect(() => {
-    const urlMode = searchParams.get('mode');
-    if (urlMode === 'reset') {
+    if (searchParams.get('mode') === 'reset') {
       setMode('reset');
-    } else if (urlMode === 'signup') {
-      setMode('signup');
-    } else if (urlMode === 'login') {
-      setMode('signin');
     }
   }, [searchParams]);
 
