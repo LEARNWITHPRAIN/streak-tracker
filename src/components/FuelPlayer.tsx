@@ -268,17 +268,14 @@ export const FuelPlayer: React.FC = () => {
                 muted={false}
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-purple-900/20 to-black p-4">
-                <iframe
-                  src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=true`}
-                  className="w-full max-w-[350px] h-[75%] border-0 rounded-xl overflow-hidden"
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-purple-900/20 to-black">
+              <iframe
+                  src={`https://www.instagram.com/p/${extractInstagramId(item.instagramUrl || '')}/embed`}
+                  className="w-full max-w-[400px] h-[80%] border-0 rounded-xl"
                   allowFullScreen
                   allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                  style={{ background: 'black' }}
+                  sandbox="allow-scripts allow-same-origin allow-presentation"
                 />
-                <p className="text-xs text-white/50 mt-3 text-center">
-                  Tap the reel to play • Instagram controls playback
-                </p>
               </div>
             )}
 
