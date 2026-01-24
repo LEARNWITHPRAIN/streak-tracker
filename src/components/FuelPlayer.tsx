@@ -269,11 +269,12 @@ export const FuelPlayer: React.FC = () => {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-purple-900/20 to-black">
-                <iframe
+              <iframe
                   src={`https://www.instagram.com/p/${extractInstagramId(item.instagramUrl || '')}/embed`}
                   className="w-full max-w-[400px] h-[80%] border-0 rounded-xl"
                   allowFullScreen
                   allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                  sandbox="allow-scripts allow-same-origin allow-presentation"
                 />
               </div>
             )}
