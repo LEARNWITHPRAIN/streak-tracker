@@ -1,13 +1,17 @@
-// IndexedDB storage for motivation videos
-const DB_NAME = 'fuel-videos-db';
-const STORE_NAME = 'videos';
-const DB_VERSION = 1;
+// IndexedDB storage for motivation videos and Instagram links
+const DB_NAME = 'yodha_fuel';
+const STORE_NAME = 'fuel_items';
+const DB_VERSION = 2;
 
-export interface StoredVideo {
+export type FuelItemType = 'local_video' | 'instagram_embed';
+
+export interface StoredFuelItem {
   id: string;
+  type: FuelItemType;
   name: string;
-  fileData: ArrayBuffer;
-  mimeType: string;
+  content: ArrayBuffer | string; // ArrayBuffer for video, URL string for Instagram
+  mimeType?: string; // Only for videos
+  createdAt: number;
 }
 
 const openDB = (): Promise<IDBDatabase> => {
@@ -19,19 +23,26 @@ const openDB = (): Promise<IDBDatabase> => {
     
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      
+      // Delete old store if exists
+      if (db.objectStoreNames.contains('videos')) {
+        db.deleteObjectStore('videos');
+      }
+      
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
   });
 };
 
-export const saveVideoToDB = async (video: StoredVideo): Promise<void> => {
+export const saveFuelItemToDB = async (item: StoredFuelItem): Promise<void> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.put(video);
+    const request = store.put(item);
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve();
@@ -40,7 +51,7 @@ export const saveVideoToDB = async (video: StoredVideo): Promise<void> => {
   });
 };
 
-export const removeVideoFromDB = async (id: string): Promise<void> => {
+export const removeFuelItemFromDB = async (id: string): Promise<void> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -54,7 +65,7 @@ export const removeVideoFromDB = async (id: string): Promise<void> => {
   });
 };
 
-export const getAllVideosFromDB = async (): Promise<StoredVideo[]> => {
+export const getAllFuelItemsFromDB = async (): Promise<StoredFuelItem[]> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readonly');
@@ -62,7 +73,35 @@ export const getAllVideosFromDB = async (): Promise<StoredVideo[]> => {
     const request = store.getAll();
     
     request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      // Sort by createdAt descending (newest first)
+      const items = request.result.sort((a, b) => b.createdAt - a.createdAt);
+      resolve(items);
+    };
+    
+    transaction.oncomplete = () => db.close();
+  });
+};
+
+export const getStorageUsage = async (): Promise<number> => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      let totalBytes = 0;
+      for (const item of request.result) {
+        if (item.type === 'local_video' && item.content instanceof ArrayBuffer) {
+          totalBytes += item.content.byteLength;
+        } else if (typeof item.content === 'string') {
+          totalBytes += new Blob([item.content]).size;
+        }
+      }
+      resolve(totalBytes);
+    };
     
     transaction.oncomplete = () => db.close();
   });
@@ -81,3 +120,35 @@ export const arrayBufferToObjectUrl = (buffer: ArrayBuffer, mimeType: string): s
   const blob = new Blob([buffer], { type: mimeType });
   return URL.createObjectURL(blob);
 };
+
+export const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+export const extractInstagramId = (url: string): string | null => {
+  // Support various Instagram URL formats
+  const patterns = [
+    /instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
+    /instagr\.am\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+export const isValidInstagramUrl = (url: string): boolean => {
+  return extractInstagramId(url) !== null;
+};
+
+// Legacy exports for backward compatibility
+export type StoredVideo = StoredFuelItem;
+export const saveVideoToDB = saveFuelItemToDB;
+export const removeVideoFromDB = removeFuelItemFromDB;
+export const getAllVideosFromDB = getAllFuelItemsFromDB;

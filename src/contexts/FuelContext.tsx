@@ -1,27 +1,37 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
-  StoredVideo,
-  saveVideoToDB,
-  removeVideoFromDB,
-  getAllVideosFromDB,
+  StoredFuelItem,
+  FuelItemType,
+  saveFuelItemToDB,
+  removeFuelItemFromDB,
+  getAllFuelItemsFromDB,
+  getStorageUsage,
   fileToArrayBuffer,
   arrayBufferToObjectUrl,
+  formatBytes,
+  isValidInstagramUrl,
+  extractInstagramId,
 } from '@/lib/videoStorage';
 
-export interface Video {
+export interface FuelItem {
   id: string;
+  type: FuelItemType;
   name: string;
-  objectUrl: string;
-  mimeType: string;
+  objectUrl?: string; // For local videos
+  instagramUrl?: string; // For Instagram embeds
+  mimeType?: string;
+  createdAt: number;
 }
 
 interface FuelContextType {
-  videos: Video[];
-  currentVideoIndex: number;
+  items: FuelItem[];
+  currentItemIndex: number;
   isPlaying: boolean;
-  addVideos: (files: FileList | File[]) => Promise<void>;
-  removeVideo: (videoId: string) => Promise<void>;
-  setCurrentVideoIndex: (index: number) => void;
+  storageUsed: string;
+  addLocalVideo: (files: FileList | File[]) => Promise<void>;
+  addInstagramEmbed: (url: string) => Promise<boolean>;
+  removeItem: (itemId: string) => Promise<void>;
+  setCurrentItemIndex: (index: number) => void;
   togglePlayPause: () => void;
   setIsPlaying: (playing: boolean) => void;
 }
@@ -37,36 +47,63 @@ export const useFuelContext = () => {
 };
 
 export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [items, setItems] = useState<FuelItem[]>([]);
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [storageUsed, setStorageUsed] = useState('0 Bytes');
 
-  // Load videos from IndexedDB on mount
+  const updateStorageUsage = useCallback(async () => {
+    try {
+      const bytes = await getStorageUsage();
+      setStorageUsed(formatBytes(bytes));
+    } catch (error) {
+      console.error('Failed to get storage usage:', error);
+    }
+  }, []);
+
+  // Load items from IndexedDB on mount
   useEffect(() => {
-    const loadVideos = async () => {
+    const loadItems = async () => {
       try {
-        const storedVideos = await getAllVideosFromDB();
-        const loadedVideos: Video[] = storedVideos.map((stored) => ({
-          id: stored.id,
-          name: stored.name,
-          objectUrl: arrayBufferToObjectUrl(stored.fileData, stored.mimeType),
-          mimeType: stored.mimeType,
-        }));
-        setVideos(loadedVideos);
+        const storedItems = await getAllFuelItemsFromDB();
+        const loadedItems: FuelItem[] = storedItems.map((stored) => {
+          if (stored.type === 'local_video' && stored.content instanceof ArrayBuffer) {
+            return {
+              id: stored.id,
+              type: stored.type,
+              name: stored.name,
+              objectUrl: arrayBufferToObjectUrl(stored.content, stored.mimeType || 'video/mp4'),
+              mimeType: stored.mimeType,
+              createdAt: stored.createdAt,
+            };
+          } else {
+            return {
+              id: stored.id,
+              type: stored.type,
+              name: stored.name,
+              instagramUrl: stored.content as string,
+              createdAt: stored.createdAt,
+            };
+          }
+        });
+        setItems(loadedItems);
+        await updateStorageUsage();
       } catch (error) {
-        console.error('Failed to load videos from IndexedDB:', error);
+        console.error('Failed to load fuel items from IndexedDB:', error);
       }
     };
 
-    loadVideos();
+    loadItems();
 
     // Cleanup object URLs on unmount
     return () => {
-      videos.forEach((video) => URL.revokeObjectURL(video.objectUrl));
+      items.forEach((item) => {
+        if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+      });
     };
   }, []);
 
-  const addVideos = useCallback(async (files: FileList | File[]) => {
+  const addLocalVideo = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     const videoFiles = fileArray.filter(
       (file) => file.type.startsWith('video/') || file.name.endsWith('.mp4') || file.name.endsWith('.webm')
@@ -74,59 +111,106 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     for (const file of videoFiles) {
       try {
-        const id = `video-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const id = `fuel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const fileData = await fileToArrayBuffer(file);
         const mimeType = file.type || 'video/mp4';
+        const createdAt = Date.now();
 
         // Save to IndexedDB
-        await saveVideoToDB({
+        await saveFuelItemToDB({
           id,
-          name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-          fileData,
+          type: 'local_video',
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          content: fileData,
           mimeType,
+          createdAt,
         });
 
         // Create object URL and add to state
         const objectUrl = arrayBufferToObjectUrl(fileData, mimeType);
-        setVideos((prev) => [
-          ...prev,
+        setItems((prev) => [
           {
             id,
+            type: 'local_video',
             name: file.name.replace(/\.[^/.]+$/, ''),
             objectUrl,
             mimeType,
+            createdAt,
           },
+          ...prev,
         ]);
       } catch (error) {
         console.error('Failed to add video:', error);
       }
     }
-  }, []);
+    await updateStorageUsage();
+  }, [updateStorageUsage]);
 
-  const removeVideo = useCallback(async (videoId: string) => {
+  const addInstagramEmbed = useCallback(async (url: string): Promise<boolean> => {
+    if (!isValidInstagramUrl(url)) {
+      return false;
+    }
+
     try {
-      await removeVideoFromDB(videoId);
+      const id = `fuel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const instagramId = extractInstagramId(url);
+      const createdAt = Date.now();
+
+      // Save to IndexedDB
+      await saveFuelItemToDB({
+        id,
+        type: 'instagram_embed',
+        name: `Reel ${instagramId}`,
+        content: url,
+        createdAt,
+      });
+
+      // Add to state
+      setItems((prev) => [
+        {
+          id,
+          type: 'instagram_embed',
+          name: `Reel ${instagramId}`,
+          instagramUrl: url,
+          createdAt,
+        },
+        ...prev,
+      ]);
+
+      await updateStorageUsage();
+      return true;
+    } catch (error) {
+      console.error('Failed to add Instagram embed:', error);
+      return false;
+    }
+  }, [updateStorageUsage]);
+
+  const removeItem = useCallback(async (itemId: string) => {
+    try {
+      await removeFuelItemFromDB(itemId);
       
-      setVideos((prev) => {
-        const videoToRemove = prev.find((v) => v.id === videoId);
-        if (videoToRemove) {
-          URL.revokeObjectURL(videoToRemove.objectUrl);
+      setItems((prev) => {
+        const itemToRemove = prev.find((i) => i.id === itemId);
+        if (itemToRemove?.objectUrl) {
+          URL.revokeObjectURL(itemToRemove.objectUrl);
         }
-        return prev.filter((v) => v.id !== videoId);
+        return prev.filter((i) => i.id !== itemId);
       });
 
       // Adjust current index if needed
-      setCurrentVideoIndex((prevIndex) => {
-        const newVideos = videos.filter((v) => v.id !== videoId);
-        if (prevIndex >= newVideos.length && newVideos.length > 0) {
-          return newVideos.length - 1;
+      setCurrentItemIndex((prevIndex) => {
+        const newItems = items.filter((i) => i.id !== itemId);
+        if (prevIndex >= newItems.length && newItems.length > 0) {
+          return newItems.length - 1;
         }
         return prevIndex;
       });
+
+      await updateStorageUsage();
     } catch (error) {
-      console.error('Failed to remove video:', error);
+      console.error('Failed to remove item:', error);
     }
-  }, [videos]);
+  }, [items, updateStorageUsage]);
 
   const togglePlayPause = useCallback(() => {
     setIsPlaying((prev) => !prev);
@@ -135,12 +219,14 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <FuelContext.Provider
       value={{
-        videos,
-        currentVideoIndex,
+        items,
+        currentItemIndex,
         isPlaying,
-        addVideos,
-        removeVideo,
-        setCurrentVideoIndex,
+        storageUsed,
+        addLocalVideo,
+        addInstagramEmbed,
+        removeItem,
+        setCurrentItemIndex,
         togglePlayPause,
         setIsPlaying,
       }}
