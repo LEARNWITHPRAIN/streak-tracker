@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Flame, Trash2, Plus, Video, Link, HardDrive, X, RotateCcw } from 'lucide-react';
+import { Flame, Trash2, Plus, Video, Link, HardDrive, X } from 'lucide-react';
 import { useFuelContext } from '@/contexts/FuelContext';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,12 +28,6 @@ export const FuelPlayer: React.FC = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [instagramUrl, setInstagramUrl] = useState('');
   const [addingInstagram, setAddingInstagram] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
-
-  const handleReplayInstagram = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIframeKey(prev => prev + 1);
-  }, []);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -275,12 +269,8 @@ export const FuelPlayer: React.FC = () => {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-black">
-                <div 
-                  className="relative w-full max-w-[400px] bg-black rounded-xl overflow-hidden"
-                  style={{ height: '140%', marginTop: '-80px' }}
-                >
+                <div className="relative w-full max-w-[400px] h-[85%] bg-black rounded-xl overflow-hidden">
                   <iframe
-                    key={iframeKey}
                     src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=1&autoplay=1`}
                     className="absolute inset-0 w-full h-full border-0"
                     style={{ background: 'black' }}
@@ -289,14 +279,6 @@ export const FuelPlayer: React.FC = () => {
                     sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
                   />
                 </div>
-                {/* Replay button for Instagram */}
-                <button
-                  onClick={handleReplayInstagram}
-                  className="absolute bottom-20 right-4 w-12 h-12 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center transition-all z-10"
-                  style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.5)' }}
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </button>
               </div>
             )}
 
