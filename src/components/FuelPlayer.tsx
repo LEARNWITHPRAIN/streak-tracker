@@ -270,22 +270,17 @@ export const FuelPlayer: React.FC = () => {
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden">
                 <div className="relative w-full max-w-[400px] h-[90%] rounded-xl overflow-hidden bg-black">
-                  {/* Clickable overlay to prevent redirect to Instagram */}
-                  <div 
-                    className="absolute inset-0 z-10 cursor-pointer" 
-                    style={{ background: 'transparent' }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
                   <iframe
                     src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=1&autoplay=1`}
-                    className="absolute inset-0 w-full h-[calc(100%+120px)] border-0"
+                    className="absolute inset-0 w-full h-[calc(100%+140px)] border-0"
                     style={{ 
-                      marginBottom: '-120px',
+                      marginBottom: '-140px',
                       background: '#000',
                       colorScheme: 'dark'
                     }}
                     allowFullScreen
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    sandbox="allow-scripts allow-same-origin allow-presentation"
                   />
                 </div>
               </div>
