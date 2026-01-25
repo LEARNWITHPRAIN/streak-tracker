@@ -268,14 +268,19 @@ export const FuelPlayer: React.FC = () => {
                 muted={false}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-purple-900/20 to-black">
-              <iframe
-                  src={`https://www.instagram.com/p/${extractInstagramId(item.instagramUrl || '')}/embed`}
-                  className="w-full max-w-[400px] h-[80%] border-0 rounded-xl"
-                  allowFullScreen
-                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                  sandbox="allow-scripts allow-same-origin allow-presentation"
-                />
+              <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden">
+                <div className="relative w-full max-w-[400px] h-[90%] rounded-xl overflow-hidden bg-black">
+                  <iframe
+                    src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=1`}
+                    className="absolute inset-0 w-full h-[calc(100%+80px)] border-0"
+                    style={{ 
+                      marginBottom: '-80px',
+                      background: 'black'
+                    }}
+                    allowFullScreen
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                  />
+                </div>
               </div>
             )}
 
