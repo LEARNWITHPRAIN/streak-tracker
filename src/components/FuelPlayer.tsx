@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Flame, Trash2, Plus, Video, Link, HardDrive, X } from 'lucide-react';
+import { Flame, Trash2, Plus, Video, Link, HardDrive, X, RotateCcw } from 'lucide-react';
 import { useFuelContext } from '@/contexts/FuelContext';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,6 +28,15 @@ export const FuelPlayer: React.FC = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [instagramUrl, setInstagramUrl] = useState('');
   const [addingInstagram, setAddingInstagram] = useState(false);
+  const [reelKeys, setReelKeys] = useState<{ [key: string]: number }>({});
+
+  const handleReplayReel = useCallback((itemId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReelKeys((prev) => ({
+      ...prev,
+      [itemId]: (prev[itemId] || 0) + 1,
+    }));
+  }, []);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,6 +280,7 @@ export const FuelPlayer: React.FC = () => {
               <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden">
                 <div className="relative w-full max-w-[400px] h-[90%] rounded-xl overflow-hidden bg-black">
                   <iframe
+                    key={`reel-${item.id}-${reelKeys[item.id] || 0}`}
                     src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=1&autoplay=1`}
                     className="absolute inset-0 w-full h-[calc(100%+140px)] border-0"
                     style={{ 
@@ -282,6 +292,14 @@ export const FuelPlayer: React.FC = () => {
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
                     sandbox="allow-scripts allow-same-origin allow-presentation"
                   />
+                  {/* Replay button */}
+                  <button
+                    onClick={(e) => handleReplayReel(item.id, e)}
+                    className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center transition-all z-20"
+                    style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.5)' }}
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             )}
