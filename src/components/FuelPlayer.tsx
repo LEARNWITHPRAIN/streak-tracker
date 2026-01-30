@@ -292,10 +292,10 @@ export const FuelPlayer: React.FC = () => {
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
                     sandbox="allow-scripts allow-same-origin allow-presentation"
                   />
-                  {/* Replay button */}
+                  {/* Replay button - positioned higher to avoid cropped area */}
                   <button
                     onClick={(e) => handleReplayReel(item.id, e)}
-                    className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center transition-all z-20"
+                    className="absolute bottom-[160px] right-4 w-12 h-12 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center transition-all z-20"
                     style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.5)' }}
                   >
                     <RotateCcw className="w-5 h-5" />
