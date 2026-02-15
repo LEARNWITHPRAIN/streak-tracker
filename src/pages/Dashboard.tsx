@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid, User, Utensils } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -16,7 +16,7 @@ import { CustomRoutine } from '@/components/CustomRoutine';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
-import { DietTracker } from '@/components/DietTracker';
+
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -305,10 +305,6 @@ const Dashboard = () => {
                 <Zap className="w-3.5 h-3.5 mr-1" />
                 Fuel
               </TabsTrigger>
-              <TabsTrigger value="diet" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Utensils className="w-3.5 h-3.5 mr-1" />
-                Diet
-              </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" className="invisible" />
           </ScrollArea>
@@ -357,9 +353,6 @@ const Dashboard = () => {
             <FuelPlayer />
           </TabsContent>
 
-          <TabsContent value="diet" className="mt-4">
-            <DietTracker />
-          </TabsContent>
         </Tabs>
       </main>
 
