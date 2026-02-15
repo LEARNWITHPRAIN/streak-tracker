@@ -282,15 +282,14 @@ export const FuelPlayer: React.FC = () => {
                   <iframe
                     key={`reel-${item.id}-${reelKeys[item.id] || 0}`}
                     src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=1&autoplay=1`}
-                    className="absolute inset-0 w-full h-[calc(100%+140px)] border-0"
+                    className="absolute inset-0 w-full h-full border-0"
                     style={{ 
-                      marginBottom: '-140px',
+                      width: '100%',
+                      height: '100%',
                       background: '#000',
-                      colorScheme: 'dark'
                     }}
-                    allowFullScreen
+                    sandbox="allow-scripts allow-same-origin allow-presentation"
                     allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                    referrerPolicy="no-referrer"
                   />
                   {/* Replay button - positioned higher to avoid cropped area */}
                   <button
