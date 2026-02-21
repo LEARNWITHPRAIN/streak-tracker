@@ -16,6 +16,7 @@ import { CustomRoutine } from '@/components/CustomRoutine';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
+import { ShareProgressCard } from '@/components/ShareProgressCard';
 
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -251,10 +252,11 @@ const Dashboard = () => {
                   <span className="text-[10px] text-muted-foreground">Complete</span>
                 </ProgressCircle>
                 
-                <div className="text-center">
+                <div className="text-center flex items-center justify-center gap-2">
                   <p className="text-base font-semibold text-primary">Today's Progress</p>
-                  <p className="text-xs text-muted-foreground">{completed} of {total} sets completed</p>
+                  <ShareProgressCard percentage={todayProgressPercent} completed={completed} total={total} />
                 </div>
+                <p className="text-xs text-muted-foreground">{completed} of {total} sets completed</p>
 
                 {/* Progress Bar */}
                 <div className="w-full">
