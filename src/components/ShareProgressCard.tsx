@@ -12,7 +12,7 @@ interface ShareProgressCardProps {
   total: number;
 }
 
-const WEBSITE_URL = 'https://yodhamode.lovable.app';
+const WEBSITE_URL = 'https://yodhamode.cloud';
 
 export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage, completed, total }) => {
   const [open, setOpen] = useState(false);
@@ -228,7 +228,7 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
               {/* Footer */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, zIndex: 1 }}>
                 <span style={{ color: '#5a4a3a', fontSize: 10, letterSpacing: 1 }}>JOIN THE ARMY</span>
-                <span style={{ color: '#8a7a6a', fontSize: 11 }}>yodhamode.lovable.app</span>
+                <span style={{ color: '#8a7a6a', fontSize: 11 }}>yodhamode.cloud</span>
               </div>
             </div>
           </div>
