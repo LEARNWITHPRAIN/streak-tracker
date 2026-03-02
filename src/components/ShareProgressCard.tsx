@@ -47,12 +47,13 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
     }
   };
 
-  const handleShare = async () => {
+  const handleShareInstagram = async () => {
     const blob = await generateImage();
     if (!blob) return;
 
     const file = new File([blob], 'yodha-progress.png', { type: 'image/png' });
 
+    // Try Web Share API first (works on mobile)
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({
@@ -60,12 +61,24 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
           text: `I'm at ${percentage}% today! #YodhaMode`,
           files: [file],
         });
+        return;
       } catch (e: any) {
-        if (e.name !== 'AbortError') toast.error('Sharing failed');
+        if (e.name === 'AbortError') return;
+        // Fall through to fallback
       }
-    } else {
-      downloadBlob(blob);
     }
+
+    // Fallback: download image + open Instagram camera
+    downloadBlob(blob);
+    toast.success('Progress Card saved! Opening Instagram...', { duration: 3000 });
+    setTimeout(() => {
+      window.location.href = 'instagram://camera';
+    }, 1000);
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = `🔥 I'm at ${percentage}% of my workout today! Join Yodha Mode: ${WEBSITE_URL}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const downloadBlob = (blob: Blob) => {
@@ -235,11 +248,15 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2 mt-2">
-            <Button onClick={handleShare} disabled={generating} className="w-full gap-2">
+            <Button onClick={handleShareInstagram} disabled={generating} className="w-full gap-2">
               <Share2 className="w-4 h-4" />
-              {generating ? 'Generating...' : 'Share to Instagram / WhatsApp'}
+              {generating ? 'Generating...' : 'Share to Instagram'}
             </Button>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={handleShareWhatsApp} className="flex-1 gap-2">
+                <span className="text-sm">💬</span>
+                WhatsApp
+              </Button>
               <Button variant="outline" onClick={handleDownload} disabled={generating} className="flex-1 gap-2">
                 <Download className="w-4 h-4" />
                 Download
@@ -250,7 +267,7 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground text-center mt-1">
-              Share your progress to your Instagram Story or as a YouTube Short to inspire others! 💪
+              Share your progress card to Instagram Stories or WhatsApp! 💪
             </p>
           </div>
         </DialogContent>
