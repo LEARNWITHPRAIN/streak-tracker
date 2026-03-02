@@ -110,6 +110,10 @@ export default {
           "0%": { strokeDashoffset: "283" },
           "100%": { strokeDashoffset: "0" },
         },
+        "sparkle": {
+          "0%, 100%": { opacity: "0", scale: "0" },
+          "50%": { opacity: "1", scale: "1.8" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -119,6 +123,7 @@ export default {
         "slide-up": "slide-up 0.3s ease-out",
         "countdown": "countdown 1s ease-in-out",
         "ring-progress": "ring-progress 1s ease-out forwards",
+        "sparkle": "sparkle 1.5s ease-in-out infinite",
       },
     },
   },
