@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
-import { Share2, Download, Copy, X, Sparkles } from 'lucide-react';
+import { Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -127,8 +127,8 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
             <div
               ref={cardRef}
               style={{
-                width: 300,
-                height: 533,
+                width: 270,
+                height: 480,
                 background: 'linear-gradient(180deg, #1a0f05 0%, #0d0906 40%, #0a0704 100%)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -248,26 +248,12 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2 mt-2">
-            <Button onClick={handleShareInstagram} disabled={generating} className="w-full gap-2">
-              <Share2 className="w-4 h-4" />
-              {generating ? 'Generating...' : 'Share to Instagram'}
+            <Button onClick={handleDownload} disabled={generating} className="w-full gap-2">
+              <Download className="w-4 h-4" />
+              {generating ? 'Generating...' : 'Download Progress Card'}
             </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleShareWhatsApp} className="flex-1 gap-2">
-                <span className="text-sm">💬</span>
-                WhatsApp
-              </Button>
-              <Button variant="outline" onClick={handleDownload} disabled={generating} className="flex-1 gap-2">
-                <Download className="w-4 h-4" />
-                Download
-              </Button>
-              <Button variant="outline" onClick={handleCopyLink} className="flex-1 gap-2">
-                <Copy className="w-4 h-4" />
-                Copy Link
-              </Button>
-            </div>
             <p className="text-[10px] text-muted-foreground text-center mt-1">
-              Share your progress card to Instagram Stories or WhatsApp! 💪
+              Download and share your progress card! 💪
             </p>
           </div>
         </DialogContent>
