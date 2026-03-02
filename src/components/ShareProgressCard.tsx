@@ -114,8 +114,8 @@ export const ShareProgressCard: React.FC<ShareProgressCardProps> = ({ percentage
             <div
               ref={cardRef}
               style={{
-                width: 360,
-                height: 640,
+                width: 300,
+                height: 533,
                 background: 'linear-gradient(180deg, #1a0f05 0%, #0d0906 40%, #0a0704 100%)',
                 display: 'flex',
                 flexDirection: 'column',
