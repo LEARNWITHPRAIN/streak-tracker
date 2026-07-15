@@ -64,6 +64,8 @@ export type Database = {
           created_at: string
           display_name: string | null
           fats_goal: number
+          fuel_payment_id: string | null
+          fuel_unlocked: boolean
           id: string
           protein_goal: number
           razorpay_payment_id: string | null
@@ -80,6 +82,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           fats_goal?: number
+          fuel_payment_id?: string | null
+          fuel_unlocked?: boolean
           id?: string
           protein_goal?: number
           razorpay_payment_id?: string | null
@@ -96,6 +100,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           fats_goal?: number
+          fuel_payment_id?: string | null
+          fuel_unlocked?: boolean
           id?: string
           protein_goal?: number
           razorpay_payment_id?: string | null
