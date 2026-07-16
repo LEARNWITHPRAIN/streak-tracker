@@ -24,7 +24,7 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-center px-6 overflow-hidden">
+    <div className="min-h-screen relative flex flex-col items-center justify-start pt-16 px-6">
       {/* Video Background */}
       <video
         autoPlay
