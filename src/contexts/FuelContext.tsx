@@ -35,6 +35,8 @@ interface FuelContextType {
   storageUsed: string;
   addLocalVideo: (files: FileList | File[]) => Promise<void>;
   addInstagramEmbed: (url: string) => Promise<boolean>;
+  addYouTubeShort: (url: string) => Promise<boolean>;
+
   removeItem: (itemId: string) => Promise<void>;
   setCurrentItemIndex: (index: number) => void;
   togglePlayPause: () => void;
