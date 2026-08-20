@@ -22,6 +22,8 @@ export interface FuelItem {
   name: string;
   objectUrl?: string; // For local videos
   instagramUrl?: string; // For Instagram embeds
+  youtubeUrl?: string; // For YouTube Shorts embeds
+
   mimeType?: string;
   createdAt: number;
 }
