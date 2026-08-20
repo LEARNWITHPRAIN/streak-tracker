@@ -3,7 +3,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
-import welcomeBgVideo from '@/assets/welcome-bg.mp4';
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -24,21 +23,7 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-start pt-16 px-6">
-      {/* Video Background */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
-      >
-        <source src={welcomeBgVideo} type="video/mp4" />
-      </video>
-      
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/60 z-10" />
-      
+    <div className="min-h-screen bg-background flex flex-col items-center justify-start pt-16 px-6">
       {/* Content */}
       <div className="relative z-20 text-center space-y-8 max-w-md">
         {/* Logo/Icon */}
