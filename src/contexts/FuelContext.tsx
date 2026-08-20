@@ -11,6 +11,9 @@ import {
   formatBytes,
   isValidInstagramUrl,
   extractInstagramId,
+  isValidYouTubeUrl,
+  extractYouTubeId,
+
 } from '@/lib/videoStorage';
 
 export interface FuelItem {
