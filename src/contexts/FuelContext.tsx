@@ -83,6 +83,14 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
               mimeType: stored.mimeType,
               createdAt: stored.createdAt,
             };
+          } else if (stored.type === 'youtube_short') {
+            return {
+              id: stored.id,
+              type: stored.type,
+              name: stored.name,
+              youtubeUrl: stored.content as string,
+              createdAt: stored.createdAt,
+            };
           } else {
             return {
               id: stored.id,
@@ -92,6 +100,7 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: stored.createdAt,
             };
           }
+
         });
         setItems(loadedItems);
         await updateStorageUsage();
