@@ -11,6 +11,9 @@ import {
   formatBytes,
   isValidInstagramUrl,
   extractInstagramId,
+  isValidYouTubeUrl,
+  extractYouTubeId,
+
 } from '@/lib/videoStorage';
 
 export interface FuelItem {
@@ -19,6 +22,8 @@ export interface FuelItem {
   name: string;
   objectUrl?: string; // For local videos
   instagramUrl?: string; // For Instagram embeds
+  youtubeUrl?: string; // For YouTube Shorts embeds
+
   mimeType?: string;
   createdAt: number;
 }
@@ -30,6 +35,8 @@ interface FuelContextType {
   storageUsed: string;
   addLocalVideo: (files: FileList | File[]) => Promise<void>;
   addInstagramEmbed: (url: string) => Promise<boolean>;
+  addYouTubeShort: (url: string) => Promise<boolean>;
+
   removeItem: (itemId: string) => Promise<void>;
   setCurrentItemIndex: (index: number) => void;
   togglePlayPause: () => void;
@@ -76,6 +83,14 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
               mimeType: stored.mimeType,
               createdAt: stored.createdAt,
             };
+          } else if (stored.type === 'youtube_short') {
+            return {
+              id: stored.id,
+              type: stored.type,
+              name: stored.name,
+              youtubeUrl: stored.content as string,
+              createdAt: stored.createdAt,
+            };
           } else {
             return {
               id: stored.id,
@@ -85,6 +100,7 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: stored.createdAt,
             };
           }
+
         });
         setItems(loadedItems);
         await updateStorageUsage();
