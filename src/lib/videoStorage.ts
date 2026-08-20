@@ -3,7 +3,7 @@ const DB_NAME = 'yodha_fuel';
 const STORE_NAME = 'fuel_items';
 const DB_VERSION = 2;
 
-export type FuelItemType = 'local_video' | 'instagram_embed';
+export type FuelItemType = 'local_video' | 'instagram_embed' | 'youtube_short';
 
 export interface StoredFuelItem {
   id: string;
