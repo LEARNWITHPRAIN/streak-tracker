@@ -15,7 +15,7 @@ import { TodayWorkout } from '@/components/TodayWorkout';
 import { CustomRoutine } from '@/components/CustomRoutine';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
-import { FuelUnlockGate } from '@/components/FuelUnlockGate';
+import { FuelPlayer } from '@/components/FuelPlayer';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 
 
@@ -352,7 +352,7 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="fuel" className="mt-4">
-            <FuelUnlockGate />
+            <FuelPlayer />
           </TabsContent>
 
         </Tabs>
