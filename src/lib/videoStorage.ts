@@ -147,6 +147,26 @@ export const isValidInstagramUrl = (url: string): boolean => {
   return extractInstagramId(url) !== null;
 };
 
+export const extractYouTubeId = (url: string): string | null => {
+  const patterns = [
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/watch\?(?:.*&)?v=([A-Za-z0-9_-]{6,})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
+    /youtu\.be\/([A-Za-z0-9_-]{6,})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+export const isValidYouTubeUrl = (url: string): boolean => {
+  return extractYouTubeId(url) !== null;
+};
+
+
 // Legacy exports for backward compatibility
 export type StoredVideo = StoredFuelItem;
 export const saveVideoToDB = saveFuelItemToDB;
