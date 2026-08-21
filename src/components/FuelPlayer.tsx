@@ -1,10 +1,11 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Flame, Trash2, Plus, Video, Link, HardDrive, X, RotateCcw } from 'lucide-react';
+import { Flame, Trash2, Video, Link, HardDrive, RotateCcw, ExternalLink, Play, Sparkles } from 'lucide-react';
 import { useFuelContext } from '@/contexts/FuelContext';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { extractInstagramId, extractYouTubeId, isValidInstagramUrl, isValidYouTubeUrl } from '@/lib/videoStorage';
 
 export const FuelPlayer: React.FC = () => {
   const {
@@ -14,6 +15,7 @@ export const FuelPlayer: React.FC = () => {
     storageUsed,
     addLocalVideo,
     addInstagramEmbed,
+    addYouTubeShort,
     removeItem,
     setCurrentItemIndex,
     setIsPlaying,
@@ -26,17 +28,21 @@ export const FuelPlayer: React.FC = () => {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [instagramUrl, setInstagramUrl] = useState('');
-  const [addingInstagram, setAddingInstagram] = useState(false);
-  const [reelKeys, setReelKeys] = useState<{ [key: string]: number }>({});
+  const [videoUrl, setVideoUrl] = useState('');
+  const [addingVideo, setAddingVideo] = useState(false);
+  const [iframeReloadKeys, setIframeReloadKeys] = useState<{ [key: string]: number }>({});
 
-  const handleReplayReel = useCallback((itemId: string, e: React.MouseEvent) => {
+  const handleReloadEmbed = useCallback((itemId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setReelKeys((prev) => ({
+    setIframeReloadKeys((prev) => ({
       ...prev,
       [itemId]: (prev[itemId] || 0) + 1,
     }));
-  }, []);
+    toast({
+      title: 'Reloading player',
+      description: 'Refreshing the video embed stream...',
+    });
+  }, [toast]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,9 +50,13 @@ export const FuelPlayer: React.FC = () => {
         addLocalVideo(e.target.files);
         e.target.value = '';
         setAddModalOpen(false);
+        toast({
+          title: 'Video saved locally',
+          description: 'Stored securely in your device storage for offline playback.',
+        });
       }
     },
-    [addLocalVideo]
+    [addLocalVideo, toast]
   );
 
   const handleDrop = useCallback(
@@ -57,9 +67,13 @@ export const FuelPlayer: React.FC = () => {
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         addLocalVideo(e.dataTransfer.files);
+        toast({
+          title: 'Video saved locally',
+          description: 'Stored securely in your device storage for offline playback.',
+        });
       }
     },
-    [addLocalVideo]
+    [addLocalVideo, toast]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -97,28 +111,58 @@ export const FuelPlayer: React.FC = () => {
     (e: React.MouseEvent, itemId: string) => {
       e.stopPropagation();
       removeItem(itemId);
+      toast({
+        title: 'Removed from Fuel',
+      });
     },
-    [removeItem]
+    [removeItem, toast]
   );
 
-  const handleAddInstagram = async () => {
-    if (!instagramUrl.trim()) return;
+  const handleAddUrl = async () => {
+    const trimmed = videoUrl.trim();
+    if (!trimmed) return;
 
-    setAddingInstagram(true);
-    const success = await addInstagramEmbed(instagramUrl);
-    setAddingInstagram(false);
+    setAddingVideo(true);
 
-    if (success) {
-      toast({
-        title: 'Added!',
-        description: 'Instagram reel added to your Fuel.',
-      });
-      setInstagramUrl('');
-      setAddModalOpen(false);
+    if (isValidInstagramUrl(trimmed)) {
+      const success = await addInstagramEmbed(trimmed);
+      setAddingVideo(false);
+      if (success) {
+        toast({
+          title: 'Instagram Reel Added!',
+          description: 'You can now watch it directly on Yodha Mode.',
+        });
+        setVideoUrl('');
+        setAddModalOpen(false);
+      } else {
+        toast({
+          title: 'Error adding Reel',
+          description: 'Could not parse the Instagram reel URL.',
+          variant: 'destructive',
+        });
+      }
+    } else if (isValidYouTubeUrl(trimmed)) {
+      const success = await addYouTubeShort(trimmed);
+      setAddingVideo(false);
+      if (success) {
+        toast({
+          title: 'YouTube Short Added!',
+          description: 'You can now watch it directly on Yodha Mode.',
+        });
+        setVideoUrl('');
+        setAddModalOpen(false);
+      } else {
+        toast({
+          title: 'Error adding YouTube video',
+          description: 'Could not parse the YouTube URL.',
+          variant: 'destructive',
+        });
+      }
     } else {
+      setAddingVideo(false);
       toast({
-        title: 'Invalid URL',
-        description: 'Please enter a valid Instagram post or reel URL.',
+        title: 'Unrecognized URL',
+        description: 'Please paste a valid Instagram Reel or YouTube Shorts URL.',
         variant: 'destructive',
       });
     }
@@ -133,12 +177,12 @@ export const FuelPlayer: React.FC = () => {
       const scrollTop = container.scrollTop;
       const containerHeight = container.clientHeight;
       const newIndex = Math.round(scrollTop / containerHeight);
-      
+
       if (newIndex !== currentItemIndex && newIndex >= 0 && newIndex < items.length) {
-        // Pause previous video
+        // Pause previous video if local
         const prevVideo = videoRefs.current[currentItemIndex];
         if (prevVideo) prevVideo.pause();
-        
+
         setCurrentItemIndex(newIndex);
         setIsPlaying(false);
       }
@@ -154,12 +198,12 @@ export const FuelPlayer: React.FC = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shadow-lg shadow-primary/20">
             <Flame className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-primary text-glow">Fuel</h2>
-            <p className="text-xs text-muted-foreground">Your motivation videos</p>
+            <p className="text-xs text-muted-foreground">Your workout motivation clips & reels</p>
           </div>
         </div>
 
@@ -171,10 +215,10 @@ export const FuelPlayer: React.FC = () => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={cn(
-            "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
+            "border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 glass hover:border-primary",
             isDragging
-              ? "border-primary bg-primary/10"
-              : "border-border hover:border-primary hover:bg-primary/5"
+              ? "border-primary bg-primary/10 scale-[0.99]"
+              : "border-border/60 hover:bg-primary/5"
           )}
         >
           <input
@@ -186,24 +230,29 @@ export const FuelPlayer: React.FC = () => {
             className="hidden"
           />
           <div className="flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
-              <Flame className="w-7 h-7 text-primary" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-500/20 flex items-center justify-center shadow-lg shadow-primary/10 border border-primary/30">
+              <Flame className="w-8 h-8 text-primary animate-pulse" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">Add Your Fuel</p>
-              <p className="text-sm text-muted-foreground">Local videos or Instagram reels</p>
+              <p className="font-bold text-foreground text-lg">Add Motivation Fuel</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                Paste Instagram Reels, YouTube Shorts, or upload downloaded workout videos from your device
+              </p>
+            </div>
+            <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+              <Sparkles className="w-3.5 h-3.5" /> Plays directly on website without redirects
             </div>
           </div>
         </div>
 
         {/* Privacy Notice */}
-        <div className="glass rounded-xl p-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
+        <div className="glass rounded-xl p-4 text-center border border-border/40">
+          <div className="flex items-center justify-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">100% Private</span>
+            <span className="text-sm font-semibold text-primary">100% Private & Instant</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Stored on your device only. No cloud, no tracking.
+            Local videos are stored directly on your device storage (IndexedDB) with zero cloud tracking.
           </p>
         </div>
 
@@ -212,10 +261,10 @@ export const FuelPlayer: React.FC = () => {
           open={addModalOpen}
           onOpenChange={setAddModalOpen}
           fileInputRef={fileInputRef}
-          instagramUrl={instagramUrl}
-          setInstagramUrl={setInstagramUrl}
-          addingInstagram={addingInstagram}
-          onAddInstagram={handleAddInstagram}
+          videoUrl={videoUrl}
+          setVideoUrl={setVideoUrl}
+          addingVideo={addingVideo}
+          onAddUrl={handleAddUrl}
         />
       </div>
     );
@@ -223,205 +272,227 @@ export const FuelPlayer: React.FC = () => {
 
   // Feed with items
   return (
-    <div className="relative">
+    <div className="relative space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shadow-lg shadow-primary/20">
             <Flame className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-primary text-glow">Fuel</h2>
             <p className="text-xs text-muted-foreground">
-              {items.length} {items.length === 1 ? 'item' : 'items'}
+              {items.length} {items.length === 1 ? 'motivation clip' : 'motivation clips'}
             </p>
           </div>
         </div>
-        
+
         <button
           onClick={() => setAddModalOpen(true)}
-          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-          style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.4)' }}
+          className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:scale-105"
         >
-          + Add
+          + Add Fuel
         </button>
       </div>
 
       {/* Storage Indicator */}
-      <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-muted/50">
-        <HardDrive className="w-4 h-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">
-          {storageUsed} stored on device
-        </span>
+      <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-muted/40 border border-border/40 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <HardDrive className="w-3.5 h-3.5 text-primary" />
+          <span>{storageUsed} stored on device</span>
+        </div>
+        <span className="text-primary font-medium">Scroll down for next clip ↓</span>
       </div>
 
-      {/* Feed - TikTok style */}
+      {/* Feed - TikTok/Reels full container */}
       <div
         ref={containerRef}
-        className="h-[70vh] overflow-y-scroll snap-y snap-mandatory rounded-2xl bg-black"
+        className="h-[75vh] max-h-[820px] overflow-y-scroll snap-y snap-mandatory rounded-3xl bg-black border border-border/50 shadow-2xl relative"
         style={{ scrollSnapType: 'y mandatory' }}
       >
-        {items.map((item, index) => (
-          <div
-            key={item.id}
-            className="h-full w-full snap-start snap-always relative flex items-center justify-center"
-            onClick={() => handleVideoTap(index)}
-          >
-            {item.type === 'local_video' ? (
-              <video
-                ref={(el) => (videoRefs.current[index] = el)}
-                src={item.objectUrl}
-                className="h-full w-full object-contain"
-                loop
-                playsInline
-                muted={false}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0f0f 0%, #1a0a2e 50%, #0d0d0d 100%)' }}>
-                <div className="relative w-full max-w-[360px] mx-4 flex flex-col items-center gap-6">
-                  {/* Instagram-styled preview card */}
+        {items.map((item, index) => {
+          const instaId = item.type === 'instagram_embed' ? extractInstagramId(item.instagramUrl || '') : null;
+          const ytId = item.type === 'youtube_short' ? extractYouTubeId(item.youtubeUrl || '') : null;
+          const reloadKey = iframeReloadKeys[item.id] || 0;
+
+          return (
+            <div
+              key={item.id}
+              className="h-full w-full snap-start snap-always relative flex items-center justify-center bg-black overflow-hidden select-none"
+              onClick={() => handleVideoTap(index)}
+            >
+              {/* Local Video */}
+              {item.type === 'local_video' && (
+                <div className="w-full h-full flex items-center justify-center relative">
+                  <video
+                    ref={(el) => (videoRefs.current[index] = el)}
+                    src={item.objectUrl}
+                    className="h-full w-full object-contain"
+                    loop
+                    playsInline
+                    muted={false}
+                  />
+
+                  {/* Play/Pause indicator for local videos */}
+                  {index === currentItemIndex && !isPlaying && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-16 h-16 rounded-full bg-black/60 border border-white/20 backdrop-blur-md flex items-center justify-center shadow-xl">
+                        <Play className="w-7 h-7 text-white fill-white ml-1" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Instagram Reel Embed — Sandboxed so clicks never redirect parent window */}
+              {item.type === 'instagram_embed' && (
+                <div className="w-full h-full flex items-center justify-center bg-[#0d0d11] relative p-2 sm:p-4">
                   <div
-                    key={`reel-${item.id}-${reelKeys[item.id] || 0}`}
-                    className="w-full rounded-3xl overflow-hidden"
+                    className="w-full max-w-[420px] h-[98%] max-h-[760px] rounded-2xl overflow-hidden shadow-2xl relative bg-black flex flex-col border border-pink-500/20"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(131,58,180,0.25) 0%, rgba(253,29,29,0.15) 50%, rgba(252,176,69,0.2) 100%)',
-                      border: '1px solid rgba(253,29,29,0.3)',
-                      boxShadow: '0 0 60px rgba(131,58,180,0.3), 0 0 30px rgba(253,29,29,0.15)',
+                      boxShadow: '0 0 40px rgba(253, 29, 29, 0.15), 0 0 80px rgba(131, 58, 180, 0.1)',
                     }}
                   >
-                    {/* Header */}
-                    <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)' }}
-                      >
-                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
-                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-white font-semibold text-sm">Instagram Reel</p>
-                        <p className="text-white/50 text-xs">Saved to Fuel</p>
-                      </div>
-                      <div className="ml-auto flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
-                        <span className="text-white/40 text-xs">Reel</span>
-                      </div>
-                    </div>
-
-                    {/* Visual reel preview area */}
-                    <div
-                      className="relative flex flex-col items-center justify-center py-12 px-6 gap-4"
-                      style={{ minHeight: 220 }}
-                    >
-                      {/* Animated gradient rings */}
-                      <div className="relative flex items-center justify-center">
-                        <div
-                          className="absolute w-28 h-28 rounded-full opacity-20 animate-ping"
-                          style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d)' }}
-                        />
-                        <div
-                          className="w-20 h-20 rounded-full flex items-center justify-center"
-                          style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)' }}
-                        >
-                          {/* Play icon */}
-                          <div className="w-0 h-0 ml-1" style={{ borderLeft: '20px solid white', borderTop: '13px solid transparent', borderBottom: '13px solid transparent' }} />
+                    {/* Top branded bar */}
+                    <div className="flex items-center justify-between px-3.5 py-2 bg-black/80 backdrop-blur-md border-b border-white/10 shrink-0 z-10">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                          </svg>
                         </div>
+                        <span className="text-white text-xs font-semibold tracking-wide">Instagram Reel</span>
                       </div>
 
-                      <p className="text-white/60 text-sm text-center">
-                        Tap below to watch this Reel on Instagram
-                      </p>
-
-                      <p
-                        className="text-white/30 text-xs font-mono text-center break-all px-2"
-                        style={{ maxWidth: 280 }}
-                      >
-                        {extractInstagramId(item.instagramUrl || '') || 'reel'}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => handleReloadEmbed(item.id, e)}
+                          title="Reload Reel Stream"
+                          className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                        <a
+                          href={item.instagramUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open in Instagram app"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded-lg text-white/60 hover:text-pink-400 hover:bg-white/10 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     </div>
 
-                    {/* Watch button */}
-                    <div className="p-4 pt-0">
-                      <a
-                        href={item.instagramUrl || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-semibold text-white text-sm transition-all hover:opacity-90 active:scale-95"
-                        style={{
-                          background: 'linear-gradient(90deg, #833ab4, #fd1d1d, #fcb045)',
-                          boxShadow: '0 0 20px rgba(253,29,29,0.4)',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
-                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                        </svg>
-                        Watch on Instagram
-                      </a>
+                    {/* Instagram Iframe Player with sandbox to block top navigation redirects */}
+                    <div className="flex-1 w-full relative bg-black">
+                      <iframe
+                        key={`ig-frame-${item.id}-${reloadKey}`}
+                        src={`https://www.instagram.com/reel/${instaId || ''}/embed/`}
+                        className="w-full h-full border-0 bg-black"
+                        sandbox="allow-scripts allow-same-origin allow-forms"
+                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
+                        allowFullScreen
+                        scrolling="no"
+                        title={item.name}
+                      />
                     </div>
                   </div>
+                </div>
+              )}
 
-                  {/* Replay / refresh button */}
-                  <button
-                    onClick={(e) => handleReplayReel(item.id, e)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white/50 hover:text-white text-xs font-medium transition-colors"
-                    style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)' }}
+              {/* YouTube Short Embed */}
+              {item.type === 'youtube_short' && (
+                <div className="w-full h-full flex items-center justify-center bg-[#0d0d11] relative p-2 sm:p-4">
+                  <div
+                    className="w-full max-w-[420px] h-[98%] max-h-[760px] rounded-2xl overflow-hidden shadow-2xl relative bg-black flex flex-col border border-red-500/20"
+                    style={{
+                      boxShadow: '0 0 40px rgba(239, 68, 68, 0.2)',
+                    }}
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Refresh
-                  </button>
+                    {/* Top branded bar */}
+                    <div className="flex items-center justify-between px-3.5 py-2 bg-black/80 backdrop-blur-md border-b border-white/10 shrink-0 z-10">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                          </svg>
+                        </div>
+                        <span className="text-white text-xs font-semibold tracking-wide">YouTube Short</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => handleReloadEmbed(item.id, e)}
+                          title="Reload Short"
+                          className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                        <a
+                          href={item.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open on YouTube"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded-lg text-white/60 hover:text-red-400 hover:bg-white/10 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* YouTube Iframe Player */}
+                    <div className="flex-1 w-full relative bg-black">
+                      <iframe
+                        key={`yt-frame-${item.id}-${reloadKey}`}
+                        src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}&modestbranding=1&rel=0`}
+                        className="w-full h-full border-0 bg-black"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        title={item.name}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Delete button */}
-            <button
-              onClick={(e) => handleDeleteItem(e, item.id)}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-destructive/80 hover:bg-destructive text-destructive-foreground flex items-center justify-center transition-all z-10"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
+              {/* Floating Delete Button */}
+              <button
+                onClick={(e) => handleDeleteItem(e, item.id)}
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 hover:bg-destructive text-white/80 hover:text-destructive-foreground backdrop-blur-md border border-white/10 flex items-center justify-center transition-all shadow-lg z-20 hover:scale-105"
+                title="Delete this fuel clip"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
 
-            {/* Item label */}
-            <div className="absolute bottom-4 left-4 z-10">
-              <div className="flex items-center gap-2 mb-1">
-                {item.type === 'local_video' ? (
-                  <Video className="w-4 h-4 text-white/70" />
-                ) : (
-                  <Link className="w-4 h-4 text-white/70" />
-                )}
-                <span className="text-white/70 text-xs uppercase tracking-wider">
-                  {item.type === 'local_video' ? 'Local' : 'Instagram'}
-                </span>
-              </div>
-              <p className="text-white font-semibold text-lg drop-shadow-lg truncate max-w-[200px]">
-                {item.name}
-              </p>
+              {/* Item bottom label (for local video) */}
+              {item.type === 'local_video' && (
+                <div className="absolute bottom-4 left-4 z-10 bg-black/50 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/10 max-w-[240px]">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Video className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-primary text-[10px] uppercase font-bold tracking-wider">Local Video</span>
+                  </div>
+                  <p className="text-white font-semibold text-sm truncate">
+                    {item.name}
+                  </p>
+                </div>
+              )}
             </div>
-
-            {/* Play indicator for local videos */}
-            {item.type === 'local_video' && index === currentItemIndex && !isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center">
-                  <div className="w-0 h-0 border-l-[20px] border-l-white border-y-[12px] border-y-transparent ml-1" />
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator pills */}
       {items.length > 1 && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 z-10">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 z-20 pointer-events-none">
           {items.map((_, index) => (
             <div
               key={index}
               className={cn(
-                "w-1.5 h-6 rounded-full transition-all duration-200",
-                index === currentItemIndex ? "bg-primary" : "bg-white/30"
+                "w-1.5 rounded-full transition-all duration-200",
+                index === currentItemIndex ? "h-6 bg-primary shadow-sm shadow-primary" : "h-1.5 bg-white/30"
               )}
             />
           ))}
@@ -443,27 +514,13 @@ export const FuelPlayer: React.FC = () => {
         open={addModalOpen}
         onOpenChange={setAddModalOpen}
         fileInputRef={fileInputRef}
-        instagramUrl={instagramUrl}
-        setInstagramUrl={setInstagramUrl}
-        addingInstagram={addingInstagram}
-        onAddInstagram={handleAddInstagram}
+        videoUrl={videoUrl}
+        setVideoUrl={setVideoUrl}
+        addingVideo={addingVideo}
+        onAddUrl={handleAddUrl}
       />
     </div>
   );
-};
-
-// Helper function for Instagram ID extraction
-const extractInstagramId = (url: string): string => {
-  const patterns = [
-    /instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
-    /instagr\.am\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return '';
 };
 
 // Add Fuel Modal Component
@@ -471,89 +528,120 @@ interface AddFuelModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
-  instagramUrl: string;
-  setInstagramUrl: (url: string) => void;
-  addingInstagram: boolean;
-  onAddInstagram: () => void;
+  videoUrl: string;
+  setVideoUrl: (url: string) => void;
+  addingVideo: boolean;
+  onAddUrl: () => void;
 }
 
 const AddFuelModal: React.FC<AddFuelModalProps> = ({
   open,
   onOpenChange,
   fileInputRef,
-  instagramUrl,
-  setInstagramUrl,
-  addingInstagram,
-  onAddInstagram,
+  videoUrl,
+  setVideoUrl,
+  addingVideo,
+  onAddUrl,
 }) => {
+  const isInsta = isValidInstagramUrl(videoUrl);
+
+  const handleOpenDownloader = () => {
+    if (!videoUrl.trim()) return;
+    window.open(`https://saveinsta.app/en?url=${encodeURIComponent(videoUrl.trim())}`, '_blank');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-card border-border/80 text-foreground">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <Flame className="w-5 h-5 text-primary" />
-            Add Fuel
+            Add Motivation Fuel
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Local Video Option */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full p-4 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-4"
-          >
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <Video className="w-6 h-6 text-primary" />
+        <div className="space-y-5 pt-2">
+          {/* Social Video Link Option (Instagram or YouTube) */}
+          <div className="space-y-3 p-4 rounded-2xl bg-muted/40 border border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shrink-0 shadow-md">
+                <Link className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-foreground text-sm">Paste Reel or Short Link</p>
+                <p className="text-xs text-muted-foreground">Embed directly in your Fuel player</p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-foreground">Upload Video</p>
-              <p className="text-sm text-muted-foreground">MP4, WebM from your device</p>
+
+            <div className="flex gap-2 pt-1">
+              <input
+                type="url"
+                placeholder="https://instagram.com/reel/... or YouTube Short"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onAddUrl();
+                  }
+                }}
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <Button
+                onClick={onAddUrl}
+                disabled={!videoUrl.trim() || addingVideo}
+                className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-4 rounded-xl shadow-md shadow-primary/20"
+              >
+                {addingVideo ? 'Adding...' : 'Add'}
+              </Button>
             </div>
-          </button>
+
+            {/* If user pasted Instagram link, show quick 1-click download button */}
+            {isInsta && (
+              <div className="pt-2 border-t border-border/40 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Want 100% offline & zero redirect?</span>
+                <button
+                  type="button"
+                  onClick={handleOpenDownloader}
+                  className="text-xs font-bold text-pink-400 hover:text-pink-300 flex items-center gap-1 bg-pink-500/10 px-2.5 py-1 rounded-lg border border-pink-500/30"
+                >
+                  ⚡ Download MP4
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
+              <span className="w-full border-t border-border/60" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">or</span>
+              <span className="bg-card px-2 text-muted-foreground font-semibold">or store offline on device</span>
             </div>
           </div>
 
-          {/* Instagram Link Option */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
-                <Link className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">Instagram Reel</p>
-                <p className="text-sm text-muted-foreground">Paste a reel or post URL</p>
-              </div>
+          {/* Local Video Option */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full p-4 rounded-2xl border-2 border-dashed border-border/70 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-4 group"
+          >
+            <div className="w-11 h-11 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Video className="w-5 h-5 text-primary" />
             </div>
-            
-            <div className="flex gap-2">
-              <input
-                type="url"
-                placeholder="https://instagram.com/reel/..."
-                value={instagramUrl}
-                onChange={(e) => setInstagramUrl(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <Button
-                onClick={onAddInstagram}
-                disabled={!instagramUrl.trim() || addingInstagram}
-                className="shrink-0"
-              >
-                {addingInstagram ? '...' : 'Add'}
-              </Button>
+            <div>
+              <p className="font-bold text-foreground text-sm">Upload Video (MP4 / WebM)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Saved 100% locally to your browser storage — plays natively with audio and zero redirects
+              </p>
             </div>
-          </div>
+          </button>
 
-          {/* Privacy Note */}
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
-            <HardDrive className="w-4 h-4 shrink-0" />
-            <span>Stored locally on your device. Private & offline-ready.</span>
+          {/* Pro tip card */}
+          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
+            <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <span>
+              <strong className="text-foreground">Zero-Redirect Playback:</strong> Local MP4 uploads and YouTube Shorts play 100% natively on your device without leaving the page.
+            </span>
           </div>
         </div>
       </DialogContent>

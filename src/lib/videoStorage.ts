@@ -157,9 +157,7 @@ export const extractInstagramId = (url: string): string | null => {
 };
 
 export const isValidInstagramUrl = (url: string): boolean => {
-  const trimmed = url.trim();
-  // Must contain instagram.com and have a reel/post path segment
-  return /instagram\.com/.test(trimmed) && /\/(p|reel|reels)\/[A-Za-z0-9_-]+/.test(trimmed);
+  return extractInstagramId(url) !== null;
 };
 
 export const extractYouTubeId = (url: string): string | null => {
