@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
@@ -35,6 +35,11 @@ const Dashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
   const [displayName, setDisplayName] = useState<string | null>(null);
+  // Skip-animation state: when timer is skipped, circle sweeps from 0 → current %
+  const [justSkipped, setJustSkipped] = useState(false);
+  const [skipAnimTarget, setSkipAnimTarget] = useState(0);
+  const skipAnimTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipAnimProgress = useAnimatedProgress(skipAnimTarget, 900);
 
   // Calculate streak from calendar history
   const calculateStreak = useCallback(() => {
@@ -144,6 +149,17 @@ const Dashboard = () => {
       timer.startTimer();
     }
   }, [timer.settings.autoStart, timer.startTimer]);
+
+  // Skip timer: reset timer and play 0→% animation on the progress circle
+  const handleSkipTimer = useCallback(() => {
+    timer.resetTimer();
+    // Start skip animation: circle goes from 0 → todayProgressPercent
+    setJustSkipped(true);
+    setSkipAnimTarget(0);
+    requestAnimationFrame(() => setSkipAnimTarget(todayProgressPercent));
+    if (skipAnimTimeout.current) clearTimeout(skipAnimTimeout.current);
+    skipAnimTimeout.current = setTimeout(() => setJustSkipped(false), 1100);
+  }, [timer, todayProgressPercent]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -268,7 +284,7 @@ const Dashboard = () => {
                   </button>
                 )}
                 <button 
-                  onClick={timer.resetTimer}
+                  onClick={handleSkipTimer}
                   className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-semibold transition-colors"
                 >
                   Skip
@@ -277,11 +293,17 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
-              {/* Daily Progress Circle */}
+              {/* Daily Progress Circle — animates from 0 when timer is skipped */}
               <div className="shrink-0">
-                <ProgressCircle percentage={animatedDailyProgress} size={130} strokeWidth={8}>
+                <ProgressCircle
+                  percentage={justSkipped ? skipAnimProgress : animatedDailyProgress}
+                  size={130}
+                  strokeWidth={8}
+                >
                   <Flame className="w-5 h-5 text-primary mb-1" />
-                  <span className="text-2xl md:text-3xl font-bold">{animatedDailyProgress}%</span>
+                  <span className="text-2xl md:text-3xl font-bold">
+                    {justSkipped ? skipAnimProgress : animatedDailyProgress}%
+                  </span>
                   <span className="text-[10px] text-muted-foreground">Complete</span>
                 </ProgressCircle>
               </div>
