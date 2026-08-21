@@ -201,93 +201,98 @@ export const CustomRoutine: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header Info */}
-      <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 mb-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Repeat className="w-4 h-4 text-primary" />
-          <span className="text-primary font-medium">
-            This routine is used when "Same routine every day" is enabled
+      <div className="p-4 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 text-sm">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+            <Repeat className="w-4 h-4 text-primary" />
+          </div>
+          <span className="text-primary font-semibold text-xs md:text-sm">
+            Active default template when "Same routine every day" is toggled on.
           </span>
         </div>
       </div>
 
       {/* Routine Header */}
       {editingHeader ? (
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-primary">
-            <Dumbbell className="w-5 h-5" />
+        <div className="flex items-center gap-3 p-4 bg-card/60 rounded-2xl border border-border/50">
+          <div className="w-12 h-12 rounded-xl bg-card flex items-center justify-center text-primary">
+            <Dumbbell className="w-6 h-6" />
           </div>
-          <div className="flex-1 space-y-1">
+          <div className="flex-1 space-y-2">
             <Input
               value={editForm.title}
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value.slice(0, 100) })}
-              className="h-8 font-bold bg-background/50"
+              className="h-9 font-bold bg-background/70 rounded-xl"
               placeholder="Routine title"
               maxLength={100}
             />
             <Input
               value={editForm.subtitle}
               onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value.slice(0, 200) })}
-              className="h-7 text-xs bg-background/50"
+              className="h-8 text-xs bg-background/70 rounded-xl"
               placeholder="Subtitle"
               maxLength={200}
             />
           </div>
-          <Button size="icon" variant="ghost" onClick={saveEditHeader} className="h-8 w-8">
+          <Button size="icon" variant="ghost" onClick={saveEditHeader} className="h-9 w-9 rounded-xl">
             <Check className="w-4 h-4 text-primary" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setEditingHeader(false)} className="h-8 w-8">
+          <Button size="icon" variant="ghost" onClick={() => setEditingHeader(false)} className="h-9 w-9 rounded-xl">
             <X className="w-4 h-4" />
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-3 mb-4 group">
-          <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-primary">
-            <Dumbbell className="w-5 h-5" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-primary">{routine.title}</h3>
-            <p className="text-xs text-muted-foreground">{routine.subtitle}</p>
+        <div className="flex items-center justify-between gap-3 p-4 bg-card/60 rounded-2xl border border-border/50 group">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-background/80 border border-border/50 flex items-center justify-center text-primary">
+              <Dumbbell className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground">{routine.title}</h3>
+              <p className="text-xs md:text-sm text-muted-foreground">{routine.subtitle}</p>
+            </div>
           </div>
           <Button
-            size="icon"
-            variant="ghost"
+            size="sm"
+            variant="outline"
             onClick={startEditHeader}
-            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="rounded-xl text-xs"
           >
-            <Pencil className="w-3 h-3" />
+            <Pencil className="w-3.5 h-3.5 mr-1.5" />
+            Edit Routine
           </Button>
         </div>
       )}
 
-      {/* Exercises List */}
-      <div className="grid gap-2">
+      {/* Exercises Grid - Responsive for PC */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {routine.exercises.map((exercise) => {
           const isEditing = editingExercise === exercise.id;
 
           if (isEditing) {
             return (
-              <Card key={exercise.id} className="bg-card/50">
-                <CardContent className="p-3 flex items-center gap-2">
+              <Card key={exercise.id} className="bg-card/70 border-primary/40 rounded-2xl">
+                <CardContent className="p-4 flex items-center gap-2">
                   <Input
                     value={exerciseForm.name}
                     onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value.slice(0, 100) })}
-                    className="flex-1 h-8 bg-background/50"
+                    className="flex-1 h-9 bg-background/70 rounded-xl"
                     placeholder="Exercise name"
                     maxLength={100}
                   />
                   <Input
                     value={exerciseForm.setsReps}
                     onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value.slice(0, 20) })}
-                    className="w-20 h-8 bg-background/50 text-center"
+                    className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
                     placeholder="3×10"
                     maxLength={20}
                   />
-                  <Button size="icon" variant="ghost" onClick={() => saveEditExercise(exercise.id)} className="h-8 w-8">
+                  <Button size="icon" variant="ghost" onClick={() => saveEditExercise(exercise.id)} className="h-9 w-9 rounded-xl">
                     <Check className="w-4 h-4 text-primary" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-8 w-8">
+                  <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-9 w-9 rounded-xl">
                     <X className="w-4 h-4" />
                   </Button>
                 </CardContent>
@@ -298,24 +303,26 @@ export const CustomRoutine: React.FC = () => {
           return (
             <Card
               key={exercise.id}
-              className="transition-all duration-200 group bg-card/50 hover:bg-card/80"
+              className="transition-all duration-200 group bg-card/60 hover:bg-card hover:border-primary/30 border-border/60 rounded-2xl"
             >
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center text-primary">
-                  <Dumbbell className="w-4 h-4" />
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-background/70 border border-border/50 flex items-center justify-center text-primary shrink-0">
+                  <Dumbbell className="w-5 h-5" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{exercise.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">{exercise.name}</p>
+                  <div className="mt-1">
+                    <Badge variant="outline" className="text-xs bg-background/60 font-mono">
+                      {exercise.setsReps}
+                    </Badge>
+                  </div>
                 </div>
-                <Badge variant="outline" className="text-xs bg-background/50">
-                  {exercise.setsReps}
-                </Badge>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button size="icon" variant="ghost" onClick={() => startEditExercise(exercise)} className="h-6 w-6">
-                    <Pencil className="w-3 h-3" />
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => startEditExercise(exercise)} className="h-8 w-8 rounded-lg hover:bg-muted">
+                    <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => deleteExercise(exercise.id)} className="h-6 w-6 text-destructive">
-                    <Trash2 className="w-3 h-3" />
+                  <Button size="icon" variant="ghost" onClick={() => deleteExercise(exercise.id)} className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10">
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </CardContent>
@@ -325,12 +332,12 @@ export const CustomRoutine: React.FC = () => {
 
         {/* Add Exercise Form */}
         {addingExercise && (
-          <Card className="bg-card/50 border-dashed">
-            <CardContent className="p-3 flex items-center gap-2">
+          <Card className="bg-card/60 border-dashed border-primary/50 rounded-2xl">
+            <CardContent className="p-4 flex items-center gap-2">
               <Input
                 value={newExercise.name}
                 onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value.slice(0, 100) })}
-                className="flex-1 h-8 bg-background/50"
+                className="flex-1 h-9 bg-background/70 rounded-xl"
                 placeholder="Exercise name"
                 autoFocus
                 maxLength={100}
@@ -339,15 +346,15 @@ export const CustomRoutine: React.FC = () => {
               <Input
                 value={newExercise.setsReps}
                 onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value.slice(0, 20) })}
-                className="w-20 h-8 bg-background/50 text-center"
+                className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
                 placeholder="3×10"
                 maxLength={20}
                 onKeyDown={(e) => e.key === 'Enter' && addExercise()}
               />
-              <Button size="icon" variant="ghost" onClick={addExercise} className="h-8 w-8">
+              <Button size="icon" variant="ghost" onClick={addExercise} className="h-9 w-9 rounded-xl">
                 <Check className="w-4 h-4 text-primary" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => setAddingExercise(false)} className="h-8 w-8">
+              <Button size="icon" variant="ghost" onClick={() => setAddingExercise(false)} className="h-9 w-9 rounded-xl">
                 <X className="w-4 h-4" />
               </Button>
             </CardContent>
@@ -359,12 +366,12 @@ export const CustomRoutine: React.FC = () => {
       {!addingExercise && (
         <Button
           variant="outline"
-          size="sm"
+          size="lg"
           onClick={() => setAddingExercise(true)}
-          className="w-full border-dashed"
+          className="w-full border-dashed rounded-2xl py-5 border-border hover:border-primary/50 text-sm font-semibold"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Exercise
+          <Plus className="w-4 h-4 mr-2 text-primary" />
+          Add Custom Exercise
         </Button>
       )}
     </div>

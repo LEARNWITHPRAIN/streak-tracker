@@ -156,171 +156,183 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-border/50">
-        <div className="container max-w-2xl mx-auto px-4 py-3">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Dumbbell className="w-4 h-4 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                <Dumbbell className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-primary text-glow">Yodha Mode</h1>
-                <p className="text-[10px] text-muted-foreground">
+                <h1 className="text-xl font-bold text-primary text-glow">Yodha Mode</h1>
+                <p className="text-xs text-muted-foreground">
                   {displayName ? `Welcome back, ${displayName}` : 'Welcome Back Yodha'}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               {/* Streak Counter */}
               {streak > 0 && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/20">
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm font-bold text-orange-500">{streak}</span>
+                <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500/20 border border-orange-500/30">
+                  <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+                  <span className="text-sm font-bold text-orange-500">{streak} Day Streak</span>
                 </div>
               )}
               
               <button
                 onClick={() => navigate('/profile')}
-                className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors border border-border/40"
                 title="Profile Settings"
               >
-                <User className="w-4 h-4 text-muted-foreground" />
+                <User className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
               </button>
               
               <button
                 onClick={handleSignOut}
-                className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors border border-border/40"
                 title="Sign Out"
               >
-                <LogOut className="w-4 h-4 text-muted-foreground" />
+                <LogOut className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Progress Section - Shows Timer when running, Progress when not */}
-        <section className="glass rounded-2xl p-4 animate-scale-in">
-          <div className="flex flex-col items-center gap-3">
-            {isTimerActive ? (
-              <>
-                {/* Timer Display */}
-                <ProgressCircle percentage={timer.progress} size={120} strokeWidth={8}>
-                  <span className="text-2xl font-bold">{timer.formattedTime}</span>
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Progress Section - Responsive Hero Banner */}
+        <section className="glass rounded-2xl p-6 md:p-8 animate-scale-in border border-border/60 shadow-xl">
+          {isTimerActive ? (
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              {/* Timer Display */}
+              <div className="flex items-center gap-6">
+                <ProgressCircle percentage={timer.progress} size={130} strokeWidth={8}>
+                  <span className="text-2xl md:text-3xl font-bold">{timer.formattedTime}</span>
                   <span className="text-[10px] text-muted-foreground">Rest Timer</span>
                 </ProgressCircle>
                 
-                <div className="text-center">
-                  <p className="text-base font-semibold text-primary">Rest Time</p>
-                  <p className="text-xs text-muted-foreground">Take a breather before next set</p>
+                <div className="text-left">
+                  <p className="text-lg md:text-xl font-bold text-primary">Rest Time Active</p>
+                  <p className="text-sm text-muted-foreground mt-1">Take a breather and recharge before your next set</p>
                 </div>
+              </div>
 
-                <div className="flex gap-2">
-                  {timer.isRunning ? (
-                    <button 
-                      onClick={timer.pauseTimer}
-                      className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
-                    >
-                      Pause
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={timer.resumeTimer}
-                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
-                    >
-                      Resume
-                    </button>
-                  )}
+              <div className="flex items-center gap-3 w-full md:w-auto justify-center">
+                {timer.isRunning ? (
                   <button 
-                    onClick={timer.resetTimer}
-                    className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
+                    onClick={timer.pauseTimer}
+                    className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-semibold transition-colors"
                   >
-                    Skip
+                    Pause
                   </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Daily Progress Circle */}
-                <ProgressCircle percentage={todayProgressPercent} size={120} strokeWidth={8}>
-                  <Flame className="w-4 h-4 text-primary mb-1" />
-                  <span className="text-2xl font-bold">{todayProgressPercent}%</span>
+                ) : (
+                  <button 
+                    onClick={timer.resumeTimer}
+                    className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold transition-colors shadow-lg shadow-primary/20"
+                  >
+                    Resume
+                  </button>
+                )}
+                <button 
+                  onClick={timer.resetTimer}
+                  className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-semibold transition-colors"
+                >
+                  Skip
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
+              {/* Daily Progress Circle */}
+              <div className="shrink-0">
+                <ProgressCircle percentage={todayProgressPercent} size={130} strokeWidth={8}>
+                  <Flame className="w-5 h-5 text-primary mb-1" />
+                  <span className="text-2xl md:text-3xl font-bold">{todayProgressPercent}%</span>
                   <span className="text-[10px] text-muted-foreground">Complete</span>
                 </ProgressCircle>
-                
-                <div className="text-center flex items-center justify-center gap-2">
-                  <p className="text-base font-semibold text-primary">Today's Progress</p>
-                  <ShareProgressCard percentage={todayProgressPercent} completed={completed} total={total} />
+              </div>
+              
+              <div className="flex-1 w-full space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-xl md:text-2xl font-bold text-foreground">Today's Workout Progress</h2>
+                      <ShareProgressCard percentage={todayProgressPercent} completed={completed} total={total} />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {completed} of {total} sets completed {todayProgressPercent >= 100 ? '🎉 Full workout crushed!' : ''}
+                    </p>
+                  </div>
+                  <div className="text-sm font-semibold px-3 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 self-start sm:self-auto">
+                    {total - completed} sets remaining
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">{completed} of {total} sets completed</p>
 
                 {/* Progress Bar */}
-                <div className="w-full">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="w-full pt-1">
+                  <div className="h-3 bg-muted/70 rounded-full overflow-hidden p-0.5 border border-border/30">
                     <div 
-                      className="h-full bg-primary transition-all duration-500 ease-out"
+                      className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                       style={{ 
                         width: `${todayProgressPercent}%`,
-                        boxShadow: todayProgressPercent > 0 ? '0 0 10px hsl(var(--primary) / 0.5)' : 'none'
+                        boxShadow: todayProgressPercent > 0 ? '0 0 14px hsl(var(--primary) / 0.6)' : 'none'
                       }}
                     />
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* Tabs - Scrollable for mobile */}
+        {/* Tabs - Responsive grid on PC, scrollable on mobile */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <ScrollArea className="w-full whitespace-nowrap">
-            <TabsList className="inline-flex w-max bg-muted/50 p-1 gap-1">
-              <TabsTrigger value="today" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Dumbbell className="w-3.5 h-3.5 mr-1" />
+          <div className="w-full overflow-x-auto pb-1 md:pb-0">
+            <TabsList className="w-full flex md:grid md:grid-cols-7 bg-muted/40 p-1.5 gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
+              <TabsTrigger value="today" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Dumbbell className="w-4 h-4 mr-1.5" />
                 Today
               </TabsTrigger>
-              <TabsTrigger value="custom" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Repeat className="w-3.5 h-3.5 mr-1" />
+              <TabsTrigger value="custom" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Repeat className="w-4 h-4 mr-1.5" />
                 Custom
               </TabsTrigger>
-              <TabsTrigger value="weekly" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <LayoutGrid className="w-3.5 h-3.5 mr-1" />
+              <TabsTrigger value="weekly" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <LayoutGrid className="w-4 h-4 mr-1.5" />
                 Weekly
               </TabsTrigger>
-              <TabsTrigger value="calendar" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Calendar className="w-3.5 h-3.5 mr-1" />
+              <TabsTrigger value="calendar" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Calendar className="w-4 h-4 mr-1.5" />
                 Calendar
               </TabsTrigger>
-              <TabsTrigger value="timer" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Clock className="w-3.5 h-3.5 mr-1" />
+              <TabsTrigger value="timer" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Clock className="w-4 h-4 mr-1.5" />
                 Timer
               </TabsTrigger>
-              <TabsTrigger value="music" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Headphones className="w-3.5 h-3.5 mr-1" />
+              <TabsTrigger value="music" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Headphones className="w-4 h-4 mr-1.5" />
                 Music
               </TabsTrigger>
-              <TabsTrigger value="fuel" className="px-3 py-2 text-xs data-[state=active]:bg-card">
-                <Zap className="w-3.5 h-3.5 mr-1" />
+              <TabsTrigger value="fuel" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Zap className="w-4 h-4 mr-1.5" />
                 Fuel
               </TabsTrigger>
             </TabsList>
-            <ScrollBar orientation="horizontal" className="invisible" />
-          </ScrollArea>
+          </div>
 
-          <TabsContent value="today" className="mt-4">
+          <TabsContent value="today" className="mt-6">
             <TodayWorkout onSetComplete={timer.startTimer} />
           </TabsContent>
 
-          <TabsContent value="custom" className="mt-4">
+          <TabsContent value="custom" className="mt-6">
             <CustomRoutine />
           </TabsContent>
 
-          <TabsContent value="weekly" className="mt-4">
+          <TabsContent value="weekly" className="mt-6">
             <WeeklySchedule />
           </TabsContent>
 
-          <TabsContent value="calendar" className="mt-4">
+          <TabsContent value="calendar" className="mt-6">
             <CalendarView
               history={calendarHistory}
               currentMonth={currentMonth}
@@ -328,7 +340,7 @@ const Dashboard = () => {
             />
           </TabsContent>
 
-          <TabsContent value="timer" className="mt-4">
+          <TabsContent value="timer" className="mt-6">
             <RestTimer
               isRunning={timer.isRunning}
               timeRemaining={timer.timeRemaining}
@@ -344,11 +356,11 @@ const Dashboard = () => {
             />
           </TabsContent>
 
-          <TabsContent value="music" className="mt-4">
+          <TabsContent value="music" className="mt-6">
             <MusicPlayer />
           </TabsContent>
 
-          <TabsContent value="fuel" className="mt-4">
+          <TabsContent value="fuel" className="mt-6">
             <FuelPlayer />
           </TabsContent>
 
@@ -360,9 +372,9 @@ const Dashboard = () => {
 
 
       {/* Footer - add padding when mini player is visible */}
-      <footer className={`container max-w-2xl mx-auto px-4 py-6 text-center ${currentTrack && activeTab !== 'music' ? 'pb-20' : ''}`}>
+      <footer className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center ${currentTrack && activeTab !== 'music' ? 'pb-24' : ''}`}>
         <p className="text-xs text-muted-foreground">
-          Built with dedication
+          Built with dedication • Yodha Mode
         </p>
       </footer>
     </div>

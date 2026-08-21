@@ -52,26 +52,31 @@ export const RestTimer: React.FC<RestTimerProps> = ({
   };
 
   return (
-    <div className="glass rounded-2xl p-6 animate-scale-in">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Timer className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Rest Timer</h3>
+    <div className="glass rounded-2xl p-6 md:p-10 animate-scale-in border border-border/60 shadow-xl space-y-8 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+            <Timer className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-foreground">Interval & Rest Timer</h3>
+            <p className="text-xs text-muted-foreground">Optimal recovery time between intense sets</p>
+          </div>
         </div>
         
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
           <DialogTrigger asChild>
-            <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground">
-              <Settings className="w-4 h-4" />
+            <Button size="icon" variant="outline" className="rounded-xl border-border/60 hover:bg-muted">
+              <Settings className="w-4 h-4 text-muted-foreground" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border">
+          <DialogContent className="bg-card border-border sm:max-w-md rounded-2xl">
             <DialogHeader>
-              <DialogTitle>Timer Settings</DialogTitle>
+              <DialogTitle>Rest Timer Settings</DialogTitle>
             </DialogHeader>
             <div className="space-y-6 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="duration">Rest Duration (seconds)</Label>
+                <Label htmlFor="duration">Custom Rest Duration (seconds)</Label>
                 <Input
                   id="duration"
                   type="number"
@@ -79,14 +84,14 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                   max={600}
                   value={tempDuration}
                   onChange={(e) => setTempDuration(parseInt(e.target.value) || 60)}
-                  className="bg-background"
+                  className="bg-background rounded-xl h-11"
                 />
               </div>
               
-              <div className="flex items-center justify-between">
-                <Label htmlFor="sound" className="flex items-center gap-2">
-                  {settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                  Sound Enabled
+              <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/40">
+                <Label htmlFor="sound" className="flex items-center gap-2 font-medium cursor-pointer">
+                  {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+                  Beep Sound on Completion
                 </Label>
                 <Switch
                   id="sound"
@@ -95,63 +100,87 @@ export const RestTimer: React.FC<RestTimerProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
-                {[30, 45, 60, 90].map((sec) => (
-                  <Button
-                    key={sec}
-                    variant={tempDuration === sec ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTempDuration(sec)}
-                    className={tempDuration === sec ? 'btn-primary-glow' : ''}
-                  >
-                    {sec}s
-                  </Button>
-                ))}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Quick Presets</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[30, 45, 60, 90].map((sec) => (
+                    <Button
+                      key={sec}
+                      type="button"
+                      variant={tempDuration === sec ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTempDuration(sec)}
+                      className={`rounded-xl h-10 ${tempDuration === sec ? 'btn-primary-glow font-bold' : ''}`}
+                    >
+                      {sec}s
+                    </Button>
+                  ))}
+                </div>
               </div>
 
-              <Button onClick={handleSaveSettings} className="w-full btn-primary-glow">
-                Save Settings
+              <Button onClick={handleSaveSettings} className="w-full btn-primary-glow h-11 rounded-xl font-bold">
+                Save & Apply Settings
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex flex-col items-center gap-4">
-        <ProgressCircle percentage={progress} size={140} strokeWidth={10}>
-          <span className={`text-3xl font-bold timer-display ${isComplete ? 'text-primary text-glow animate-pulse-glow' : ''}`}>
+      <div className="flex flex-col items-center justify-center gap-6 py-4">
+        <ProgressCircle percentage={progress} size={180} strokeWidth={12}>
+          <span className={`text-4xl md:text-5xl font-extrabold timer-display tracking-tight ${isComplete ? 'text-primary text-glow animate-pulse-glow' : 'text-foreground'}`}>
             {formattedTime}
           </span>
-          {isComplete && (
-            <span className="text-xs text-primary font-medium">Done!</span>
+          {isComplete ? (
+            <span className="text-xs font-bold text-primary animate-bounce mt-1">Ready for next set!</span>
+          ) : (
+            <span className="text-xs text-muted-foreground mt-1">Seconds Left</span>
           )}
         </ProgressCircle>
 
+        {/* Quick presets row */}
         <div className="flex items-center gap-2">
+          {[30, 45, 60, 90, 120].map((sec) => (
+            <button
+              key={sec}
+              onClick={() => onUpdateSettings({ restDuration: sec })}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                settings.restDuration === sec
+                  ? 'bg-primary/20 text-primary border border-primary/40'
+                  : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {sec}s
+            </button>
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           {!isRunning && timeRemaining === settings.restDuration && (
-            <Button onClick={onStart} className="btn-primary-glow">
-              <Play className="w-4 h-4 mr-2" />
-              Start
+            <Button onClick={onStart} size="lg" className="btn-primary-glow px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none shadow-lg shadow-primary/30">
+              <Play className="w-5 h-5 mr-2" />
+              Start Timer
             </Button>
           )}
 
           {isRunning && (
-            <Button onClick={onPause} variant="outline" className="border-primary text-primary">
-              <Pause className="w-4 h-4 mr-2" />
+            <Button onClick={onPause} size="lg" variant="outline" className="border-primary text-primary px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none">
+              <Pause className="w-5 h-5 mr-2" />
               Pause
             </Button>
           )}
 
           {!isRunning && timeRemaining < settings.restDuration && timeRemaining > 0 && (
-            <Button onClick={onResume} className="btn-primary-glow">
-              <Play className="w-4 h-4 mr-2" />
+            <Button onClick={onResume} size="lg" className="btn-primary-glow px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none shadow-lg shadow-primary/30">
+              <Play className="w-5 h-5 mr-2" />
               Resume
             </Button>
           )}
 
           {(timeRemaining < settings.restDuration || isComplete) && (
-            <Button onClick={onReset} variant="outline" className="border-border">
-              <RotateCcw className="w-4 h-4 mr-2" />
+            <Button onClick={onReset} size="lg" variant="outline" className="border-border px-6 h-12 rounded-xl text-base font-semibold flex-1 sm:flex-none hover:bg-muted">
+              <RotateCcw className="w-5 h-5 mr-2" />
               Reset
             </Button>
           )}

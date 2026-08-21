@@ -106,14 +106,13 @@ export const WeeklySchedule: React.FC = () => {
         <h2 className="text-lg font-bold text-foreground">Weekly Workout Split</h2>
         <p className="text-xs text-muted-foreground">Your structured training program</p>
       </div>
-
-      <Tabs defaultValue={today} className="w-full">
-        <TabsList className="w-full grid grid-cols-7 gap-1 bg-card/50 p-1 h-auto">
+      <Tabs defaultValue={today} className="w-full">
+        <TabsList className="w-full grid grid-cols-7 gap-1.5 bg-card/60 p-1.5 rounded-2xl border border-border/50 h-auto">
           {schedule.map((day) => (
             <TabsTrigger
               key={day.day}
               value={day.day}
-              className="text-xs px-1 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="text-xs md:text-sm font-semibold py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all"
             >
               {day.shortDay}
             </TabsTrigger>
@@ -121,80 +120,83 @@ export const WeeklySchedule: React.FC = () => {
         </TabsList>
 
         {schedule.map((day) => (
-          <TabsContent key={day.day} value={day.day} className="mt-4 space-y-3">
+          <TabsContent key={day.day} value={day.day} className="mt-6 space-y-4">
             {/* Day Header */}
             {editingDay === day.day ? (
-              <div className="flex items-center gap-2 mb-4">
-                <div className={`w-10 h-10 rounded-xl bg-card flex items-center justify-center ${dayColors[day.day]}`}>
+              <div className="flex items-center gap-3 p-4 bg-card/60 rounded-2xl border border-border/50">
+                <div className={`w-12 h-12 rounded-xl bg-card flex items-center justify-center ${dayColors[day.day]}`}>
                   {dayIcons[day.day]}
                 </div>
-                <div className="flex-1 space-y-1">
+                <div className="flex-1 space-y-2">
                   <Input
                     value={editForm.title}
                     onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="h-8 font-bold bg-background/50"
+                    className="h-9 font-bold bg-background/70 rounded-xl"
                     placeholder="Day title"
                   />
                   <Input
                     value={editForm.subtitle}
                     onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value })}
-                    className="h-7 text-xs bg-background/50"
+                    className="h-8 text-xs bg-background/70 rounded-xl"
                     placeholder="Subtitle"
                   />
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => saveEditDay(day.day)} className="h-8 w-8">
+                <Button size="icon" variant="ghost" onClick={() => saveEditDay(day.day)} className="h-9 w-9 rounded-xl">
                   <Check className="w-4 h-4 text-primary" />
                 </Button>
-                <Button size="icon" variant="ghost" onClick={() => setEditingDay(null)} className="h-8 w-8">
+                <Button size="icon" variant="ghost" onClick={() => setEditingDay(null)} className="h-9 w-9 rounded-xl">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-3 mb-4 group">
-                <div className={`w-10 h-10 rounded-xl bg-card flex items-center justify-center ${dayColors[day.day]}`}>
-                  {dayIcons[day.day]}
-                </div>
-                <div className="flex-1">
-                  <h3 className={`font-bold ${dayColors[day.day]}`}>{day.title}</h3>
-                  <p className="text-xs text-muted-foreground">{day.subtitle}</p>
+              <div className="flex items-center justify-between gap-3 p-4 bg-card/60 rounded-2xl border border-border/50 group">
+                <div className="flex items-center gap-3.5">
+                  <div className={`w-12 h-12 rounded-2xl bg-background/80 border border-border/50 flex items-center justify-center ${dayColors[day.day]}`}>
+                    {dayIcons[day.day]}
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-bold ${dayColors[day.day]}`}>{day.title}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground">{day.subtitle}</p>
+                  </div>
                 </div>
                 <Button 
-                  size="icon" 
-                  variant="ghost" 
+                  size="sm" 
+                  variant="outline" 
                   onClick={() => startEditDay(day)}
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="rounded-xl text-xs"
                 >
-                  <Pencil className="w-3 h-3" />
+                  <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                  Edit Day
                 </Button>
               </div>
             )}
 
-            {/* Exercises List */}
+            {/* Exercises List - Responsive Grid */}
             {day.exercises.length > 0 || addingExercise === day.day ? (
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {day.exercises.map((exercise) => {
                   const isEditing = editingExercise === exercise.id;
                   
                   if (isEditing) {
                     return (
-                      <Card key={exercise.id} className="bg-card/50">
-                        <CardContent className="p-3 flex items-center gap-2">
+                      <Card key={exercise.id} className="bg-card/70 border-primary/40 rounded-2xl">
+                        <CardContent className="p-4 flex items-center gap-2">
                           <Input
                             value={exerciseForm.name}
                             onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
-                            className="flex-1 h-8 bg-background/50"
+                            className="flex-1 h-9 bg-background/70 rounded-xl"
                             placeholder="Exercise name"
                           />
                           <Input
                             value={exerciseForm.setsReps}
                             onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value })}
-                            className="w-20 h-8 bg-background/50 text-center"
+                            className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
                             placeholder="3×10"
                           />
-                          <Button size="icon" variant="ghost" onClick={() => saveEditExercise(day.day, exercise.id)} className="h-8 w-8">
+                          <Button size="icon" variant="ghost" onClick={() => saveEditExercise(day.day, exercise.id)} className="h-9 w-9 rounded-xl">
                             <Check className="w-4 h-4 text-primary" />
                           </Button>
-                          <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-8 w-8">
+                          <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-9 w-9 rounded-xl">
                             <X className="w-4 h-4" />
                           </Button>
                         </CardContent>
@@ -205,26 +207,28 @@ export const WeeklySchedule: React.FC = () => {
                   return (
                     <Card
                       key={exercise.id}
-                      className="transition-all duration-200 group bg-card/50 hover:bg-card/80"
+                      className="transition-all duration-200 group bg-card/60 hover:bg-card hover:border-primary/30 border-border/60 rounded-2xl"
                     >
-                      <CardContent className="p-3 flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center ${dayColors[day.day]}`}>
-                          <Dumbbell className="w-4 h-4" />
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl bg-background/70 border border-border/50 flex items-center justify-center shrink-0 ${dayColors[day.day]}`}>
+                          <Dumbbell className="w-5 h-5" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">
                             {exercise.name}
                           </p>
+                          <div className="mt-1">
+                            <Badge variant="outline" className="text-xs bg-background/60 font-mono">
+                              {exercise.setsReps}
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge variant="outline" className="text-xs bg-background/50">
-                          {exercise.setsReps}
-                        </Badge>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button size="icon" variant="ghost" onClick={() => startEditExercise(exercise)} className="h-6 w-6">
-                            <Pencil className="w-3 h-3" />
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => startEditExercise(exercise)} className="h-8 w-8 rounded-lg hover:bg-muted">
+                            <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                           </Button>
-                          <Button size="icon" variant="ghost" onClick={() => deleteExercise(day.day, exercise.id)} className="h-6 w-6 text-destructive">
-                            <Trash2 className="w-3 h-3" />
+                          <Button size="icon" variant="ghost" onClick={() => deleteExercise(day.day, exercise.id)} className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10">
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </CardContent>
@@ -234,12 +238,12 @@ export const WeeklySchedule: React.FC = () => {
 
                 {/* Add Exercise Form */}
                 {addingExercise === day.day && (
-                  <Card className="bg-card/50 border-dashed">
-                    <CardContent className="p-3 flex items-center gap-2">
+                  <Card className="bg-card/60 border-dashed border-primary/50 rounded-2xl">
+                    <CardContent className="p-4 flex items-center gap-2">
                       <Input
                         value={newExercise.name}
                         onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
-                        className="flex-1 h-8 bg-background/50"
+                        className="flex-1 h-9 bg-background/70 rounded-xl"
                         placeholder="Exercise name"
                         autoFocus
                         onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
@@ -247,14 +251,14 @@ export const WeeklySchedule: React.FC = () => {
                       <Input
                         value={newExercise.setsReps}
                         onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value })}
-                        className="w-20 h-8 bg-background/50 text-center"
+                        className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
                         placeholder="3×10"
                         onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
                       />
-                      <Button size="icon" variant="ghost" onClick={() => addExercise(day.day)} className="h-8 w-8">
+                      <Button size="icon" variant="ghost" onClick={() => addExercise(day.day)} className="h-9 w-9 rounded-xl">
                         <Check className="w-4 h-4 text-primary" />
                       </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setAddingExercise(null)} className="h-8 w-8">
+                      <Button size="icon" variant="ghost" onClick={() => setAddingExercise(null)} className="h-9 w-9 rounded-xl">
                         <X className="w-4 h-4" />
                       </Button>
                     </CardContent>
@@ -262,11 +266,11 @@ export const WeeklySchedule: React.FC = () => {
                 )}
               </div>
             ) : day.day === 'sunday' ? (
-              <Card className="bg-card/30 border-dashed">
-                <CardContent className="p-6 text-center">
-                  <Moon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Take time to rest and recover</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Your muscles grow during rest!</p>
+              <Card className="bg-card/30 border-dashed rounded-2xl p-8 text-center">
+                <CardContent className="space-y-2">
+                  <Moon className="w-10 h-10 mx-auto text-muted-foreground/60" />
+                  <p className="text-base font-semibold text-muted-foreground">Take time to rest and recover</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Your muscles grow and rebuild during rest!</p>
                 </CardContent>
               </Card>
             ) : null}
@@ -275,12 +279,12 @@ export const WeeklySchedule: React.FC = () => {
             {addingExercise !== day.day && (
               <Button
                 variant="outline"
-                size="sm"
+                size="lg"
                 onClick={() => setAddingExercise(day.day)}
-                className="w-full border-dashed"
+                className="w-full border-dashed rounded-2xl py-5 border-border hover:border-primary/50 text-sm font-semibold"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Exercise
+                <Plus className="w-4 h-4 mr-2 text-primary" />
+                Add Exercise to {day.title}
               </Button>
             )}
           </TabsContent>
