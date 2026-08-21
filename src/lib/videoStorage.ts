@@ -130,21 +130,36 @@ export const formatBytes = (bytes: number): string => {
 };
 
 export const extractInstagramId = (url: string): string | null => {
+  // Normalize: remove query params and fragments for ID extraction, but keep the path
+  let cleanUrl = url.trim();
+  // Remove fragment
+  cleanUrl = cleanUrl.split('#')[0];
+  // Remove query string
+  const queryIdx = cleanUrl.indexOf('?');
+  const pathUrl = queryIdx !== -1 ? cleanUrl.substring(0, queryIdx) : cleanUrl;
+
   // Support various Instagram URL formats
   const patterns = [
     /instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
     /instagr\.am\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
+    // Handle /username/p/ID or /username/reel/ID style
+    /instagram\.com\/[^/]+\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/,
   ];
-  
+
   for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
+    // Try on path-only URL first, then full URL (handles query string edge cases)
+    const matchPath = pathUrl.match(pattern);
+    if (matchPath) return matchPath[1];
+    const matchFull = url.match(pattern);
+    if (matchFull) return matchFull[1];
   }
   return null;
 };
 
 export const isValidInstagramUrl = (url: string): boolean => {
-  return extractInstagramId(url) !== null;
+  const trimmed = url.trim();
+  // Must contain instagram.com and have a reel/post path segment
+  return /instagram\.com/.test(trimmed) && /\/(p|reel|reels)\/[A-Za-z0-9_-]+/.test(trimmed);
 };
 
 export const extractYouTubeId = (url: string): string | null => {

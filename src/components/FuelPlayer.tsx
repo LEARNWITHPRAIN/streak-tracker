@@ -277,28 +277,100 @@ export const FuelPlayer: React.FC = () => {
                 muted={false}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden">
-                <div className="relative w-full max-w-[400px] h-[90%] rounded-xl overflow-hidden bg-black">
-                  <iframe
+              <div className="w-full h-full flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0f0f 0%, #1a0a2e 50%, #0d0d0d 100%)' }}>
+                <div className="relative w-full max-w-[360px] mx-4 flex flex-col items-center gap-6">
+                  {/* Instagram-styled preview card */}
+                  <div
                     key={`reel-${item.id}-${reelKeys[item.id] || 0}`}
-                    src={`https://www.instagram.com/reel/${extractInstagramId(item.instagramUrl || '')}/embed/?hidecaption=1&autoplay=1`}
-                    className="absolute inset-0 w-full h-full border-0"
-                    style={{ 
-                      width: '100%',
-                      height: '100%',
-                      background: '#000',
+                    className="w-full rounded-3xl overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(131,58,180,0.25) 0%, rgba(253,29,29,0.15) 50%, rgba(252,176,69,0.2) 100%)',
+                      border: '1px solid rgba(253,29,29,0.3)',
+                      boxShadow: '0 0 60px rgba(131,58,180,0.3), 0 0 30px rgba(253,29,29,0.15)',
                     }}
-                    sandbox="allow-scripts allow-same-origin allow-presentation"
-                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                    referrerPolicy="no-referrer"
-                  />
-                  {/* Replay button - positioned higher to avoid cropped area */}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)' }}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-sm">Instagram Reel</p>
+                        <p className="text-white/50 text-xs">Saved to Fuel</p>
+                      </div>
+                      <div className="ml-auto flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+                        <span className="text-white/40 text-xs">Reel</span>
+                      </div>
+                    </div>
+
+                    {/* Visual reel preview area */}
+                    <div
+                      className="relative flex flex-col items-center justify-center py-12 px-6 gap-4"
+                      style={{ minHeight: 220 }}
+                    >
+                      {/* Animated gradient rings */}
+                      <div className="relative flex items-center justify-center">
+                        <div
+                          className="absolute w-28 h-28 rounded-full opacity-20 animate-ping"
+                          style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d)' }}
+                        />
+                        <div
+                          className="w-20 h-20 rounded-full flex items-center justify-center"
+                          style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)' }}
+                        >
+                          {/* Play icon */}
+                          <div className="w-0 h-0 ml-1" style={{ borderLeft: '20px solid white', borderTop: '13px solid transparent', borderBottom: '13px solid transparent' }} />
+                        </div>
+                      </div>
+
+                      <p className="text-white/60 text-sm text-center">
+                        Tap below to watch this Reel on Instagram
+                      </p>
+
+                      <p
+                        className="text-white/30 text-xs font-mono text-center break-all px-2"
+                        style={{ maxWidth: 280 }}
+                      >
+                        {extractInstagramId(item.instagramUrl || '') || 'reel'}
+                      </p>
+                    </div>
+
+                    {/* Watch button */}
+                    <div className="p-4 pt-0">
+                      <a
+                        href={item.instagramUrl || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-semibold text-white text-sm transition-all hover:opacity-90 active:scale-95"
+                        style={{
+                          background: 'linear-gradient(90deg, #833ab4, #fd1d1d, #fcb045)',
+                          boxShadow: '0 0 20px rgba(253,29,29,0.4)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                        Watch on Instagram
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Replay / refresh button */}
                   <button
                     onClick={(e) => handleReplayReel(item.id, e)}
-                    className="absolute bottom-[160px] right-4 w-12 h-12 rounded-full bg-primary/80 hover:bg-primary text-primary-foreground flex items-center justify-center transition-all z-20"
-                    style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.5)' }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white/50 hover:text-white text-xs font-medium transition-colors"
+                    style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)' }}
                   >
-                    <RotateCcw className="w-5 h-5" />
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Refresh
                   </button>
                 </div>
               </div>
