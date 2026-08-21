@@ -122,6 +122,8 @@ export const CustomRoutine: React.FC = () => {
 
       if (error) throw error;
       setRoutine(updatedRoutine);
+      window.dispatchEvent(new Event('workout-schedule-updated'));
+      window.dispatchEvent(new Event('workout-progress-updated'));
     } catch (error) {
       console.error('Error updating custom routine:', error);
       toast.error('Failed to update routine');

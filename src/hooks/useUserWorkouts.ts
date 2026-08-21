@@ -108,10 +108,22 @@ export const parseSets = (setsReps: string): number | null => {
 const SAME_DAILY_KEY = 'yodha-same-daily';
 const CUSTOM_ROUTINE_KEY = 'custom';
 
+const defaultCustomRoutine: DaySchedule = {
+  day: CUSTOM_ROUTINE_KEY,
+  shortDay: 'Daily',
+  title: 'Daily Routine',
+  subtitle: 'Same workout every day',
+  exercises: [
+    { id: 'custom-1', name: 'Push-ups', setsReps: '3×15' },
+    { id: 'custom-2', name: 'Squats', setsReps: '3×15' },
+    { id: 'custom-3', name: 'Plank', setsReps: '3×30s' },
+  ],
+};
+
 export const useUserWorkouts = () => {
   const { user } = useAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
-  const [customRoutine, setCustomRoutine] = useState<DaySchedule | null>(null);
+  const [customRoutine, setCustomRoutine] = useState<DaySchedule>(defaultCustomRoutine);
   const [loading, setLoading] = useState(true);
   
   // Initialize useSameDaily from localStorage
@@ -123,6 +135,26 @@ export const useUserWorkouts = () => {
       return false;
     }
   });
+
+  // Listen for same-daily updates across components & tabs
+  useEffect(() => {
+    const handleSameDailyUpdate = () => {
+      try {
+        const saved = localStorage.getItem(SAME_DAILY_KEY);
+        setUseSameDaily(saved === 'true');
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('same-daily-updated', handleSameDailyUpdate);
+    window.addEventListener('storage', handleSameDailyUpdate);
+
+    return () => {
+      window.removeEventListener('same-daily-updated', handleSameDailyUpdate);
+      window.removeEventListener('storage', handleSameDailyUpdate);
+    };
+  }, []);
 
   // Fetch user's workout schedule from database
   const fetchSchedule = useCallback(async () => {
@@ -166,6 +198,8 @@ export const useUserWorkouts = () => {
             subtitle: customData.subtitle,
             exercises: customData.exercises as unknown as Exercise[],
           });
+        } else {
+          setCustomRoutine(defaultCustomRoutine);
         }
       } else {
         // Initialize with default schedule for new users
@@ -177,6 +211,18 @@ export const useUserWorkouts = () => {
       setLoading(false);
     }
   }, [user]);
+
+  // Listen for schedule updates from custom routine editor
+  useEffect(() => {
+    const handleScheduleUpdate = () => {
+      fetchSchedule();
+    };
+
+    window.addEventListener('workout-schedule-updated', handleScheduleUpdate);
+    return () => {
+      window.removeEventListener('workout-schedule-updated', handleScheduleUpdate);
+    };
+  }, [fetchSchedule]);
 
   // Initialize default schedule for new users
   const initializeDefaultSchedule = async () => {
@@ -219,12 +265,15 @@ export const useUserWorkouts = () => {
 
       // Update local state
       if (dayName === CUSTOM_ROUTINE_KEY) {
-        setCustomRoutine(prev => prev ? { ...prev, ...updates } : null);
+        setCustomRoutine(prev => ({ ...prev, ...updates }));
       } else {
         setSchedule(prev =>
           prev.map(d => (d.day === dayName ? { ...d, ...updates } : d))
         );
       }
+
+      window.dispatchEvent(new Event('workout-schedule-updated'));
+      window.dispatchEvent(new Event('workout-progress-updated'));
     } catch (error) {
       console.error('Error updating workout:', error);
     }
@@ -232,8 +281,8 @@ export const useUserWorkouts = () => {
 
   // Get today's schedule - returns custom routine if useSameDaily, otherwise day-specific
   const getTodaySchedule = useCallback((): DaySchedule | null => {
-    if (useSameDaily && customRoutine) {
-      return customRoutine;
+    if (useSameDaily) {
+      return customRoutine || defaultCustomRoutine;
     }
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     return schedule.find(d => d.day === today) || null;
@@ -251,6 +300,8 @@ export const useUserWorkouts = () => {
       } catch {
         // Ignore localStorage errors
       }
+      window.dispatchEvent(new CustomEvent('same-daily-updated', { detail: newValue }));
+      window.dispatchEvent(new Event('workout-progress-updated'));
       return newValue;
     });
   };
