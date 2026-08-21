@@ -27,7 +27,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const timer = useTimer();
   const { getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
-  const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading } = useWorkoutLogs();
+  const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
   
@@ -118,6 +118,7 @@ const Dashboard = () => {
   // Listen for progress updates to refresh calendar
   useEffect(() => {
     const handleProgressUpdate = () => {
+      refetchLogs();
       loadCalendarHistory();
     };
     
@@ -126,7 +127,7 @@ const Dashboard = () => {
     return () => {
       window.removeEventListener('workout-progress-updated', handleProgressUpdate);
     };
-  }, [loadCalendarHistory]);
+  }, [loadCalendarHistory, refetchLogs]);
 
   // Refetch schedule when switching back to today tab (to get updated custom routine)
   useEffect(() => {
@@ -134,6 +135,13 @@ const Dashboard = () => {
       refetch();
     }
   }, [activeTab, refetch]);
+
+  // Only auto-start the rest timer when the auto-timer toggle is on
+  const handleSetComplete = useCallback(() => {
+    if (timer.settings.autoStart) {
+      timer.startTimer();
+    }
+  }, [timer.settings.autoStart, timer.startTimer]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -321,7 +329,7 @@ const Dashboard = () => {
           </div>
 
           <TabsContent value="today" className="mt-6">
-            <TodayWorkout onSetComplete={timer.startTimer} />
+            <TodayWorkout onSetComplete={handleSetComplete} />
           </TabsContent>
 
           <TabsContent value="custom" className="mt-6">

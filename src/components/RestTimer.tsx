@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Timer, Play, Pause, RotateCcw, Settings, Volume2, VolumeX } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, Settings, Volume2, VolumeX, Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,12 +22,13 @@ interface RestTimerProps {
   settings: {
     restDuration: number;
     soundEnabled: boolean;
+    autoStart: boolean;
   };
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
   onReset: () => void;
-  onUpdateSettings: (settings: { restDuration?: number; soundEnabled?: boolean }) => void;
+  onUpdateSettings: (settings: { restDuration?: number; soundEnabled?: boolean; autoStart?: boolean }) => void;
 }
 
 export const RestTimer: React.FC<RestTimerProps> = ({
@@ -124,6 +125,24 @@ export const RestTimer: React.FC<RestTimerProps> = ({
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Auto Timer Toggle */}
+      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border/40">
+        <Label htmlFor="auto-timer" className="flex items-center gap-3 cursor-pointer">
+          {settings.autoStart ? <Zap className="w-5 h-5 text-primary" /> : <ZapOff className="w-5 h-5 text-muted-foreground" />}
+          <span className="flex flex-col">
+            <span className="font-semibold text-sm">Automatic Timer</span>
+            <span className="text-xs text-muted-foreground">
+              {settings.autoStart ? 'Starts automatically when you complete a set' : 'Off — start the timer manually'}
+            </span>
+          </span>
+        </Label>
+        <Switch
+          id="auto-timer"
+          checked={settings.autoStart}
+          onCheckedChange={(checked) => onUpdateSettings({ autoStart: checked })}
+        />
       </div>
 
       <div className="flex flex-col items-center justify-center gap-6 py-4">
