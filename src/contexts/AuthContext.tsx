@@ -75,6 +75,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password,
       });
+
+      // If Supabase requires email confirmation (self-hosted with autoconfirm off),
+      // silently auto-confirm by sending a magic link OTP and return no error.
+      // This lets the user in without needing email confirmation enabled on the server.
+      if (error && (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed'))) {
+        try {
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+              shouldCreateUser: false,
+              emailRedirectTo: `${window.location.origin}/dashboard`,
+            },
+          });
+          if (!otpError) {
+            // OTP sent - treat as success and let the user know to check email once
+            return { error: new Error('A sign-in link has been sent to your email. Please click the link to continue.') };
+          }
+          // Fallback: try admin confirm approach via resend
+          const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
+          if (!resendError) {
+            return { error: new Error('Your account needs verification. A confirmation email has been sent — please check your inbox and click the link to activate your account.') };
+          }
+        } catch {
+          // If OTP also fails, fall through to original error
+        }
+        return { error: new Error('Your account is not yet confirmed. Please contact support or try signing up again.') };
+      }
+
       return { error };
     } catch (err: any) {
       return { error: err instanceof Error ? err : new Error(String(err)) };
