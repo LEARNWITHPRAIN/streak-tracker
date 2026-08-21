@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, RotateCcw, Repeat } from 'lucide-react';
+import { Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, RotateCcw, Repeat } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { useUserWorkouts, parseSets } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
+import { useAnimatedProgress } from '@/hooks/useAnimatedProgress';
 
 const dayIcons: Record<string, React.ReactNode> = {
   monday: <Dumbbell className="w-5 h-5" />,
@@ -31,9 +32,15 @@ const dayColors: Record<string, string> = {
 
 interface TodayWorkoutProps {
   onSetComplete?: () => void;
+  autoStart?: boolean;
+  onToggleAutoStart?: () => void;
 }
 
-export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => {
+export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ 
+  onSetComplete,
+  autoStart = true,
+  onToggleAutoStart,
+}) => {
   const { getTodaySchedule, getTodayName, useSameDaily, toggleUseSameDaily, loading: scheduleLoading } = useUserWorkouts();
   const { todayProgress, updateSetProgress, resetTodayProgress, calculateTotalProgress, loading: progressLoading } = useWorkoutLogs();
   
@@ -65,6 +72,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
   };
 
   const { percentage: totalProgress } = calculateTotalProgress(todaySchedule);
+  const animatedTotalProgress = useAnimatedProgress(totalProgress);
 
   if (scheduleLoading || progressLoading) {
     return (
@@ -105,7 +113,23 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+          {onToggleAutoStart && (
+            <button
+              type="button"
+              onClick={onToggleAutoStart}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs md:text-sm font-medium border transition-all ${
+                autoStart
+                  ? 'bg-primary/15 text-primary border-primary/40 hover:bg-primary/25'
+                  : 'bg-muted/40 text-muted-foreground border-border/30 hover:bg-muted hover:text-foreground'
+              }`}
+              title={autoStart ? 'Auto-start Rest Timer is ON' : 'Auto-start Rest Timer is OFF'}
+            >
+              {autoStart ? <Zap className="w-3.5 h-3.5 text-primary" /> : <ZapOff className="w-3.5 h-3.5 text-muted-foreground" />}
+              <span>Auto Timer: {autoStart ? 'ON' : 'OFF'}</span>
+            </button>
+          )}
+
           <div className="flex items-center gap-2.5 bg-muted/40 px-3 py-1.5 rounded-xl border border-border/30">
             <Repeat className="w-4 h-4 text-primary" />
             <Label htmlFor="same-daily" className="text-xs md:text-sm cursor-pointer font-medium">
@@ -134,9 +158,9 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ onSetComplete }) => 
       <div className="space-y-2 bg-card/40 border border-border/40 p-4 rounded-2xl">
         <div className="flex justify-between items-center text-sm">
           <span className="text-muted-foreground font-medium">Workout Completion</span>
-          <span className="font-bold text-primary text-base">{totalProgress}%</span>
+          <span className="font-bold text-primary text-base">{animatedTotalProgress}%</span>
         </div>
-        <Progress value={totalProgress} className="h-2.5 rounded-full" activeOnProgress />
+        <Progress value={animatedTotalProgress} className="h-2.5 rounded-full" activeOnProgress />
       </div>
 
       {/* Exercises Grid - Responsive for PC (1 col mobile, 2 col tablet, 3 col desktop) */}

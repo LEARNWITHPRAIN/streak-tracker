@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useMusicContext } from '@/contexts/MusicContext';
+import { useAnimatedProgress } from '@/hooks/useAnimatedProgress';
 import { supabase } from '@/integrations/supabase/client';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { RestTimer } from '@/components/RestTimer';
@@ -75,6 +76,7 @@ const Dashboard = () => {
   const todaySchedule = getTodaySchedule();
   const progressData = calculateTotalProgress(todaySchedule);
   const todayProgressPercent = progressData.percentage;
+  const animatedDailyProgress = useAnimatedProgress(todayProgressPercent);
   const completed = progressData.completed;
   const total = progressData.total;
 
@@ -225,7 +227,31 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto justify-center">
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center">
+                {/* Auto Timer Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => timer.updateSettings({ autoStart: !timer.settings.autoStart })}
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-semibold transition-all border ${
+                    timer.settings.autoStart
+                      ? 'bg-primary/20 text-primary border-primary/40 hover:bg-primary/30 shadow-sm shadow-primary/20'
+                      : 'bg-muted/70 text-muted-foreground border-border/50 hover:bg-muted hover:text-foreground'
+                  }`}
+                  title={timer.settings.autoStart ? 'Auto Timer is ON: click to turn OFF' : 'Auto Timer is OFF: click to turn ON'}
+                >
+                  {timer.settings.autoStart ? (
+                    <>
+                      <Zap className="w-4 h-4 text-primary animate-pulse" />
+                      <span>Auto Timer: ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <ZapOff className="w-4 h-4 text-muted-foreground" />
+                      <span>Auto Timer: OFF</span>
+                    </>
+                  )}
+                </button>
+
                 {timer.isRunning ? (
                   <button 
                     onClick={timer.pauseTimer}
@@ -253,9 +279,9 @@ const Dashboard = () => {
             <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
               {/* Daily Progress Circle */}
               <div className="shrink-0">
-                <ProgressCircle percentage={todayProgressPercent} size={130} strokeWidth={8}>
+                <ProgressCircle percentage={animatedDailyProgress} size={130} strokeWidth={8}>
                   <Flame className="w-5 h-5 text-primary mb-1" />
-                  <span className="text-2xl md:text-3xl font-bold">{todayProgressPercent}%</span>
+                  <span className="text-2xl md:text-3xl font-bold">{animatedDailyProgress}%</span>
                   <span className="text-[10px] text-muted-foreground">Complete</span>
                 </ProgressCircle>
               </div>
@@ -282,8 +308,8 @@ const Dashboard = () => {
                     <div 
                       className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                       style={{ 
-                        width: `${todayProgressPercent}%`,
-                        boxShadow: todayProgressPercent > 0 ? '0 0 14px hsl(var(--primary) / 0.6)' : 'none'
+                        width: `${animatedDailyProgress}%`,
+                        boxShadow: animatedDailyProgress > 0 ? '0 0 14px hsl(var(--primary) / 0.6)' : 'none'
                       }}
                     />
                   </div>
@@ -329,7 +355,11 @@ const Dashboard = () => {
           </div>
 
           <TabsContent value="today" className="mt-6">
-            <TodayWorkout onSetComplete={handleSetComplete} />
+            <TodayWorkout 
+              onSetComplete={handleSetComplete}
+              autoStart={timer.settings.autoStart}
+              onToggleAutoStart={() => timer.updateSettings({ autoStart: !timer.settings.autoStart })}
+            />
           </TabsContent>
 
           <TabsContent value="custom" className="mt-6">
