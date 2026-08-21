@@ -4,6 +4,40 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
+import { Dumbbell, Timer, Music2, Flame, Calendar, Zap } from 'lucide-react';
+
+const features = [
+  {
+    icon: <Dumbbell className="w-5 h-5" />,
+    title: 'Custom Routines',
+    desc: 'Build and track your own workout routines with sets, reps, and progress.',
+  },
+  {
+    icon: <Timer className="w-5 h-5" />,
+    title: 'Auto Rest Timer',
+    desc: 'Timer starts automatically when you complete a set — no interruptions.',
+  },
+  {
+    icon: <Music2 className="w-5 h-5" />,
+    title: 'Workout Music',
+    desc: 'Play your local audio files while training, right inside the app.',
+  },
+  {
+    icon: <Flame className="w-5 h-5" />,
+    title: 'Daily Progress',
+    desc: 'Visual completion % circle and streak counter to keep you motivated.',
+  },
+  {
+    icon: <Calendar className="w-5 h-5" />,
+    title: 'Calendar History',
+    desc: 'Track your consistency with a full monthly workout calendar.',
+  },
+  {
+    icon: <Zap className="w-5 h-5" />,
+    title: 'Fuel / Motivation',
+    desc: 'Save YouTube & Instagram Reels to replay your favourite motivation clips.',
+  },
+];
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -24,85 +58,156 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between">
-      <div className="flex-1 flex flex-col items-center justify-start pt-16 px-6">
+    <div className="min-h-screen flex flex-col bg-background">
+
+      {/* ── HERO ── */}
+      <section
+        className="relative w-full min-h-screen flex items-center justify-center overflow-hidden"
+        style={{ minHeight: '100svh' }}
+      >
+        {/* Full-bleed background image */}
+        <img
+          src={yodhaLogo}
+          alt="Yodha warrior at sunset"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          draggable={false}
+        />
+
+        {/* Gradient overlay — darker on right so text is readable */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/30 md:from-black/85 md:via-black/55 md:to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+
         {/* Content */}
-        <div className="relative z-20 text-center space-y-8 max-w-md">
-          {/* Logo/Icon */}
-          <div className="w-28 h-28 mx-auto rounded-2xl overflow-hidden shadow-lg shadow-primary/30 ring-2 ring-primary/50">
-            <img src={yodhaLogo} alt="Yodha Logo" className="w-full h-full object-cover" />
-          </div>
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex flex-col md:flex-row items-center md:items-end justify-start gap-10 py-20">
 
-          {/* Headline */}
-          <div className="space-y-3">
-            <h1 className="text-4xl font-bold text-white tracking-tight">
-              Track Every Workout. Build Your Strongest Self.
-            </h1>
-            <p className="text-xl text-white/80 font-medium">
-              Yodha Mode — Master Your Routine.
+          {/* Left column — main CTA */}
+          <div className="w-full md:max-w-xl space-y-7 text-left">
+            {/* Badge */}
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold bg-primary/20 border border-primary/40 text-primary backdrop-blur-sm">
+              <Flame className="w-3.5 h-3.5 animate-pulse" />
+              Your Personal Workout Tracker
+            </span>
+
+            {/* Headline */}
+            <div className="space-y-3">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.05]">
+                Yodha<br />
+                <span className="text-primary" style={{ textShadow: '0 0 40px hsl(var(--primary)/0.6)' }}>
+                  Mode
+                </span>
+              </h1>
+              <p className="text-xl md:text-2xl text-white/80 font-medium leading-snug">
+                Master Your Routine. Build Your Strongest Self.
+              </p>
+              <p className="text-sm md:text-base text-white/60 max-w-md leading-relaxed">
+                Custom routines · Automatic rest timers · Workout music · Daily progress tracking — all in one place.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={() => navigate('/auth?mode=signup')}
+                size="lg"
+                className="h-13 px-8 text-base font-bold shadow-lg shadow-primary/40 hover:shadow-primary/60 transition-all"
+              >
+                Get Started Free
+              </Button>
+              <Button
+                onClick={() => navigate('/auth?mode=login')}
+                variant="outline"
+                size="lg"
+                className="h-13 px-8 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+              >
+                Log In
+              </Button>
+            </div>
+
+            <p className="text-xs text-white/40">
+              Free · No credit card required · Syncs across all devices
             </p>
-            <p className="text-sm text-white/70">
-              Your personal workout tracker for custom routines, exercise tracking, automatic timers, daily progress, music, and motivation.
-            </p>
           </div>
-
-          {/* Buttons */}
-          <div className="space-y-3 pt-4">
-            <Button
-              onClick={() => navigate('/auth?mode=login')}
-              className="w-full h-12 text-base font-semibold"
-              size="lg"
-            >
-              Log In
-            </Button>
-            <Button
-              onClick={() => navigate('/auth?mode=signup')}
-              variant="outline"
-              className="w-full h-12 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20"
-              size="lg"
-            >
-              Create Account
-            </Button>
-          </div>
-
-          {/* Footer text */}
-          <p className="text-sm text-white/60 pt-4">
-            Sync your progress across all devices
-          </p>
         </div>
 
-        {/* SEO content */}
-        <section className="relative z-20 mt-12 max-w-2xl text-white/70 space-y-6 px-2 pb-10 text-sm leading-relaxed">
+        {/* Scroll hint */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 opacity-50 animate-bounce">
+          <div className="w-0.5 h-8 bg-white/60 rounded-full" />
+        </div>
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section className="w-full bg-background py-20 px-6 sm:px-10 lg:px-16">
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+              Everything you need to train smarter
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-base">
+              Yodha Mode combines all your workout essentials into one powerful, distraction-free app.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map((f) => (
+              <div
+                key={f.title}
+                className="group p-6 rounded-2xl border border-border/60 bg-card/60 hover:bg-card hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 backdrop-blur-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-4 group-hover:bg-primary/25 transition-colors">
+                  {f.icon}
+                </div>
+                <h3 className="font-bold text-base text-foreground mb-1.5">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SEO TEXT SECTION ── */}
+      <section className="w-full bg-muted/20 py-16 px-6 sm:px-10 lg:px-16 border-t border-border/40">
+        <div className="max-w-4xl mx-auto grid sm:grid-cols-2 gap-8 text-sm leading-relaxed text-muted-foreground">
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Your Personal Workout Tracker</h2>
-            <p>Yodha Mode helps you take control of your fitness journey. Create custom workout routines, track every exercise, use automatic timers, listen to your favorite music, monitor your daily progress, and stay motivated throughout your workout.</p>
+            <h2 className="text-base font-semibold text-foreground mb-2">Create Custom Workout Routines</h2>
+            <p>Build routines that fit your goals. Add exercises, organize your training, and design a personalized plan — bodyweight, calisthenics, strength, or anything you like.</p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Create Custom Workout Routines</h2>
-            <p>Build a workout routine that fits your goals. Add your own exercises, organize your training, and design a personalized plan — whether you train with bodyweight, calisthenics, strength training, or your own custom routine.</p>
+            <h2 className="text-base font-semibold text-foreground mb-2">Automatic Workout Timer</h2>
+            <p>Focus on your workout, not the clock. Yodha Mode auto-starts your rest timer after each set and alerts you when it's time for the next one.</p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Automatic Workout Timer</h2>
-            <p>Focus on your workout instead of watching the clock. Yodha Mode automatically starts your rest timer when you complete an exercise and alerts you when it's time for the next set.</p>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Track Your Daily Progress</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2">Track Your Daily Progress</h2>
             <p>Use the workout calendar to monitor your exercise consistency and see how much of your planned workout you complete each day.</p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Listen to Your Own Music</h2>
-            <p>Add music from your phone and listen to your favorite songs while training. Create the perfect workout atmosphere with the tracks that motivate you.</p>
+            <h2 className="text-base font-semibold text-foreground mb-2">Listen to Your Own Music</h2>
+            <p>Upload your audio files and listen to your favourite songs while training — create the perfect workout atmosphere without switching apps.</p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Fuel Your Motivation</h2>
-            <p>Save your favorite motivational Instagram Reels and YouTube Shorts in Fuel. When you need extra motivation, revisit the content that inspires you to keep training.</p>
+            <h2 className="text-base font-semibold text-foreground mb-2">Fuel Your Motivation</h2>
+            <p>Save your favourite motivational Instagram Reels and YouTube Shorts. When you need a boost, revisit the content that inspires you most.</p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Track Your Complete Workout Journey</h2>
-            <p>Keep exercises, custom routines, workout completion, daily consistency, and overall progress organized in one place with Yodha Mode.</p>
+            <h2 className="text-base font-semibold text-foreground mb-2">Complete Workout Journey</h2>
+            <p>Exercises, custom routines, workout completion, daily consistency, and overall progress — all organized in one place with Yodha Mode.</p>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ── */}
+      <section className="w-full py-16 px-6 text-center bg-background border-t border-border/40">
+        <div className="max-w-lg mx-auto space-y-5">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">Ready to become a Yodha?</h2>
+          <p className="text-muted-foreground text-sm">Join and start tracking your workouts today. Free, no credit card needed.</p>
+          <Button
+            onClick={() => navigate('/auth?mode=signup')}
+            size="lg"
+            className="px-10 h-12 text-base font-bold shadow-lg shadow-primary/30"
+          >
+            Start Training Now
+          </Button>
+        </div>
+      </section>
 
       <Footer />
     </div>
