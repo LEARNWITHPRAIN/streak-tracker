@@ -4,6 +4,7 @@ import { TimerSettings } from '@/types/exercise';
 const DEFAULT_SETTINGS: TimerSettings = {
   restDuration: 60,
   soundEnabled: true,
+  autoStart: true,
 };
 
 export const useTimer = () => {
@@ -19,7 +20,7 @@ export const useTimer = () => {
     const saved = localStorage.getItem('timer-settings');
     if (saved) {
       const parsed = JSON.parse(saved);
-      setSettings(parsed);
+      setSettings({ ...DEFAULT_SETTINGS, ...parsed });
       setTimeRemaining(parsed.restDuration);
     }
   }, []);

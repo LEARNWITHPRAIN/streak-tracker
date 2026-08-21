@@ -17,4 +17,5 @@ export interface DayProgress {
 export interface TimerSettings {
   restDuration: number; // in seconds
   soundEnabled: boolean;
+  autoStart: boolean; // auto-start rest timer after completing a set
 }

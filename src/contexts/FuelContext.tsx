@@ -201,6 +201,43 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [updateStorageUsage]);
 
+  const addYouTubeShort = useCallback(async (url: string): Promise<boolean> => {
+    if (!isValidYouTubeUrl(url)) {
+      return false;
+    }
+
+    try {
+      const id = `fuel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const youtubeId = extractYouTubeId(url);
+      const createdAt = Date.now();
+
+      await saveFuelItemToDB({
+        id,
+        type: 'youtube_short',
+        name: `Short ${youtubeId}`,
+        content: url,
+        createdAt,
+      });
+
+      setItems((prev) => [
+        {
+          id,
+          type: 'youtube_short',
+          name: `Short ${youtubeId}`,
+          youtubeUrl: url,
+          createdAt,
+        },
+        ...prev,
+      ]);
+
+      await updateStorageUsage();
+      return true;
+    } catch (error) {
+      console.error('Failed to add YouTube Short:', error);
+      return false;
+    }
+  }, [updateStorageUsage]);
+
   const removeItem = useCallback(async (itemId: string) => {
     try {
       await removeFuelItemFromDB(itemId);
@@ -241,6 +278,7 @@ export const FuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         storageUsed,
         addLocalVideo,
         addInstagramEmbed,
+        addYouTubeShort,
         removeItem,
         setCurrentItemIndex,
         togglePlayPause,
