@@ -215,13 +215,13 @@ const Auth = () => {
   const getHeaderContent = () => {
     switch (mode) {
       case 'signin':
-        return { title: 'Welcome Back', subtitle: 'Sign in to continue your journey', icon: Mail };
+        return { title: 'Sign In to Yodha Mode', subtitle: 'Access your workout tracker, music, and routines', icon: Mail };
       case 'signup':
-        return { title: 'Create Account', subtitle: 'Join Yodha Mode and start your journey', icon: Mail };
+        return { title: 'Create Yodha Mode Account', subtitle: 'Start tracking workouts with gamified progress and music', icon: Mail };
       case 'forgot':
-        return { title: 'Forgot Password', subtitle: 'Enter your email to receive a reset link', icon: Lock };
+        return { title: 'Reset Password', subtitle: 'Enter your email to receive a secure password reset link', icon: Lock };
       case 'reset':
-        return { title: 'Reset Password', subtitle: 'Enter your new password', icon: Lock };
+        return { title: 'Set New Password', subtitle: 'Enter your new secure password', icon: Lock };
       default:
         return { title: '', subtitle: '', icon: Mail };
     }
@@ -269,11 +269,12 @@ const Auth = () => {
       </button>
 
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-        {/* Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-            <Icon className="w-10 h-10 text-primary" />
+        {/* Brand Logo & Icon */}
+        <div className="flex flex-col items-center justify-center mb-6">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-primary/20 ring-2 ring-primary/40 mb-3">
+            <img src="/favicon.png" alt="Yodha Mode Logo" className="w-full h-full object-cover" />
           </div>
+          <span className="text-sm font-semibold tracking-wider uppercase text-primary">Yodha Mode</span>
         </div>
 
         {/* Header */}
@@ -423,7 +424,7 @@ const Auth = () => {
 
         {/* Toggle mode (signin/signup only) */}
         {['signin', 'signup'].includes(mode) && (
-          <div className="text-center mt-6">
+          <div className="text-center mt-6 space-y-4">
             <p className="text-muted-foreground">
               {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
               <button
@@ -435,6 +436,22 @@ const Auth = () => {
                 {mode === 'signin' ? 'Sign up' : 'Sign in'}
               </button>
             </p>
+
+            <div className="pt-4 border-t border-border/40 text-xs text-muted-foreground/80 space-y-2">
+              <p>
+                By continuing, you agree to Yodha Mode's{' '}
+                <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{' '}
+                and{' '}
+                <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+              </p>
+              <div className="flex justify-center gap-4 text-xs pt-1">
+                <a href="/" className="hover:text-primary transition-colors">Home</a>
+                <span>•</span>
+                <a href="/about" className="hover:text-primary transition-colors">About</a>
+                <span>•</span>
+                <a href="/contact" className="hover:text-primary transition-colors">Support</a>
+              </div>
+            </div>
           </div>
         )}
       </div>
