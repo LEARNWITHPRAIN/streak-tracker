@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
-import { Dumbbell, Timer, Music2, Flame, Calendar, Zap } from 'lucide-react';
+import { Dumbbell, Timer, Music2, Flame, Calendar, Zap, ArrowRight } from 'lucide-react';
 
 const features = [
   {
@@ -105,26 +105,30 @@ const Welcome = () => {
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3.5 pt-2">
               <Button
                 onClick={() => navigate('/auth?mode=signup')}
                 size="lg"
-                className="h-13 px-8 text-base font-bold shadow-lg shadow-primary/40 hover:shadow-primary/60 transition-all"
+                className="group relative h-13 px-8 text-base font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 rounded-xl overflow-hidden"
               >
-                Get Started Free
+                <span className="flex items-center gap-2">
+                  <span>Get Started Free</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </span>
               </Button>
               <Button
                 onClick={() => navigate('/auth?mode=login')}
                 variant="outline"
                 size="lg"
-                className="h-13 px-8 text-base font-semibold bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                className="h-13 px-8 text-base font-medium bg-white/5 hover:bg-white/10 text-white border-white/20 hover:border-white/35 backdrop-blur-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 rounded-xl"
               >
                 Log In
               </Button>
             </div>
 
-            <p className="text-xs text-white/40">
-              Free · No credit card required · Syncs across all devices
+            <p className="text-xs text-white/50 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              Free forever · No credit card required
             </p>
           </div>
         </div>
@@ -202,9 +206,12 @@ const Welcome = () => {
           <Button
             onClick={() => navigate('/auth?mode=signup')}
             size="lg"
-            className="px-10 h-12 text-base font-bold shadow-lg shadow-primary/30"
+            className="group px-9 h-12 text-base font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 rounded-xl"
           >
-            Start Training Now
+            <span className="flex items-center gap-2">
+              <span>Start Training Now</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </span>
           </Button>
         </div>
       </section>
