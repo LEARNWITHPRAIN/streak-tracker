@@ -118,14 +118,14 @@ export const FuelPlayer: React.FC = () => {
     [removeItem, toast]
   );
 
-  const handleAddUrl = async () => {
-    const trimmed = videoUrl.trim();
-    if (!trimmed) return;
+  const handleAddUrl = async (overrideUrl?: string) => {
+    const targetUrl = (overrideUrl || videoUrl).trim();
+    if (!targetUrl) return;
 
     setAddingVideo(true);
 
-    if (isValidInstagramUrl(trimmed)) {
-      const success = await addInstagramEmbed(trimmed);
+    if (isValidInstagramUrl(targetUrl)) {
+      const success = await addInstagramEmbed(targetUrl);
       setAddingVideo(false);
       if (success) {
         toast({
@@ -141,13 +141,13 @@ export const FuelPlayer: React.FC = () => {
           variant: 'destructive',
         });
       }
-    } else if (isValidYouTubeUrl(trimmed)) {
-      const success = await addYouTubeShort(trimmed);
+    } else if (isValidYouTubeUrl(targetUrl)) {
+      const success = await addYouTubeShort(targetUrl);
       setAddingVideo(false);
       if (success) {
         toast({
           title: 'YouTube Short Added!',
-          description: 'You can now watch it directly on Yodha Mode.',
+          description: 'Playing directly on Yodha Mode without redirects.',
         });
         setVideoUrl('');
         setAddModalOpen(false);
@@ -245,11 +245,80 @@ export const FuelPlayer: React.FC = () => {
           </div>
         </div>
 
+        {/* Action Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="p-4 rounded-2xl glass border border-red-500/30 hover:border-red-500/60 bg-red-500/5 hover:bg-red-500/10 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md shadow-red-600/30">
+                <Play className="w-4 h-4 fill-white" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-red-500/20 text-red-400 border border-red-500/30">
+                In-App
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground group-hover:text-red-400 transition-colors">
+                Play YouTube Shorts
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Embed &amp; play directly on website without redirect
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="p-4 rounded-2xl glass border border-pink-500/30 hover:border-pink-500/60 bg-pink-500/5 hover:bg-pink-500/10 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center text-white shadow-md">
+                <Link className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                Reels
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground group-hover:text-pink-400 transition-colors">
+                Instagram Reels
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Paste Instagram reel links or download offline
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-4 rounded-2xl glass border border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 text-left transition-all group flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                <Video className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/20 text-primary border border-primary/30">
+                Device
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                Upload MP4 Video
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Stored 100% locally in browser for offline playback
+              </p>
+            </div>
+          </button>
+        </div>
+
         {/* Privacy Notice */}
         <div className="glass rounded-xl p-4 text-center border border-border/40">
           <div className="flex items-center justify-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-primary">100% Private & Instant</span>
+            <span className="text-sm font-semibold text-primary">100% Private &amp; Instant</span>
           </div>
           <p className="text-xs text-muted-foreground">
             Local videos are stored directly on your device storage (IndexedDB) with zero cloud tracking.
@@ -287,12 +356,21 @@ export const FuelPlayer: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:scale-105"
-        >
-          + Add Fuel
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs sm:text-sm font-bold transition-all shadow-lg shadow-red-600/25 hover:scale-105"
+          >
+            <Play className="w-3.5 h-3.5 fill-white" />
+            <span>Play YouTube Shorts</span>
+          </button>
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 hover:scale-105"
+          >
+            + Add Fuel
+          </button>
+        </div>
       </div>
 
       {/* Storage Indicator */}
@@ -398,6 +476,29 @@ export const FuelPlayer: React.FC = () => {
                         title={item.name}
                       />
                     </div>
+
+                    {/* YouTube Shorts Play Button Below Instagram Reel */}
+                    <div className="px-3.5 py-2.5 bg-black/90 backdrop-blur-md border-t border-white/10 flex items-center justify-between gap-2 shrink-0 z-10">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-5 h-5 rounded-md bg-red-600 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                          </svg>
+                        </div>
+                        <span className="text-xs text-white/90 font-medium truncate">Reel restricted? Play Shorts</span>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAddModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition-all hover:scale-105 active:scale-95 shrink-0"
+                      >
+                        <Play className="w-3 h-3 fill-white" />
+                        <span>Play YouTube Shorts</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -430,16 +531,6 @@ export const FuelPlayer: React.FC = () => {
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                         </button>
-                        <a
-                          href={item.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Open on YouTube"
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-1 rounded-lg text-white/60 hover:text-red-400 hover:bg-white/10 transition-colors"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
                       </div>
                     </div>
 
@@ -447,9 +538,9 @@ export const FuelPlayer: React.FC = () => {
                     <div className="flex-1 w-full relative bg-black">
                       <iframe
                         key={`yt-frame-${item.id}-${reloadKey}`}
-                        src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}&modestbranding=1&rel=0`}
+                        src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}&modestbranding=1&rel=0&playsinline=1&enablejsapi=1`}
                         className="w-full h-full border-0 bg-black"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                         allowFullScreen
                         title={item.name}
                       />
@@ -531,8 +622,31 @@ interface AddFuelModalProps {
   videoUrl: string;
   setVideoUrl: (url: string) => void;
   addingVideo: boolean;
-  onAddUrl: () => void;
+  onAddUrl: (overrideUrl?: string) => void;
 }
+
+const MOTIVATION_SHORTS = [
+  {
+    name: 'David Goggins',
+    tag: 'Discipline',
+    url: 'https://www.youtube.com/shorts/q7q0m7iFjG4',
+  },
+  {
+    name: 'Arnold Motivation',
+    tag: 'Champion Mindset',
+    url: 'https://www.youtube.com/shorts/7QyQpB8tJ6E',
+  },
+  {
+    name: 'CBum Focus',
+    tag: 'Workout Drive',
+    url: 'https://www.youtube.com/shorts/P1bWn4_JjFE',
+  },
+  {
+    name: 'Ronnie Coleman',
+    tag: 'Heavy Duty',
+    url: 'https://www.youtube.com/shorts/Vf7Hw0mJp0o',
+  },
+];
 
 const AddFuelModal: React.FC<AddFuelModalProps> = ({
   open,
@@ -543,6 +657,7 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
   addingVideo,
   onAddUrl,
 }) => {
+  const [ytUrl, setYtUrl] = useState('');
   const isInsta = isValidInstagramUrl(videoUrl);
 
   const handleOpenDownloader = () => {
@@ -550,9 +665,16 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
     window.open(`https://saveinsta.app/en?url=${encodeURIComponent(videoUrl.trim())}`, '_blank');
   };
 
+  const handleAddYouTube = (targetUrl?: string) => {
+    const urlToAdd = targetUrl || ytUrl;
+    if (!urlToAdd.trim()) return;
+    onAddUrl(urlToAdd.trim());
+    setYtUrl('');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card border-border/80 text-foreground">
+      <DialogContent className="sm:max-w-lg bg-card border-border/80 text-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <Flame className="w-5 h-5 text-primary" />
@@ -560,23 +682,25 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 pt-2">
-          {/* Social Video Link Option (Instagram or YouTube) */}
-          <div className="space-y-3 p-4 rounded-2xl bg-muted/40 border border-border/50">
+        <div className="space-y-4 pt-1">
+          {/* 1. Instagram Reels Option */}
+          <div className="space-y-3 p-4 rounded-2xl bg-muted/40 border border-pink-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shrink-0 shadow-md">
-                <Link className="w-5 h-5 text-white" />
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
               </div>
               <div>
-                <p className="font-bold text-foreground text-sm">Paste Reel or Short Link</p>
-                <p className="text-xs text-muted-foreground">Embed directly in your Fuel player</p>
+                <p className="font-bold text-foreground text-sm">Instagram Reel</p>
+                <p className="text-xs text-muted-foreground">Paste any Instagram reel share link</p>
               </div>
             </div>
 
             <div className="flex gap-2 pt-1">
               <input
                 type="url"
-                placeholder="https://instagram.com/reel/... or YouTube Short"
+                placeholder="https://instagram.com/reel/..."
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -585,21 +709,20 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
                     onAddUrl();
                   }
                 }}
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-pink-500/50"
               />
               <Button
-                onClick={onAddUrl}
+                onClick={() => onAddUrl()}
                 disabled={!videoUrl.trim() || addingVideo}
-                className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-4 rounded-xl shadow-md shadow-primary/20"
+                className="shrink-0 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold px-4 rounded-xl shadow-md"
               >
-                {addingVideo ? 'Adding...' : 'Add'}
+                {addingVideo ? 'Adding...' : 'Add Reel'}
               </Button>
             </div>
 
-            {/* If user pasted Instagram link, show quick 1-click download button */}
             {isInsta && (
               <div className="pt-2 border-t border-border/40 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Want 100% offline & zero redirect?</span>
+                <span className="text-xs text-muted-foreground">Want 100% offline playback?</span>
                 <button
                   type="button"
                   onClick={handleOpenDownloader}
@@ -611,6 +734,80 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
             )}
           </div>
 
+          {/* 2. YouTube Shorts (Plays Directly on Website) */}
+          <div className="space-y-3 p-4 rounded-2xl bg-muted/40 border border-red-500/30 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center shrink-0 shadow-md shadow-red-600/30">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-foreground text-sm">YouTube Shorts</p>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                      In-App Player
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Plays directly on website with zero redirects</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <input
+                type="url"
+                placeholder="https://youtube.com/shorts/... or watch?v=..."
+                value={ytUrl}
+                onChange={(e) => setYtUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddYouTube();
+                  }
+                }}
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/50"
+              />
+              <Button
+                onClick={() => handleAddYouTube()}
+                disabled={!ytUrl.trim() || addingVideo}
+                className="shrink-0 bg-red-600 hover:bg-red-500 text-white font-semibold px-4 rounded-xl shadow-md shadow-red-600/30 flex items-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>Play on Website</span>
+              </Button>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="pt-2 border-t border-border/40 space-y-1.5">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                ⚡ 1-Click Gym Motivation Shorts:
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {MOTIVATION_SHORTS.map((short) => (
+                  <button
+                    key={short.name}
+                    type="button"
+                    onClick={() => handleAddYouTube(short.url)}
+                    disabled={addingVideo}
+                    className="flex items-center justify-between p-2 rounded-xl bg-background hover:bg-red-500/10 border border-border hover:border-red-500/40 text-left transition-all group"
+                  >
+                    <div className="min-w-0 pr-1">
+                      <p className="text-xs font-semibold text-foreground truncate group-hover:text-red-400 transition-colors">
+                        {short.name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">{short.tag}</p>
+                    </div>
+                    <div className="w-6 h-6 rounded-lg bg-red-600/20 group-hover:bg-red-600 text-red-400 group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
+                      <Play className="w-3 h-3 fill-current ml-0.5" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border/60" />
@@ -620,7 +817,7 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
             </div>
           </div>
 
-          {/* Local Video Option */}
+          {/* 3. Local Video Option */}
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-full p-4 rounded-2xl border-2 border-dashed border-border/70 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-4 group"
@@ -635,14 +832,6 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
               </p>
             </div>
           </button>
-
-          {/* Pro tip card */}
-          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-            <span>
-              <strong className="text-foreground">Zero-Redirect Playback:</strong> Local MP4 uploads and YouTube Shorts play 100% natively on your device without leaving the page.
-            </span>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

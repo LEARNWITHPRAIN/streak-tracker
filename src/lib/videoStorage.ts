@@ -161,16 +161,19 @@ export const isValidInstagramUrl = (url: string): boolean => {
 };
 
 export const extractYouTubeId = (url: string): string | null => {
+  const cleanUrl = url.trim();
   const patterns = [
-    /youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/,
-    /youtube\.com\/watch\?(?:.*&)?v=([A-Za-z0-9_-]{6,})/,
-    /youtube\.com\/embed\/([A-Za-z0-9_-]{6,})/,
+    /(?:youtube\.com|m\.youtube\.com)\/shorts\/([A-Za-z0-9_-]{6,})/,
+    /(?:youtube\.com|m\.youtube\.com)\/watch\?(?:.*&)?v=([A-Za-z0-9_-]{6,})/,
+    /(?:youtube\.com|m\.youtube\.com)\/embed\/([A-Za-z0-9_-]{6,})/,
     /youtu\.be\/([A-Za-z0-9_-]{6,})/,
   ];
 
   for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
+    const match = cleanUrl.match(pattern);
+    if (match) {
+      return match[1].split('?')[0].split('&')[0];
+    }
   }
   return null;
 };
