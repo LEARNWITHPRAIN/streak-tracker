@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 import { Headphones, Upload, Play, Pause, SkipBack, SkipForward, Trash2, Music } from 'lucide-react';
 import { useMusicContext } from '@/contexts/MusicContext';
 import { cn } from '@/lib/utils';
+import { SpotifySection } from '@/components/SpotifySection';
 
 const formatTime = (seconds: number): string => {
   if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
@@ -183,6 +184,16 @@ export const MusicPlayer: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 pt-2">
+        <div className="flex-1 h-px bg-border/50" />
+        <span className="text-xs text-muted-foreground/50 uppercase tracking-wider font-semibold">Stream</span>
+        <div className="flex-1 h-px bg-border/50" />
+      </div>
+
+      {/* Spotify Section */}
+      <SpotifySection />
 
       {/* Now Playing Bar - Fixed at bottom */}
       {tracks.length > 0 && (
