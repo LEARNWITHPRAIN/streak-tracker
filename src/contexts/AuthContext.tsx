@@ -17,6 +17,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getAuthRedirectUrl = (path: string = '/dashboard') => {
+  if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost')) {
+    return `${window.location.origin}${path}`;
+  }
+  return `https://yodhamode.cloud${path}`;
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -55,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/dashboard`;
+      const redirectUrl = getAuthRedirectUrl('/dashboard');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -91,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: getAuthRedirectUrl('/dashboard'),
         },
       });
       return { error };
@@ -106,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: getAuthRedirectUrl('/dashboard'),
         },
       });
       return { error };
@@ -118,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?mode=reset`,
+        redirectTo: getAuthRedirectUrl('/auth?mode=reset'),
       });
       return { error };
     } catch (err: any) {
