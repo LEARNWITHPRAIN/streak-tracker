@@ -1,22 +1,26 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Loader2, CheckCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import yodhaLogo from '@/assets/yodha-logo.jpg';
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
+  const targetEmail = searchParams.get('email') || user?.email || '';
+
   // Check if email is already verified
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !targetEmail) {
       navigate('/auth');
       return;
     }
@@ -27,13 +31,13 @@ const VerifyEmail = () => {
         navigate('/dashboard');
       }, 2000);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, targetEmail, navigate]);
 
   // Listen for auth state changes (when user verifies email)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'USER_UPDATED' && session?.user?.email_confirmed_at) {
+        if ((event === 'USER_UPDATED' || event === 'SIGNED_IN') && session?.user?.email_confirmed_at) {
           setIsVerified(true);
           toast({
             title: 'Identity Confirmed!',
@@ -41,7 +45,7 @@ const VerifyEmail = () => {
           });
           setTimeout(() => {
             navigate('/dashboard');
-          }, 2000);
+          }, 1500);
         }
       }
     );
@@ -58,13 +62,13 @@ const VerifyEmail = () => {
   }, [countdown]);
 
   const handleResendEmail = async () => {
-    if (!user?.email || countdown > 0) return;
+    if (!targetEmail || countdown > 0) return;
 
     setIsResending(true);
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email: user.email,
+        email: targetEmail,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
@@ -74,7 +78,7 @@ const VerifyEmail = () => {
 
       toast({
         title: 'Email Sent!',
-        description: 'Check your inbox for the verification link.',
+        description: 'Check your inbox (or spam) for the verification link.',
       });
       setCountdown(60); // 60 second cooldown
     } catch (error: any) {
@@ -89,7 +93,9 @@ const VerifyEmail = () => {
   };
 
   const handleChangeEmail = async () => {
-    await signOut();
+    if (user) {
+      await signOut();
+    }
     navigate('/auth?mode=signup');
   };
 
@@ -113,7 +119,7 @@ const VerifyEmail = () => {
             Identity Confirmed!
           </h1>
           <p className="text-xl text-primary font-semibold">
-            Welcome to the Army, {user?.email?.split('@')[0] || 'Warrior'}!
+            Welcome to the Army, {targetEmail ? targetEmail.split('@')[0] : 'Warrior'}!
           </p>
           <p className="text-muted-foreground">
             Redirecting to dashboard...
@@ -132,28 +138,36 @@ const VerifyEmail = () => {
         className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
       >
         <ArrowLeft className="w-5 h-5" />
-        <span>Back</span>
+        <span>Back to Sign In</span>
       </button>
 
       <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full">
+        {/* Brand Logo & Icon */}
+        <div className="flex flex-col items-center justify-center mb-6">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-primary/20 ring-2 ring-primary/40 mb-3">
+            <img src={yodhaLogo} alt="Yodha Mode Logo" className="w-full h-full object-cover" />
+          </div>
+          <span className="text-sm font-semibold tracking-wider uppercase text-primary">Yodha Mode</span>
+        </div>
+
         {/* Envelope Icon */}
-        <div className="w-28 h-28 rounded-full bg-primary/20 flex items-center justify-center mb-8 animate-bounce">
-          <Mail className="w-14 h-14 text-primary" />
+        <div className="w-24 h-24 rounded-2xl bg-primary/20 flex items-center justify-center mb-6 animate-bounce">
+          <Mail className="w-12 h-12 text-primary" />
         </div>
 
         {/* Header */}
         <div className="text-center mb-8 space-y-3">
           <h1 className="text-3xl font-bold text-foreground">
-            Verify Your Identity
+            Verify Your Email
           </h1>
           <p className="text-muted-foreground">
-            We've sent a verification email to:
+            We've sent a verification link to:
           </p>
-          <p className="text-lg font-semibold text-primary">
-            {user?.email}
+          <p className="text-lg font-semibold text-primary break-all">
+            {targetEmail || 'your email address'}
           </p>
-          <p className="text-sm text-muted-foreground mt-4">
-            Click the link in the email to verify your account and join the army.
+          <p className="text-sm text-muted-foreground mt-3">
+            Please click the link in your email to activate your account and access the dashboard.
           </p>
         </div>
 
