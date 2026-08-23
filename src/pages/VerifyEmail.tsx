@@ -61,6 +61,13 @@ const VerifyEmail = () => {
     }
   }, [countdown]);
 
+  const getAuthRedirectUrl = () => {
+    if (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost')) {
+      return `${window.location.origin}/dashboard`;
+    }
+    return 'https://yodhamode.cloud/dashboard';
+  };
+
   const handleResendEmail = async () => {
     if (!targetEmail || countdown > 0) return;
 
@@ -70,7 +77,7 @@ const VerifyEmail = () => {
         type: 'signup',
         email: targetEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: getAuthRedirectUrl(),
         },
       });
 
@@ -98,6 +105,8 @@ const VerifyEmail = () => {
     }
     navigate('/auth?mode=signup');
   };
+
+  const isGmail = targetEmail.toLowerCase().includes('@gmail.com');
 
   if (loading) {
     return (
@@ -151,46 +160,68 @@ const VerifyEmail = () => {
         </div>
 
         {/* Envelope Icon */}
-        <div className="w-24 h-24 rounded-2xl bg-primary/20 flex items-center justify-center mb-6 animate-bounce">
-          <Mail className="w-12 h-12 text-primary" />
+        <div className="w-20 h-20 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center mb-6 animate-bounce shadow-lg shadow-primary/10">
+          <Mail className="w-10 h-10 text-primary" />
         </div>
 
         {/* Header */}
-        <div className="text-center mb-8 space-y-3">
-          <h1 className="text-3xl font-bold text-foreground">
-            Verify Your Email
+        <div className="text-center mb-6 space-y-2.5">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
+            Check Your Inbox
           </h1>
-          <p className="text-muted-foreground">
-            We've sent a verification link to:
+          <p className="text-muted-foreground text-sm">
+            We've sent an activation link to:
           </p>
-          <p className="text-lg font-semibold text-primary break-all">
+          <p className="text-base font-bold text-primary break-all px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 inline-block">
             {targetEmail || 'your email address'}
           </p>
-          <p className="text-sm text-muted-foreground mt-3">
-            Please click the link in your email to activate your account and access the dashboard.
+          <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
+            Click the link in the email to activate your account and start tracking your workouts.
+          </p>
+        </div>
+
+        {/* Spam / Junk Notice Box */}
+        <div className="w-full mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+          <p className="font-semibold flex items-center gap-1.5 text-amber-400">
+            ⚠️ Can't find the email?
+          </p>
+          <p className="text-muted-foreground text-[11px] leading-relaxed">
+            Please check your <strong>Spam</strong> or <strong>Junk / Promotions</strong> folder. Make sure to mark it as <em>"Not Spam"</em> so you never miss workout updates.
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="w-full space-y-4">
+        <div className="w-full space-y-3">
+          {isGmail && (
+            <Button
+              onClick={() => window.open('https://mail.google.com', '_blank')}
+              className="w-full h-12 text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md"
+            >
+              Open Gmail
+            </Button>
+          )}
+
           <Button
             onClick={handleResendEmail}
             disabled={isResending || countdown > 0}
-            className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+            variant={isGmail ? 'outline' : 'default'}
+            className={`w-full h-12 text-sm font-semibold rounded-xl ${
+              !isGmail ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'border-border/60 hover:bg-muted'
+            }`}
           >
             {isResending ? (
               <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Sending...
               </>
             ) : countdown > 0 ? (
               <>
-                <RefreshCw className="w-5 h-5 mr-2" />
-                Resend in {countdown}s
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Resend available in {countdown}s
               </>
             ) : (
               <>
-                <RefreshCw className="w-5 h-5 mr-2" />
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Resend Verification Email
               </>
             )}
@@ -198,17 +229,12 @@ const VerifyEmail = () => {
 
           <Button
             onClick={handleChangeEmail}
-            variant="outline"
-            className="w-full h-14 text-lg font-medium rounded-xl border-muted-foreground/20"
+            variant="ghost"
+            className="w-full h-11 text-xs font-medium rounded-xl text-muted-foreground hover:text-foreground"
           >
-            Change Email Address
+            Change Email Address / Sign In
           </Button>
         </div>
-
-        {/* Help text */}
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          Didn't receive the email? Check your spam folder or try resending.
-        </p>
       </div>
     </div>
   );
