@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import yodhaLogo from '@/assets/yodha-logo.jpg';
 import { z } from 'zod';
 
 const emailSchema = z.string().trim().email('Please enter a valid email address').max(255);
@@ -85,7 +86,7 @@ const Auth = () => {
       return;
     }
 
-    const { error: signUpError } = await signUp(email, password);
+    const { data, error: signUpError } = await signUp(email, password);
     if (signUpError) {
       if (signUpError.message.includes('already registered')) {
         setError('This email is already registered. Please sign in.');
@@ -93,11 +94,19 @@ const Auth = () => {
         setError(signUpError.message);
       }
     } else {
-      toast({
-        title: 'Welcome!',
-        description: 'Your account has been created successfully.',
-      });
-      navigate('/dashboard');
+      if (data?.session) {
+        toast({
+          title: 'Welcome!',
+          description: 'Your account has been created successfully.',
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: 'Verification email sent!',
+          description: 'Please check your inbox to verify your account.',
+        });
+        navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+      }
     }
   };
 
@@ -272,7 +281,7 @@ const Auth = () => {
         {/* Brand Logo & Icon */}
         <div className="flex flex-col items-center justify-center mb-6">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-primary/20 ring-2 ring-primary/40 mb-3">
-            <img src="/favicon.png" alt="Yodha Mode Logo" className="w-full h-full object-cover" />
+            <img src={yodhaLogo} alt="Yodha Mode Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-sm font-semibold tracking-wider uppercase text-primary">Yodha Mode</span>
         </div>
