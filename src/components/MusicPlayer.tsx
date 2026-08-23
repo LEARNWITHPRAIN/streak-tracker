@@ -1,6 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { Headphones, Upload, Play, Pause, SkipBack, SkipForward, Trash2, Music } from 'lucide-react';
 import { useMusicContext } from '@/contexts/MusicContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { SpotifySection } from '@/components/SpotifySection';
 
@@ -12,6 +13,7 @@ const formatTime = (seconds: number): string => {
 };
 
 export const MusicPlayer: React.FC = () => {
+  const { requireAuth } = useAuth();
   const {
     tracks,
     currentTrack,
@@ -32,21 +34,28 @@ export const MusicPlayer: React.FC = () => {
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!requireAuth(undefined, 'Create a free account to upload and personalize your workout playlist.')) {
+      e.target.value = '';
+      return;
+    }
     if (e.target.files && e.target.files.length > 0) {
       addTracks(e.target.files);
       e.target.value = '';
     }
-  }, [addTracks]);
+  }, [addTracks, requireAuth]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     dropZoneRef.current?.classList.remove('border-primary', 'bg-primary/10');
     
+    if (!requireAuth(undefined, 'Create a free account to upload and personalize your workout playlist.')) {
+      return;
+    }
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       addTracks(e.dataTransfer.files);
     }
-  }, [addTracks]);
+  }, [addTracks, requireAuth]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
