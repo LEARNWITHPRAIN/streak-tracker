@@ -84,9 +84,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       : 0;
     
     if (percentage >= 100) {
-      return <span className="absolute bottom-0.5 text-[8px]">✓</span>;
+      return <span className="absolute bottom-0.5 sm:bottom-1 text-[8px] sm:text-[9px] font-semibold tracking-tight leading-none opacity-90">100%</span>;
     } else if (percentage > 0) {
-      return <span className="absolute bottom-0.5 text-[8px]">{Math.round(percentage)}%</span>;
+      return <span className="absolute bottom-0.5 sm:bottom-1 text-[8px] sm:text-[9px] font-semibold tracking-tight leading-none opacity-90">{Math.round(percentage)}%</span>;
     }
     
     return null;
