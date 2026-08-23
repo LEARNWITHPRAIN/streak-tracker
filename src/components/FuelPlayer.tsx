@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { Flame, Trash2, Video, Link, HardDrive, RotateCcw, ExternalLink, Play, Sparkles } from 'lucide-react';
 import { useFuelContext } from '@/contexts/FuelContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { extractInstagramId, extractYouTubeId, isValidInstagramUrl, isValidYouTubeUrl } from '@/lib/videoStorage';
 
 export const FuelPlayer: React.FC = () => {
+  const { requireAuth } = useAuth();
   const {
     items,
     currentItemIndex,
@@ -46,6 +48,10 @@ export const FuelPlayer: React.FC = () => {
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!requireAuth(undefined, 'Create a free account to upload offline workout motivation videos.')) {
+        e.target.value = '';
+        return;
+      }
       if (e.target.files && e.target.files.length > 0) {
         addLocalVideo(e.target.files);
         e.target.value = '';
@@ -56,7 +62,7 @@ export const FuelPlayer: React.FC = () => {
         });
       }
     },
-    [addLocalVideo, toast]
+    [addLocalVideo, requireAuth, toast]
   );
 
   const handleDrop = useCallback(
@@ -64,6 +70,10 @@ export const FuelPlayer: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
+
+      if (!requireAuth(undefined, 'Create a free account to upload offline workout motivation videos.')) {
+        return;
+      }
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         addLocalVideo(e.dataTransfer.files);
@@ -73,7 +83,7 @@ export const FuelPlayer: React.FC = () => {
         });
       }
     },
-    [addLocalVideo, toast]
+    [addLocalVideo, requireAuth, toast]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -110,15 +120,21 @@ export const FuelPlayer: React.FC = () => {
   const handleDeleteItem = useCallback(
     (e: React.MouseEvent, itemId: string) => {
       e.stopPropagation();
+      if (!requireAuth(undefined, 'Create a free account to manage your motivation reels.')) {
+        return;
+      }
       removeItem(itemId);
       toast({
         title: 'Removed from Fuel',
       });
     },
-    [removeItem, toast]
+    [removeItem, requireAuth, toast]
   );
 
   const handleAddUrl = async (overrideUrl?: string) => {
+    if (!requireAuth(undefined, 'Create a free account to save custom workout motivation reels and videos.')) {
+      return;
+    }
     const targetUrl = (overrideUrl || videoUrl).trim();
     if (!targetUrl) return;
 
