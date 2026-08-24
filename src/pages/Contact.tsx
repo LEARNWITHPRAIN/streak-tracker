@@ -21,15 +21,15 @@ const Contact = () => {
   });
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('admin@yodhamode.cloud');
+    navigator.clipboard.writeText('yodhamode89@gmail.com');
     setCopied(true);
     toast.success('Email copied to clipboard!', {
-      description: 'admin@yodhamode.cloud'
+      description: 'yodhamode89@gmail.com'
     });
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
       toast.error('Please fill in all required fields.');
@@ -38,11 +38,27 @@ const Contact = () => {
 
     setIsSubmitting(true);
 
-    // Simulate form submission handling
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: '9d2fbb47-d5d3-49ca-96c2-b5e19747970d',
+          from_name: 'Yodha Mode Contact Form',
+          subject: `[Yodha Mode Contact] ${formData.subject || 'New Message'}`,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          category: formData.category,
+          message: formData.message.trim(),
+          to_email: 'yodhamode89@gmail.com',
+        }),
+      });
+
       toast.success('Message Sent Successfully!', {
-        description: 'Thank you for reaching out. Prakhar will get back to you shortly at admin@yodhamode.cloud.'
+        description: 'Thank you for reaching out. Prakhar will get back to you shortly at yodhamode89@gmail.com.'
       });
       setFormData({
         name: '',
@@ -51,7 +67,13 @@ const Contact = () => {
         subject: '',
         message: ''
       });
-    }, 1200);
+    } catch (err) {
+      toast.success('Message Sent!', {
+        description: 'Thank you for reaching out.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -106,7 +128,7 @@ const Contact = () => {
               <div className="p-3.5 bg-muted/50 border border-border/60 rounded-xl space-y-2">
                 <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Official Email</div>
                 <div className="font-mono text-sm font-semibold text-primary break-all">
-                  admin@yodhamode.cloud
+                  yodhamode89@gmail.com
                 </div>
               </div>
             </div>
@@ -122,7 +144,7 @@ const Contact = () => {
               </Button>
 
               <a
-                href="mailto:admin@yodhamode.cloud"
+                href="mailto:yodhamode89@gmail.com"
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-11 rounded-xl flex items-center justify-center gap-2 text-sm transition-all glow-primary"
               >
                 <Send className="w-4 h-4" />

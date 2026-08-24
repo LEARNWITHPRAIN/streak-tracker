@@ -154,8 +154,8 @@ const PrivacyPolicy = () => {
             </p>
             <div className="p-4 rounded-xl bg-muted/40 border border-border/50 flex items-center gap-3 w-fit mt-2">
               <Mail className="w-5 h-5 text-primary" />
-              <a href="mailto:admin@yodhamode.cloud" className="font-semibold text-primary hover:underline">
-                admin@yodhamode.cloud
+              <a href="mailto:yodhamode89@gmail.com" className="font-semibold text-primary hover:underline">
+                yodhamode89@gmail.com
               </a>
             </div>
           </section>

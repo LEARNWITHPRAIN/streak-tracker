@@ -63,10 +63,10 @@ const Feedback = () => {
   }, [user]);
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('admin@yodhamode.cloud');
+    navigator.clipboard.writeText('yodhamode89@gmail.com');
     setCopied(true);
     toast.success('Email copied to clipboard!', {
-      description: 'admin@yodhamode.cloud',
+      description: 'yodhamode89@gmail.com',
     });
     setTimeout(() => setCopied(false), 2500);
   };
@@ -82,7 +82,7 @@ const Feedback = () => {
     setIsSubmitting(true);
 
     try {
-      // Send form submission via Web3Forms API to direct email admin@yodhamode.cloud
+      // Send form submission via Web3Forms API to direct email yodhamode89@gmail.com
       const res = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: {
@@ -98,7 +98,7 @@ const Feedback = () => {
           category: category,
           star_rating: `${rating} / 5 (${ratingLabels[rating - 1]})`,
           message: message.trim(),
-          to_email: 'admin@yodhamode.cloud',
+          to_email: 'yodhamode89@gmail.com',
         }),
       });
 
@@ -176,7 +176,7 @@ const Feedback = () => {
                 Thank You, Yodha! 🔥
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto leading-relaxed">
-                Your feedback was delivered straight to founder Prakhar Jain and the development team at <span className="text-primary font-medium">admin@yodhamode.cloud</span>.
+                Your feedback was delivered straight to founder Prakhar Jain and the development team at <span className="text-primary font-medium">yodhamode89@gmail.com</span>.
               </p>
             </div>
 
@@ -217,7 +217,7 @@ const Feedback = () => {
                     Official Inbox
                   </div>
                   <div className="font-mono text-sm font-bold text-primary break-all">
-                    admin@yodhamode.cloud
+                    yodhamode89@gmail.com
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     Avg. response time: &lt; 24 hours
@@ -236,7 +236,7 @@ const Feedback = () => {
                 </Button>
 
                 <a
-                  href="mailto:admin@yodhamode.cloud?subject=Yodha%20Mode%20App%20Feedback"
+                  href="mailto:yodhamode89@gmail.com?subject=Yodha%20Mode%20App%20Feedback"
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-11 rounded-xl flex items-center justify-center gap-2 text-xs transition-all glow-primary"
                 >
                   <Mail className="w-4 h-4" />

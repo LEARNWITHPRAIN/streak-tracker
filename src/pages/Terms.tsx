@@ -86,7 +86,7 @@ const Terms = () => {
               <span className="text-primary">3.</span> User Accounts & Responsibility
             </h2>
             <p>
-              To access certain features, you must register for an account. You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account at <code>admin@yodhamode.cloud</code>.
+              To access certain features, you must register for an account. You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account at <code>yodhamode89@gmail.com</code>.
             </p>
           </section>
 
@@ -152,8 +152,8 @@ const Terms = () => {
             </p>
             <div className="p-4 rounded-xl bg-muted/40 border border-border/50 flex items-center gap-3 w-fit mt-2">
               <Mail className="w-5 h-5 text-primary" />
-              <a href="mailto:admin@yodhamode.cloud" className="font-semibold text-primary hover:underline">
-                admin@yodhamode.cloud
+              <a href="mailto:yodhamode89@gmail.com" className="font-semibold text-primary hover:underline">
+                yodhamode89@gmail.com
               </a>
             </div>
           </section>

@@ -66,11 +66,11 @@ export const Footer = () => {
           <div className="col-span-2 sm:col-span-1 space-y-2">
             <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider text-primary">Support</h4>
             <a
-              href="mailto:admin@yodhamode.cloud"
+              href="mailto:yodhamode89@gmail.com"
               className="inline-flex items-center gap-2 text-xs bg-muted/60 hover:bg-muted text-foreground px-3 py-2 rounded-lg border border-border/60 transition-all hover:border-primary/40 group"
             >
               <Mail className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
-              <span>admin@yodhamode.cloud</span>
+              <span>yodhamode89@gmail.com</span>
             </a>
           </div>
         </div>
