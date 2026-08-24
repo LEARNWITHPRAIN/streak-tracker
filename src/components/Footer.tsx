@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mail, Heart, ShieldCheck, FileText, Info, Dumbbell } from 'lucide-react';
+import { Mail, Heart, ShieldCheck, FileText, Info, Dumbbell, MessageSquareHeart } from 'lucide-react';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
 
 export const Footer = () => {
@@ -27,6 +27,11 @@ export const Footer = () => {
               <li>
                 <Link to="/dashboard" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                   <Dumbbell className="w-3.5 h-3.5" /> Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link to="/feedback" className="hover:text-foreground transition-colors flex items-center gap-1.5 text-primary/90 font-medium">
+                  <MessageSquareHeart className="w-3.5 h-3.5 text-primary" /> Give Feedback
                 </Link>
               </li>
               <li>

@@ -4,7 +4,13 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
-import { Dumbbell, Timer, Music2, Flame, Calendar, Zap, ArrowRight } from 'lucide-react';
+import { Dumbbell, Timer, Music2, Flame, Calendar, Zap, ArrowRight, Sparkles } from 'lucide-react';
+import customRoutinesImg from '@/assets/screenshots/custom-routines.webp';
+import trackProgressImg from '@/assets/screenshots/track-progress.webp';
+import restTimersImg from '@/assets/screenshots/rest-timers.webp';
+import musicPlaylistImg from '@/assets/screenshots/music-playlist.webp';
+import fuelMotivationImg from '@/assets/screenshots/fuel-motivation.webp';
+import workoutStreaksImg from '@/assets/screenshots/workout-streaks.webp';
 
 const features = [
   {
@@ -36,6 +42,51 @@ const features = [
     icon: <Zap className="w-5 h-5" />,
     title: 'Fuel / Motivation',
     desc: 'Save YouTube & Instagram Reels to replay your favourite motivation clips.',
+  },
+];
+
+const showcaseItems = [
+  {
+    image: customRoutinesImg,
+    badge: 'Custom Split',
+    icon: <Dumbbell className="w-4 h-4 text-primary" />,
+    title: 'Build Custom Routines',
+    desc: 'Create personalized workout days, customize exercises, sets, reps, and manage flexible weekly splits with ease.',
+  },
+  {
+    image: trackProgressImg,
+    badge: 'Live Tracker',
+    icon: <Flame className="w-4 h-4 text-primary" />,
+    title: 'Track Your Daily Progress',
+    desc: 'Monitor real-time workout completion percentages, track active sets, and stay disciplined every single day.',
+  },
+  {
+    image: restTimersImg,
+    badge: 'Smart Intervals',
+    icon: <Timer className="w-4 h-4 text-primary" />,
+    title: 'Automatic Rest Timers',
+    desc: 'Hands-free countdown interval timer that automatically activates after you finish a set to keep your training on pace.',
+  },
+  {
+    image: musicPlaylistImg,
+    badge: 'Offline Audio',
+    icon: <Music2 className="w-4 h-4 text-primary" />,
+    title: 'Build Your Workout Playlist',
+    desc: 'Upload and play your own high-energy MP3 / WAV audio tracks locally inside the app with zero distractions.',
+  },
+  {
+    image: fuelMotivationImg,
+    badge: 'Motivation Stream',
+    icon: <Zap className="w-4 h-4 text-primary" />,
+    title: 'Add Motivation Fuel',
+    desc: 'Embed YouTube Shorts and Instagram Reels to watch intense workout motivation directly without leaving your session.',
+  },
+  {
+    image: workoutStreaksImg,
+    badge: 'Consistency & Calendar',
+    icon: <Calendar className="w-4 h-4 text-primary" />,
+    title: 'Build Your Streaks & History',
+    desc: 'Visualize monthly workout consistency, celebrate daily streaks, and review your historical training logs.',
   },
 ];
 
@@ -162,6 +213,64 @@ const Welcome = () => {
                 </div>
                 <h3 className="font-bold text-base text-foreground mb-1.5">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── VISUAL APP SHOWCASE (2 SIDE BY SIDE) ── */}
+      <section className="w-full bg-background/50 py-20 px-6 sm:px-10 lg:px-16 border-t border-border/40">
+        <div className="max-w-7xl mx-auto space-y-12">
+          {/* Header */}
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary/15 border border-primary/30 text-primary">
+              <Sparkles className="w-3.5 h-3.5" />
+              Inside Yodha Mode
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
+              See Yodha Mode in Action
+            </h2>
+            <p className="text-muted-foreground text-base">
+              A distraction-free, dedicated workout platform engineered for intense focus, consistent habits, and unstoppable progress.
+            </p>
+          </div>
+
+          {/* 6 Images Grid: 2 side by side, then below, then below */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10">
+            {showcaseItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="group rounded-3xl border border-border/70 bg-gradient-to-b from-card/90 via-card/60 to-card/95 p-5 sm:p-7 shadow-xl hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 flex flex-col justify-between overflow-hidden backdrop-blur-md"
+              >
+                {/* Header text content */}
+                <div className="space-y-2.5 mb-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
+                      {item.icon}
+                      <span>{item.badge}</span>
+                    </span>
+                    <span className="text-xs font-bold text-muted-foreground/60 tracking-wider uppercase">
+                      0{idx + 1}
+                    </span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+
+                {/* Screenshot Image Container */}
+                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black/60 shadow-lg relative flex items-center justify-center p-2 sm:p-3 group-hover:border-primary/30 transition-colors">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    loading="lazy"
+                    className="w-full h-auto max-h-[520px] object-contain rounded-xl transition-transform duration-500 group-hover:scale-[1.015]"
+                  />
+                </div>
               </div>
             ))}
           </div>

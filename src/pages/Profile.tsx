@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save } from 'lucide-react';
+import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles } from 'lucide-react';
 import { z } from 'zod';
 
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -240,6 +240,35 @@ const Profile = () => {
               ) : (
                 'Update Password'
               )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Feedback Card */}
+        <div className="glass rounded-2xl p-6 mt-6 border-primary/20 hover:border-primary/40 transition-all group">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center text-primary">
+                <MessageSquareHeart className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  Give App Feedback
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Request features or report bugs directly to our team
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => navigate('/feedback')}
+              variant="outline"
+              size="sm"
+              className="bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border-primary/30 rounded-xl font-semibold flex items-center gap-1 h-9"
+            >
+              <span>Feedback</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>

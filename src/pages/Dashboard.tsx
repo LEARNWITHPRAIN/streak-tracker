@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User, MessageSquareHeart } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -205,6 +205,14 @@ const Dashboard = () => {
                 </div>
               )}
               
+              <button
+                onClick={() => navigate('/feedback')}
+                className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-primary/20 hover:text-primary transition-colors border border-border/40 text-muted-foreground group"
+                title="Give Feedback"
+              >
+                <MessageSquareHeart className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              </button>
+
               <button
                 onClick={() => navigate('/profile')}
                 className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors border border-border/40"

@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import Feedback from "./pages/Feedback";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/feedback" element={<Feedback />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<Terms />} />

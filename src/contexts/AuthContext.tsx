@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -13,6 +14,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  requireAuth: (callback?: (() => void) | undefined, message?: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ const getAuthRedirectUrl = (path: string = '/dashboard') => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,8 +167,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const requireAuth = useCallback((callback?: (() => void) | undefined, message?: string): boolean => {
+    if (user) {
+      if (callback) callback();
+      return true;
+    }
+    navigate('/auth', { state: { message: message || 'Please sign in to continue.' } });
+    return false;
+  }, [user, navigate]);
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signInWithGoogle, sendMagicLink, resetPassword, updatePassword, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signInWithGoogle, sendMagicLink, resetPassword, updatePassword, signOut, requireAuth }}>
       {children}
     </AuthContext.Provider>
   );
