@@ -54,3 +54,12 @@ Implement an 'Explore as Guest' preview mode for Yodha Mode. Unauthenticated use
 
 **Improved:**
 Complete and polish the 'Explore as Guest' preview mode across Yodha Mode so unauthenticated visitors can explore all dashboard features with pre-populated demo data, while intercepting write actions with a branded authentication modal.
+
+## Prompt 4
+
+**Original:**
+remove this
+
+**Improved:**
+In `src/components/FuelPlayer.tsx`, remove the '1-Click Gym Motivation Shorts' preset section (David Goggins, Arnold Motivation, CBum Focus, Ronnie Coleman buttons and `MOTIVATION_SHORTS` constant) while keeping the YouTube URL input and local upload options cleanly formatted.
+

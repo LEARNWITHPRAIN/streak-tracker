@@ -641,29 +641,6 @@ interface AddFuelModalProps {
   onAddUrl: (overrideUrl?: string) => void;
 }
 
-const MOTIVATION_SHORTS = [
-  {
-    name: 'David Goggins',
-    tag: 'Discipline',
-    url: 'https://www.youtube.com/shorts/q7q0m7iFjG4',
-  },
-  {
-    name: 'Arnold Motivation',
-    tag: 'Champion Mindset',
-    url: 'https://www.youtube.com/shorts/7QyQpB8tJ6E',
-  },
-  {
-    name: 'CBum Focus',
-    tag: 'Workout Drive',
-    url: 'https://www.youtube.com/shorts/P1bWn4_JjFE',
-  },
-  {
-    name: 'Ronnie Coleman',
-    tag: 'Heavy Duty',
-    url: 'https://www.youtube.com/shorts/Vf7Hw0mJp0o',
-  },
-];
-
 const AddFuelModal: React.FC<AddFuelModalProps> = ({
   open,
   onOpenChange,
@@ -793,34 +770,6 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
                 <Play className="w-3.5 h-3.5 fill-white" />
                 <span>Play on Website</span>
               </Button>
-            </div>
-
-            {/* Quick Presets */}
-            <div className="pt-2 border-t border-border/40 space-y-1.5">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                ⚡ 1-Click Gym Motivation Shorts:
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {MOTIVATION_SHORTS.map((short) => (
-                  <button
-                    key={short.name}
-                    type="button"
-                    onClick={() => handleAddYouTube(short.url)}
-                    disabled={addingVideo}
-                    className="flex items-center justify-between p-2 rounded-xl bg-background hover:bg-red-500/10 border border-border hover:border-red-500/40 text-left transition-all group"
-                  >
-                    <div className="min-w-0 pr-1">
-                      <p className="text-xs font-semibold text-foreground truncate group-hover:text-red-400 transition-colors">
-                        {short.name}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground truncate">{short.tag}</p>
-                    </div>
-                    <div className="w-6 h-6 rounded-lg bg-red-600/20 group-hover:bg-red-600 text-red-400 group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
-                      <Play className="w-3 h-3 fill-current ml-0.5" />
-                    </div>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
