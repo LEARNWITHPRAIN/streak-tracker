@@ -479,12 +479,12 @@ export const FuelPlayer: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Instagram Iframe Player with sandbox to block top navigation redirects */}
-                    <div className="flex-1 w-full relative bg-black">
+                    {/* Instagram Iframe Player with sandbox and top header cropped for full black view */}
+                    <div className="flex-1 w-full relative bg-black overflow-hidden flex items-center justify-center">
                       <iframe
                         key={`ig-frame-${item.id}-${reloadKey}`}
                         src={`https://www.instagram.com/reel/${instaId || ''}/embed/`}
-                        className="w-full h-full border-0 bg-black"
+                        className="w-full h-[calc(100%+60px)] -mt-[58px] border-0 bg-black"
                         sandbox="allow-scripts allow-same-origin allow-forms"
                         allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
                         allowFullScreen

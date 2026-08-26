@@ -63,3 +63,12 @@ remove this
 **Improved:**
 In `src/components/FuelPlayer.tsx`, remove the '1-Click Gym Motivation Shorts' preset section (David Goggins, Arnold Motivation, CBum Focus, Ronnie Coleman buttons and `MOTIVATION_SHORTS` constant) while keeping the YouTube URL input and local upload options cleanly formatted.
 
+## Prompt 5
+
+**Original:**
+It's white, like full black, full black, no white.
+
+**Improved:**
+Update the Instagram Reel player in `src/components/FuelPlayer.tsx` to eliminate the white profile header bar and ensure a pure, 100% full-black viewing experience by masking the top header (`-mt-[58px] h-[calc(100%+60px)] overflow-hidden`) and using pure black backgrounds.
+
+
