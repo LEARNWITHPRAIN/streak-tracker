@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Swords, Plus, Copy, Share2, CheckCircle2, Clock, Zap, ChevronDown, ChevronUp, Hash } from 'lucide-react';
+import { Swords, Plus, Copy, Share2, CheckCircle2, Circle, Clock, Zap, ChevronDown, ChevronUp, Hash, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChallenges, ChallengeWithMeta, ChallengeTask } from '@/hooks/useChallenges';
 import { LeaderboardTab } from './LeaderboardTab';
 import { TaskBuilder } from './TaskBuilder';
+import { VariableStepper } from './VariableStepper';
 
 const DURATION_OPTIONS = [
   { label: '7 Days',  value: 7 },
@@ -27,12 +28,15 @@ interface ChallengesTabProps {
 export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl }) => {
   const {
     myChallenges,
+    todayProgress,
     loading,
     fetchMyChallenges,
     createChallenge,
     lookupChallengeByCode,
+    joinChallengeByCode,
     acceptChallenge,
     declineChallenge,
+    logChallengeProgress,
     shareChallengeLink,
   } = useChallenges();
 
@@ -43,7 +47,6 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   const [newTasks, setNewTasks] = useState<Omit<ChallengeTask, 'id'>[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [justCreated, setJustCreated] = useState<ChallengeWithMeta | null>(null);
 
   // Join by code state
   const [joinCode, setJoinCode] = useState(inviteCodeFromUrl ?? '');
@@ -51,7 +54,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinPreview, setJoinPreview] = useState<any>(null);
 
-  // Expanded challenge for leaderboard
+  // Expanded challenge for leaderboard & task logging
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Copied state for code
@@ -61,8 +64,37 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
   // Auto-lookup if arriving with a code
   useEffect(() => {
-    if (inviteCodeFromUrl) handleLookup();
+    if (inviteCodeFromUrl) {
+      setJoinCode(inviteCodeFromUrl);
+      performLookup(inviteCodeFromUrl);
+    }
   }, [inviteCodeFromUrl]);
+
+  // Auto-lookup when user types/pastes 6 characters
+  const handleCodeChange = (val: string) => {
+    const clean = val.trim().toUpperCase();
+    setJoinCode(clean);
+    setJoinError(null);
+    if (clean.length === 6) {
+      performLookup(clean);
+    } else {
+      setJoinPreview(null);
+    }
+  };
+
+  const performLookup = async (code: string) => {
+    if (!code || code.length < 6) return;
+    setJoining(true);
+    setJoinError(null);
+    const { preview, error } = await lookupChallengeByCode(code);
+    setJoining(false);
+    if (error || !preview) {
+      setJoinError(error ?? 'Challenge not found or expired.');
+      setJoinPreview(null);
+    } else {
+      setJoinPreview(preview);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newTitle.trim()) { setCreateError('Please enter a challenge title.'); return; }
@@ -74,36 +106,29 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     if (error) { setCreateError(error); return; }
     setShowCreate(false);
     setNewTitle(''); setNewTasks([]); setNewDuration(30);
-    // Find the created challenge in myChallenges
     await fetchMyChallenges();
-    setJustCreated(myChallenges[0] ?? null);
+    if (challenge) setExpandedId(challenge.id);
   };
 
-  const handleLookup = async () => {
+  const handleJoinAndStart = async () => {
     if (!joinCode.trim()) return;
     setJoining(true);
     setJoinError(null);
-    const { preview, error } = await lookupChallengeByCode(joinCode.trim());
-    setJoining(false);
-    if (error || !preview) { setJoinError(error ?? 'Not found'); return; }
-    setJoinPreview(preview);
-  };
 
-  const handleAcceptFromLookup = async () => {
-    if (!joinPreview) return;
-    setJoining(true);
-    await acceptChallenge(joinPreview.challenge_id);
+    const { challengeId, error } = await joinChallengeByCode(joinCode.trim());
     setJoining(false);
-    setJoinPreview(null);
+
+    if (error) {
+      setJoinError(error);
+      return;
+    }
+
     setJoinCode('');
+    setJoinPreview(null);
     await fetchMyChallenges();
-  };
-
-  const handleDeclineFromLookup = async () => {
-    if (!joinPreview) return;
-    await declineChallenge(joinPreview.challenge_id);
-    setJoinPreview(null);
-    setJoinCode('');
+    if (challengeId) {
+      setExpandedId(challengeId);
+    }
   };
 
   const copyCode = async (code: string) => {
@@ -200,53 +225,60 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
       <div className="glass rounded-2xl p-5 border border-border/40 space-y-3">
         <h4 className="font-bold text-foreground flex items-center gap-2">
           <Hash className="w-4 h-4 text-muted-foreground" />
-          Join by Code
+          Join Challenge
         </h4>
+        <p className="text-xs text-muted-foreground">
+          Paste the 6-character code from a friend to start competing immediately.
+        </p>
+
         <div className="flex gap-2">
           <input
             value={joinCode}
-            onChange={e => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="ABC123"
+            onChange={e => handleCodeChange(e.target.value)}
+            placeholder="PASTE CODE HERE"
             maxLength={6}
-            className="flex-1 px-3 py-2.5 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground font-mono tracking-widest placeholder:tracking-normal placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 uppercase"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground font-mono tracking-widest placeholder:tracking-normal placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 uppercase font-bold"
           />
           <Button
-            onClick={handleLookup}
+            onClick={handleJoinAndStart}
             disabled={joining || joinCode.length < 6}
-            className="rounded-xl bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 font-bold"
+            className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 px-5"
           >
-            {joining ? <div className="w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" /> : 'Find'}
+            {joining ? (
+              <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+            ) : (
+              <span className="flex items-center gap-1.5">
+                Join & Start <ArrowRight className="w-4 h-4" />
+              </span>
+            )}
           </Button>
         </div>
+
         {joinError && <p className="text-xs text-destructive">{joinError}</p>}
 
-        {/* Preview inline */}
+        {/* Preview popup card when code found */}
         {joinPreview && (
-          <div className="mt-3 p-4 rounded-xl bg-muted/30 border border-border/40 space-y-3">
-            <div>
-              <p className="font-bold text-foreground">{joinPreview.title}</p>
-              <p className="text-xs text-muted-foreground">
-                By {joinPreview.creator_name ?? 'Unknown'} · {joinPreview.duration_days} days · {joinPreview.task_count} tasks
-              </p>
+          <div className="mt-3 p-4 rounded-xl bg-primary/10 border border-primary/30 space-y-3 animate-scale-in">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wider font-semibold text-primary">Challenge Found</p>
+                <p className="font-bold text-foreground text-base mt-0.5">{joinPreview.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Created by {joinPreview.creator_name ?? 'Friend'} · {joinPreview.duration_days} days · {joinPreview.task_count} tasks
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-primary/20 text-primary text-xs font-bold border border-primary/30">
+                Ready to Start
+              </span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeclineFromLookup}
-                className="flex-1 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 text-xs"
-              >
-                Decline
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAcceptFromLookup}
-                disabled={joining}
-                className="flex-1 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/20"
-              >
-                Accept Challenge
-              </Button>
-            </div>
+
+            <Button
+              onClick={handleJoinAndStart}
+              disabled={joining}
+              className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20"
+            >
+              {joining ? 'Starting Challenge...' : 'Accept & Start Challenge Now'}
+            </Button>
           </div>
         )}
       </div>
@@ -264,14 +296,14 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
         <div className="text-center py-12 text-muted-foreground">
           <Swords className="w-12 h-12 mx-auto mb-3 opacity-20" />
           <p className="font-medium">No challenges yet.</p>
-          <p className="text-sm mt-1">Create one or join using an invite code.</p>
+          <p className="text-sm mt-1">Create one or paste a friend's code above to start!</p>
         </div>
       )}
 
       {myChallenges.map(challenge => {
         const badge = STATUS_BADGES[challenge.status] ?? STATUS_BADGES.ended;
         const isExpanded = expandedId === challenge.id;
-        const shareLink = `${window.location.origin}/challenge/${challenge.invite_code}`;
+        const isActive = challenge.status === 'active';
 
         return (
           <div key={challenge.id} className="glass rounded-2xl border border-border/40 overflow-hidden">
@@ -286,11 +318,11 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground truncate">{challenge.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  vs {challenge.opponent_name ?? 'Waiting for opponent'} · {challenge.duration_days}d
+                  vs {challenge.opponent_name ?? (challenge.status === 'pending' ? 'Waiting for opponent' : 'Friend')} · {challenge.duration_days}d
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${badge.className}`}>
+                <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-semibold ${badge.className}`}>
                   {badge.label}
                 </span>
                 {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -299,13 +331,16 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
             {/* Expanded panel */}
             {isExpanded && (
-              <div className="border-t border-border/30 p-4 space-y-4">
-                {/* Invite code (pending only) */}
+              <div className="border-t border-border/30 p-4 space-y-5">
+
+                {/* Invite code sharing (pending only) */}
                 {challenge.status === 'pending' && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">Share with opponent</p>
+                  <div className="space-y-2 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                    <p className="text-xs text-yellow-400 font-semibold uppercase tracking-widest">
+                      Share Invite Code with Opponent
+                    </p>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 px-4 py-2.5 rounded-xl bg-muted/50 border border-border/40 font-mono text-lg font-bold text-foreground tracking-[0.3em] text-center">
+                      <div className="flex-1 px-4 py-2.5 rounded-xl bg-background/80 border border-border/50 font-mono text-xl font-bold text-primary tracking-[0.3em] text-center">
                         {challenge.invite_code}
                       </div>
                       <button
@@ -327,36 +362,106 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Expires {new Date(challenge.expires_at).toLocaleString()}</span>
+                      <span>Expires in 48 hours</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive Challenge Task Logging (Active only) */}
+                {isActive && challenge.tasks.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        Today's Challenge Tasks
+                      </h5>
+                      <span className="text-[10px] text-primary font-semibold">Log your daily progress</span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {challenge.tasks.map(task => {
+                        const progress = task.id ? todayProgress[task.id] : undefined;
+                        const isFixed = task.task_type === 'fixed';
+                        const isChecked = (progress?.units_logged ?? 0) >= 1;
+                        const currentUnits = progress?.units_logged ?? 0;
+
+                        if (isFixed) {
+                          return (
+                            <button
+                              key={task.id}
+                              onClick={() => task.id && logChallengeProgress(challenge.id, task, !isChecked)}
+                              className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                                isChecked
+                                  ? 'bg-primary/10 border-primary/40'
+                                  : 'bg-muted/30 border-border/40 hover:border-primary/30'
+                              }`}
+                            >
+                              <div className="shrink-0">
+                                {isChecked
+                                  ? <CheckCircle2 className="w-5 h-5 text-primary" />
+                                  : <Circle className="w-5 h-5 text-muted-foreground/50" />
+                                }
+                              </div>
+                              <span className={`flex-1 text-sm font-medium ${isChecked ? 'text-primary' : 'text-foreground'}`}>
+                                {task.task_name}
+                              </span>
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
+                                isChecked
+                                  ? 'bg-primary/20 text-primary border-primary/30'
+                                  : 'bg-muted/50 text-muted-foreground border-border/40'
+                              }`}>
+                                +{task.xp_flat} XP
+                              </span>
+                            </button>
+                          );
+                        } else {
+                          return (
+                            <div key={task.id} className="p-3.5 rounded-xl bg-muted/30 border border-border/40 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-bold text-foreground">{task.task_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {task.xp_rate} XP per {task.unit_label || 'unit'}
+                                    {task.daily_unit_cap && ` · Max cap: ${task.daily_unit_cap} ${task.unit_label}`}
+                                  </p>
+                                </div>
+                                {currentUnits > 0 && (
+                                  <span className="text-xs font-bold text-primary px-2 py-0.5 rounded-lg bg-primary/15 border border-primary/30">
+                                    {Math.round(progress?.capped_xp_earned ?? 0)} XP
+                                  </span>
+                                )}
+                              </div>
+                              <VariableStepper
+                                taskId={task.id || ''}
+                                unitLabel={task.unit_label || 'units'}
+                                value={currentUnits}
+                                stepIncrement={task.step_increment || 1}
+                                dailyUnitCap={task.daily_unit_cap || null}
+                                xpRate={task.xp_rate || 1}
+                                quickAddChips={[
+                                  (task.step_increment || 1) * 2,
+                                  (task.step_increment || 1) * 5,
+                                  (task.step_increment || 1) * 10
+                                ]}
+                                onChange={(_, newVal) => logChallengeProgress(challenge.id, task, newVal)}
+                              />
+                            </div>
+                          );
+                        }
+                      })}
                     </div>
                   </div>
                 )}
 
                 {/* 1v1 Leaderboard (active/ended) */}
                 {(challenge.status === 'active' || challenge.status === 'ended') && (
-                  <LeaderboardTab
-                    scopeType="challenge"
-                    scopeId={challenge.id}
-                    title={`${challenge.title} — Scoreboard`}
-                  />
+                  <div className="pt-2 border-t border-border/30">
+                    <LeaderboardTab
+                      scopeType="challenge"
+                      scopeId={challenge.id}
+                      title={`${challenge.title} — Scoreboard`}
+                    />
+                  </div>
                 )}
-
-                {/* Task list */}
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">Tasks</p>
-                  {challenge.tasks.map((task, i) => (
-                    <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-muted/30 border border-border/30">
-                      <div className={`w-1.5 h-1.5 rounded-full ${task.task_type === 'fixed' ? 'bg-blue-400' : 'bg-purple-400'}`} />
-                      <span className="flex-1 text-sm text-foreground">{task.task_name}</span>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Zap className="w-3 h-3 text-primary" />
-                        {task.task_type === 'fixed'
-                          ? `${task.xp_flat} XP`
-                          : `${task.xp_rate}/${task.unit_label}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>

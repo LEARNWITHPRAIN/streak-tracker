@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ChallengeTask {
-  id?: string;          // undefined when being built before creation
+  id?: string;
   task_name: string;
   task_type: 'fixed' | 'variable';
   xp_flat?: number | null;
@@ -46,10 +46,17 @@ export interface ChallengePreviewData {
   tasks: ChallengeTask[];
 }
 
+export interface ChallengeProgressItem {
+  task_id: string;
+  units_logged: number;
+  xp_earned: number;
+  capped_xp_earned: number;
+}
+
 // ─── Util ──────────────────────────────────────────────────────────────────────
 
 function generateInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
@@ -59,8 +66,11 @@ export const useChallenges = () => {
   const { user } = useAuth();
 
   const [myChallenges, setMyChallenges] = useState<ChallengeWithMeta[]>([]);
+  const [todayProgress, setTodayProgress] = useState<Record<string, ChallengeProgressItem>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const getTodayKey = () => new Date().toISOString().split('T')[0];
 
   // ── Fetch all my challenges ───────────────────────────────────────────────
   const fetchMyChallenges = useCallback(async () => {
@@ -117,6 +127,25 @@ export const useChallenges = () => {
         tasksByChallenge[t.challenge_id].push(t as ChallengeTask);
       });
 
+      // Fetch today's progress for all tasks in active challenges
+      const today = getTodayKey();
+      const { data: progressRows } = await supabase
+        .from('challenge_progress')
+        .select('task_id, units_logged, xp_earned, capped_xp_earned')
+        .eq('user_id', user.id)
+        .eq('date', today);
+
+      const progressMap: Record<string, ChallengeProgressItem> = {};
+      (progressRows || []).forEach(pr => {
+        progressMap[pr.task_id] = {
+          task_id: pr.task_id,
+          units_logged: pr.units_logged ?? 0,
+          xp_earned: pr.xp_earned ?? 0,
+          capped_xp_earned: pr.capped_xp_earned ?? 0,
+        };
+      });
+      setTodayProgress(progressMap);
+
       const enriched: ChallengeWithMeta[] = (challenges || []).map(c => {
         const myParticipant = participantRows.find(p => p.challenge_id === c.id);
         const opponent = (allParticipants || []).find(p => p.challenge_id === c.id);
@@ -136,6 +165,8 @@ export const useChallenges = () => {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => { fetchMyChallenges(); }, [fetchMyChallenges]);
 
   // ── Create challenge ──────────────────────────────────────────────────────
   const createChallenge = useCallback(async (
@@ -212,43 +243,61 @@ export const useChallenges = () => {
     };
   }, []);
 
+  // ── Join & start challenge by code directly ───────────────────────────────
+  const joinChallengeByCode = useCallback(async (code: string): Promise<{ challengeId: string | null; error: string | null }> => {
+    if (!user) return { challengeId: null, error: 'Not authenticated' };
+
+    try {
+      const upperCode = code.trim().toUpperCase();
+      const { data, error: rpcError } = await (supabase.rpc as any)('join_challenge_by_code', { p_code: upperCode });
+      
+      if (rpcError) throw rpcError;
+      
+      if (data && data.success) {
+        await fetchMyChallenges();
+        return { challengeId: data.challenge_id, error: null };
+      } else {
+        return { challengeId: null, error: data?.error ?? 'Failed to join challenge' };
+      }
+    } catch (err: any) {
+      // Fallback: direct table update if RPC not present yet
+      const { preview, error: lookupErr } = await lookupChallengeByCode(code);
+      if (lookupErr || !preview) return { challengeId: null, error: lookupErr ?? 'Challenge not found' };
+      
+      const acceptRes = await acceptChallenge(preview.challenge_id);
+      if (acceptRes.error) return { challengeId: null, error: acceptRes.error };
+      return { challengeId: preview.challenge_id, error: null };
+    }
+  }, [user, fetchMyChallenges, lookupChallengeByCode]);
+
   // ── Accept challenge ──────────────────────────────────────────────────────
   const acceptChallenge = useCallback(async (challengeId: string): Promise<{ error: string | null }> => {
     if (!user) return { error: 'Not authenticated' };
 
-    // Check if already a participant
-    const { data: existing } = await supabase
-      .from('challenge_participants')
-      .select('user_id')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (!existing) {
-      // Add as invitee
-      const { error: pErr } = await supabase.from('challenge_participants').insert({
+    try {
+      // Upsert participation
+      const { error: pErr } = await supabase.from('challenge_participants').upsert({
         challenge_id: challengeId,
         user_id: user.id,
         role: 'invitee',
         status: 'accepted',
-      });
-      if (pErr) return { error: pErr.message };
-    } else {
-      // Update status
-      await supabase.from('challenge_participants')
-        .update({ status: 'accepted' })
-        .eq('challenge_id', challengeId)
-        .eq('user_id', user.id);
+      }, { onConflict: 'challenge_id,user_id' });
+      
+      if (pErr) throw pErr;
+
+      // Activate challenge
+      const today = new Date().toISOString().split('T')[0];
+      const { error: cErr } = await supabase.from('challenges')
+        .update({ status: 'active', start_date: today })
+        .eq('id', challengeId);
+
+      if (cErr) throw cErr;
+
+      await fetchMyChallenges();
+      return { error: null };
+    } catch (err: any) {
+      return { error: err?.message ?? 'Failed to accept challenge' };
     }
-
-    // Activate the challenge and set start_date
-    const today = new Date().toISOString().split('T')[0];
-    await supabase.from('challenges')
-      .update({ status: 'active', start_date: today })
-      .eq('id', challengeId);
-
-    await fetchMyChallenges();
-    return { error: null };
   }, [user, fetchMyChallenges]);
 
   // ── Decline challenge ─────────────────────────────────────────────────────
@@ -274,7 +323,7 @@ export const useChallenges = () => {
   ) => {
     if (!user || !task.id) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayKey();
     let units: number;
     let xpEarned: number;
     let cappedXp: number;
@@ -290,6 +339,17 @@ export const useChallenges = () => {
       const capUnits = task.daily_unit_cap ?? Infinity;
       cappedXp = Math.round(Math.min(units, capUnits) * rate * 10) / 10;
     }
+
+    // Optimistic local state update
+    setTodayProgress(prev => ({
+      ...prev,
+      [task.id!]: {
+        task_id: task.id!,
+        units_logged: units,
+        xp_earned: xpEarned,
+        capped_xp_earned: cappedXp,
+      }
+    }));
 
     await supabase.from('challenge_progress').upsert({
       challenge_id: challengeId,
@@ -321,11 +381,13 @@ export const useChallenges = () => {
 
   return {
     myChallenges,
+    todayProgress,
     loading,
     error,
     fetchMyChallenges,
     createChallenge,
     lookupChallengeByCode,
+    joinChallengeByCode,
     acceptChallenge,
     declineChallenge,
     logChallengeProgress,

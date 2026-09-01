@@ -1,5 +1,5 @@
 -- ============================================================
--- Winter Arc Schema Migration (Fixed Order & Anti-Recursion)
+-- Winter Arc Schema Migration (Fixed Order, Anti-Recursion & Join RPC)
 -- 1. All Tables
 -- 2. Enable RLS
 -- 3. Security Definer Helper Functions (prevents policy recursion)
@@ -284,10 +284,14 @@ CREATE POLICY "Creators can insert challenges"
   WITH CHECK (creator_id = auth.uid());
 
 DROP POLICY IF EXISTS "Creators can update challenges" ON public.challenges;
-CREATE POLICY "Creators can update challenges"
+DROP POLICY IF EXISTS "Participants can update challenges" ON public.challenges;
+CREATE POLICY "Participants can update challenges"
   ON public.challenges FOR UPDATE
   TO authenticated
-  USING (creator_id = auth.uid());
+  USING (
+    creator_id = auth.uid()
+    OR public.is_challenge_participant(id, auth.uid())
+  );
 
 -- challenge_participants
 DROP POLICY IF EXISTS "Participants can read own challenge rows" ON public.challenge_participants;
@@ -492,6 +496,7 @@ CREATE TRIGGER recalculate_streak_after_progress
 -- STEP 6: RPC FUNCTIONS & GRANTS
 -- ──────────────────────────────────────────────────────────
 
+-- Get leaderboard RPC
 CREATE OR REPLACE FUNCTION public.get_leaderboard(
   p_scope_type  TEXT,
   p_scope_id    UUID,
@@ -547,6 +552,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_leaderboard(TEXT, UUID, DATE, DATE) TO authenticated;
 
+-- Lookup challenge by invite code RPC
 CREATE OR REPLACE FUNCTION public.get_challenge_by_code(p_code TEXT)
 RETURNS TABLE (
   challenge_id  UUID,
@@ -582,3 +588,58 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_challenge_by_code(TEXT) TO authenticated, anon;
+
+-- Join / Accept challenge by code RPC (Atomic and starts challenge)
+CREATE OR REPLACE FUNCTION public.join_challenge_by_code(p_code TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_challenge RECORD;
+  v_user_id   UUID := auth.uid();
+  v_today     DATE := CURRENT_DATE;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  SELECT * INTO v_challenge
+  FROM public.challenges
+  WHERE UPPER(invite_code) = UPPER(TRIM(p_code))
+    AND status IN ('pending', 'active')
+    AND expires_at > now();
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Challenge not found or has expired');
+  END IF;
+
+  -- Add/update participant
+  INSERT INTO public.challenge_participants (challenge_id, user_id, role, status)
+  VALUES (
+    v_challenge.id,
+    v_user_id,
+    CASE WHEN v_challenge.creator_id = v_user_id THEN 'creator' ELSE 'invitee' END,
+    'accepted'
+  )
+  ON CONFLICT (challenge_id, user_id)
+  DO UPDATE SET status = 'accepted';
+
+  -- If invitee joining, flip status to active and set start_date
+  IF v_challenge.creator_id <> v_user_id THEN
+    UPDATE public.challenges
+    SET status = 'active',
+        start_date = COALESCE(start_date, v_today)
+    WHERE id = v_challenge.id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'challenge_id', v_challenge.id,
+    'title', v_challenge.title
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.join_challenge_by_code(TEXT) TO authenticated;
