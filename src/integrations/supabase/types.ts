@@ -193,12 +193,367 @@ export type Database = {
         }
         Relationships: []
       }
+      // ── Winter Arc Tables ─────────────────────────────────
+      winter_arc_seasons: {
+        Row: {
+          id: string
+          name: string
+          start_date: string
+          end_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          start_date: string
+          end_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          start_date?: string
+          end_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      winter_arc_daily_tasks: {
+        Row: {
+          id: string
+          season_id: string | null
+          task_name: string
+          task_type: 'fixed' | 'variable'
+          xp_flat: number | null
+          unit_label: string | null
+          xp_rate: number | null
+          step_increment: number | null
+          daily_unit_cap: number | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          season_id?: string | null
+          task_name: string
+          task_type: 'fixed' | 'variable'
+          xp_flat?: number | null
+          unit_label?: string | null
+          xp_rate?: number | null
+          step_increment?: number | null
+          daily_unit_cap?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          season_id?: string | null
+          task_name?: string
+          task_type?: 'fixed' | 'variable'
+          xp_flat?: number | null
+          unit_label?: string | null
+          xp_rate?: number | null
+          step_increment?: number | null
+          daily_unit_cap?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_arc_daily_tasks_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "winter_arc_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_arc_enrollment: {
+        Row: {
+          user_id: string
+          season_id: string
+          joined_date: string
+        }
+        Insert: {
+          user_id: string
+          season_id: string
+          joined_date?: string
+        }
+        Update: {
+          user_id?: string
+          season_id?: string
+          joined_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_arc_enrollment_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "winter_arc_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_arc_user_settings: {
+        Row: {
+          user_id: string
+          season_id: string
+          social_media_limit_minutes: number
+        }
+        Insert: {
+          user_id: string
+          season_id: string
+          social_media_limit_minutes?: number
+        }
+        Update: {
+          user_id?: string
+          season_id?: string
+          social_media_limit_minutes?: number
+        }
+        Relationships: []
+      }
+      winter_arc_user_progress: {
+        Row: {
+          id: string
+          user_id: string
+          season_id: string
+          task_id: string | null
+          date: string
+          units_logged: number
+          xp_earned: number
+          capped_xp_earned: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          season_id: string
+          task_id?: string | null
+          date?: string
+          units_logged?: number
+          xp_earned?: number
+          capped_xp_earned?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          season_id?: string
+          task_id?: string | null
+          date?: string
+          units_logged?: number
+          xp_earned?: number
+          capped_xp_earned?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_arc_user_progress_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "winter_arc_daily_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_arc_streaks: {
+        Row: {
+          user_id: string
+          season_id: string
+          current_streak: number
+          longest_streak: number
+          last_active_date: string | null
+        }
+        Insert: {
+          user_id: string
+          season_id: string
+          current_streak?: number
+          longest_streak?: number
+          last_active_date?: string | null
+        }
+        Update: {
+          user_id?: string
+          season_id?: string
+          current_streak?: number
+          longest_streak?: number
+          last_active_date?: string | null
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          id: string
+          creator_id: string
+          title: string
+          status: 'pending' | 'active' | 'declined' | 'ended' | 'expired'
+          invite_code: string
+          expires_at: string
+          duration_days: number
+          start_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          creator_id: string
+          title: string
+          status?: 'pending' | 'active' | 'declined' | 'ended' | 'expired'
+          invite_code: string
+          expires_at?: string
+          duration_days: number
+          start_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          creator_id?: string
+          title?: string
+          status?: 'pending' | 'active' | 'declined' | 'ended' | 'expired'
+          invite_code?: string
+          expires_at?: string
+          duration_days?: number
+          start_date?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          user_id: string
+          role: 'creator' | 'invitee'
+          status: 'invited' | 'accepted' | 'declined'
+        }
+        Insert: {
+          challenge_id: string
+          user_id: string
+          role: 'creator' | 'invitee'
+          status?: 'invited' | 'accepted' | 'declined'
+        }
+        Update: {
+          challenge_id?: string
+          user_id?: string
+          role?: 'creator' | 'invitee'
+          status?: 'invited' | 'accepted' | 'declined'
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_tasks: {
+        Row: {
+          id: string
+          challenge_id: string
+          task_name: string
+          task_type: 'fixed' | 'variable'
+          xp_flat: number | null
+          unit_label: string | null
+          xp_rate: number | null
+          step_increment: number | null
+          daily_unit_cap: number | null
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          challenge_id: string
+          task_name: string
+          task_type: 'fixed' | 'variable'
+          xp_flat?: number | null
+          unit_label?: string | null
+          xp_rate?: number | null
+          step_increment?: number | null
+          daily_unit_cap?: number | null
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          challenge_id?: string
+          task_name?: string
+          task_type?: 'fixed' | 'variable'
+          xp_flat?: number | null
+          unit_label?: string | null
+          xp_rate?: number | null
+          step_increment?: number | null
+          daily_unit_cap?: number | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      challenge_progress: {
+        Row: {
+          id: string
+          challenge_id: string
+          user_id: string
+          task_id: string
+          date: string
+          units_logged: number
+          xp_earned: number
+          capped_xp_earned: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          challenge_id: string
+          user_id: string
+          task_id: string
+          date?: string
+          units_logged?: number
+          xp_earned?: number
+          capped_xp_earned?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          challenge_id?: string
+          user_id?: string
+          task_id?: string
+          date?: string
+          units_logged?: number
+          xp_earned?: number
+          capped_xp_earned?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_leaderboard: {
+        Args: {
+          p_scope_type: string
+          p_scope_id: string
+          p_start_date: string
+          p_end_date: string
+        }
+        Returns: {
+          user_id: string
+          display_name: string | null
+          total_xp: number
+          current_streak: number
+          rank: number
+        }[]
+      }
+      get_challenge_by_code: {
+        Args: {
+          p_code: string
+        }
+        Returns: {
+          challenge_id: string
+          title: string
+          status: string
+          duration_days: number
+          expires_at: string
+          creator_name: string | null
+          task_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

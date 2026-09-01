@@ -17,6 +17,7 @@ import Feedback from "./pages/Feedback";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
+import WinterArc from "./pages/WinterArc";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,8 @@ const App = () => (
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/terms-and-conditions" element={<Terms />} />
+                <Route path="/winter-arc" element={<WinterArc />} />
+                <Route path="/challenge/:code" element={<WinterArc initialTab="challenges" />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

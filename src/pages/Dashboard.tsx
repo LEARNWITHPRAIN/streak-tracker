@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User, MessageSquareHeart } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User, MessageSquareHeart, Snowflake } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWinterArc } from '@/hooks/useWinterArc';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useMusicContext } from '@/contexts/MusicContext';
@@ -194,6 +195,8 @@ const Dashboard = () => {
                   {displayName ? `Welcome back, ${displayName}` : 'Welcome Back Yodha'}
                 </p>
               </div>
+              {/* Winter Arc entry point */}
+              <WinterArcIconButton />
             </div>
             
             <div className="flex items-center gap-2.5">
@@ -450,3 +453,36 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+// ── Winter Arc Header Icon ─────────────────────────────────────────────────
+const WinterArcIconButton: React.FC = () => {
+  const navigate = useNavigate();
+  const { enrolled, arcDayCount, streak } = useWinterArc();
+
+  return (
+    <button
+      onClick={() => navigate('/winter-arc')}
+      className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-br from-orange-500/15 to-blue-500/10 border border-orange-500/30 hover:from-orange-500/25 hover:to-blue-500/20 transition-all group shadow-sm shadow-orange-500/10"
+      title={enrolled ? `Winter Arc — Day ${arcDayCount}` : 'Join Winter Arc'}
+    >
+      {/* Icon */}
+      <div className="relative">
+        <Snowflake className="w-4 h-4 text-blue-300/80 group-hover:text-blue-200 transition-colors" />
+        <Flame className="w-2.5 h-2.5 text-orange-500 absolute -bottom-0.5 -right-0.5 animate-pulse" />
+      </div>
+
+      {/* Label when enrolled */}
+      {enrolled && arcDayCount > 0 ? (
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-bold text-orange-400 hidden sm:block">Day {arcDayCount}</span>
+          {streak.current_streak > 0 && (
+            <span className="text-[10px] font-bold text-orange-500 hidden sm:block">🔥{streak.current_streak}</span>
+          )}
+        </div>
+      ) : (
+        <span className="text-xs font-bold text-orange-400 hidden sm:block">Winter Arc</span>
+      )}
+    </button>
+  );
+};
+
