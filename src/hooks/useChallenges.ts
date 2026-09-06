@@ -379,6 +379,32 @@ export const useChallenges = () => {
     }
   }, []);
 
+  // ── Delete challenge (creator only) ───────────────────────────────────────
+  const deleteChallenge = useCallback(async (challengeId: string): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'Not authenticated' };
+
+    try {
+      // Clean up child tables to prevent any foreign key constraint issues
+      await supabase.from('challenge_progress').delete().eq('challenge_id', challengeId);
+      await supabase.from('challenge_tasks').delete().eq('challenge_id', challengeId);
+      await supabase.from('challenge_participants').delete().eq('challenge_id', challengeId);
+
+      const { error: dErr } = await supabase
+        .from('challenges')
+        .delete()
+        .eq('id', challengeId)
+        .eq('creator_id', user.id);
+
+      if (dErr) throw dErr;
+
+      // Optimistic state update
+      setMyChallenges(prev => prev.filter(c => c.id !== challengeId));
+      return { error: null };
+    } catch (err: any) {
+      return { error: err?.message ?? 'Failed to delete challenge' };
+    }
+  }, [user]);
+
   return {
     myChallenges,
     todayProgress,
@@ -392,5 +418,6 @@ export const useChallenges = () => {
     declineChallenge,
     logChallengeProgress,
     shareChallengeLink,
+    deleteChallenge,
   };
 };

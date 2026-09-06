@@ -293,6 +293,12 @@ CREATE POLICY "Participants can update challenges"
     OR public.is_challenge_participant(id, auth.uid())
   );
 
+DROP POLICY IF EXISTS "Creators can delete challenges" ON public.challenges;
+CREATE POLICY "Creators can delete challenges"
+  ON public.challenges FOR DELETE
+  TO authenticated
+  USING (creator_id = auth.uid());
+
 -- challenge_participants
 DROP POLICY IF EXISTS "Participants can read own challenge rows" ON public.challenge_participants;
 CREATE POLICY "Participants can read own challenge rows"
@@ -316,6 +322,15 @@ CREATE POLICY "Participants can update own row"
   TO authenticated
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Participants or creators can delete challenge participants" ON public.challenge_participants;
+CREATE POLICY "Participants or creators can delete challenge participants"
+  ON public.challenge_participants FOR DELETE
+  TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR public.is_challenge_creator(challenge_id, auth.uid())
+  );
+
 -- challenge_tasks
 DROP POLICY IF EXISTS "Participants can read challenge tasks" ON public.challenge_tasks;
 CREATE POLICY "Participants can read challenge tasks"
@@ -331,6 +346,14 @@ CREATE POLICY "Creators can insert challenge tasks"
   ON public.challenge_tasks FOR INSERT
   TO authenticated
   WITH CHECK (
+    public.is_challenge_creator(challenge_id, auth.uid())
+  );
+
+DROP POLICY IF EXISTS "Creators can delete challenge tasks" ON public.challenge_tasks;
+CREATE POLICY "Creators can delete challenge tasks"
+  ON public.challenge_tasks FOR DELETE
+  TO authenticated
+  USING (
     public.is_challenge_creator(challenge_id, auth.uid())
   );
 
@@ -355,6 +378,15 @@ CREATE POLICY "Participants can read challenge progress"
   USING (
     user_id = auth.uid()
     OR public.is_challenge_participant(challenge_id, auth.uid())
+    OR public.is_challenge_creator(challenge_id, auth.uid())
+  );
+
+DROP POLICY IF EXISTS "Users or creators can delete challenge progress" ON public.challenge_progress;
+CREATE POLICY "Users or creators can delete challenge progress"
+  ON public.challenge_progress FOR DELETE
+  TO authenticated
+  USING (
+    user_id = auth.uid()
     OR public.is_challenge_creator(challenge_id, auth.uid())
   );
 

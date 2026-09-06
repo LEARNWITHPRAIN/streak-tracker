@@ -1,7 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Swords, Plus, Copy, Share2, CheckCircle2, Circle, Clock, Zap, ChevronDown, ChevronUp, Hash, ArrowRight } from 'lucide-react';
+import {
+  Swords,
+  Plus,
+  Copy,
+  Share2,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Hash,
+  ArrowRight,
+  Trash2,
+  Calendar,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useChallenges, ChallengeWithMeta, ChallengeTask } from '@/hooks/useChallenges';
+import { toast } from '@/hooks/use-toast';
 import { LeaderboardTab } from './LeaderboardTab';
 import { TaskBuilder } from './TaskBuilder';
 import { VariableStepper } from './VariableStepper';
@@ -38,15 +64,22 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     declineChallenge,
     logChallengeProgress,
     shareChallengeLink,
+    deleteChallenge,
   } = useChallenges();
 
   // Create flow state
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDuration, setNewDuration] = useState(30);
+  const [isCustomDuration, setIsCustomDuration] = useState(false);
+  const [customDaysInput, setCustomDaysInput] = useState('45');
   const [newTasks, setNewTasks] = useState<Omit<ChallengeTask, 'id'>[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Delete challenge confirmation modal state
+  const [challengeToDelete, setChallengeToDelete] = useState<ChallengeWithMeta | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Join by code state
   const [joinCode, setJoinCode] = useState(inviteCodeFromUrl ?? '');
@@ -97,15 +130,38 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   };
 
   const handleCreate = async () => {
-    if (!newTitle.trim()) { setCreateError('Please enter a challenge title.'); return; }
-    if (newTasks.length === 0) { setCreateError('Add at least one task.'); return; }
+    if (!newTitle.trim()) {
+      setCreateError('Please enter a challenge title.');
+      return;
+    }
+
+    const durationToUse = isCustomDuration ? parseInt(customDaysInput, 10) : newDuration;
+    if (!durationToUse || isNaN(durationToUse) || durationToUse < 1 || durationToUse > 365) {
+      setCreateError('Please specify a valid duration between 1 and 365 days.');
+      return;
+    }
+
+    if (newTasks.length === 0) {
+      setCreateError('Add at least one task.');
+      return;
+    }
+
     setCreating(true);
     setCreateError(null);
-    const { challenge, error } = await createChallenge(newTitle.trim(), newDuration, newTasks);
+    const { challenge, error } = await createChallenge(newTitle.trim(), durationToUse, newTasks);
     setCreating(false);
-    if (error) { setCreateError(error); return; }
+
+    if (error) {
+      setCreateError(error);
+      return;
+    }
+
     setShowCreate(false);
-    setNewTitle(''); setNewTasks([]); setNewDuration(30);
+    setNewTitle('');
+    setNewTasks([]);
+    setNewDuration(30);
+    setIsCustomDuration(false);
+    setCustomDaysInput('45');
     await fetchMyChallenges();
     if (challenge) setExpandedId(challenge.id);
   };
@@ -135,6 +191,30 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!challengeToDelete) return;
+    setDeletingId(challengeToDelete.id);
+    const { error } = await deleteChallenge(challengeToDelete.id);
+    setDeletingId(null);
+
+    if (error) {
+      toast({
+        title: 'Failed to delete challenge',
+        description: error,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Challenge deleted',
+        description: `"${challengeToDelete.title}" has been deleted.`,
+      });
+      if (expandedId === challengeToDelete.id) {
+        setExpandedId(null);
+      }
+      setChallengeToDelete(null);
+    }
   };
 
   return (
@@ -178,21 +258,74 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
           <div>
             <label className="text-xs text-muted-foreground mb-2 block">Duration</label>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {DURATION_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
-                  onClick={() => setNewDuration(opt.value)}
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDuration(false);
+                    setNewDuration(opt.value);
+                  }}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
-                    newDuration === opt.value
-                      ? 'bg-primary/20 text-primary border-primary/40'
+                    !isCustomDuration && newDuration === opt.value
+                      ? 'bg-primary/20 text-primary border-primary/40 shadow-sm'
                       : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60'
                   }`}
                 >
                   {opt.label}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomDuration(true);
+                  const parsed = parseInt(customDaysInput, 10);
+                  if (!isNaN(parsed) && parsed > 0) {
+                    setNewDuration(parsed);
+                  } else {
+                    setCustomDaysInput('45');
+                    setNewDuration(45);
+                  }
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                  isCustomDuration
+                    ? 'bg-primary/20 text-primary border-primary/40 shadow-sm'
+                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Custom Days
+              </button>
             </div>
+
+            {/* Custom Days Input */}
+            {isCustomDuration && (
+              <div className="mt-3 p-3 rounded-xl bg-muted/30 border border-border/40 flex items-center gap-3 animate-scale-in">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={customDaysInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomDaysInput(val);
+                    const parsed = parseInt(val, 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      setNewDuration(parsed);
+                    }
+                  }}
+                  placeholder="e.g. 45"
+                  className="w-28 px-3 py-2 rounded-lg bg-background border border-border/60 text-sm font-bold text-foreground focus:outline-none focus:border-primary/60 text-center"
+                />
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    {parseInt(customDaysInput, 10) > 0 ? `${parseInt(customDaysInput, 10)} Days` : 'Enter duration'}
+                  </span>
+                  <p className="text-[11px] text-muted-foreground/80">Choose any length from 1 to 365 days</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -304,12 +437,13 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
         const badge = STATUS_BADGES[challenge.status] ?? STATUS_BADGES.ended;
         const isExpanded = expandedId === challenge.id;
         const isActive = challenge.status === 'active';
+        const isCreator = challenge.my_role === 'creator';
 
         return (
           <div key={challenge.id} className="glass rounded-2xl border border-border/40 overflow-hidden">
             {/* Card header */}
             <div
-              className="flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+              className="flex items-center gap-3 sm:gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
               onClick={() => setExpandedId(isExpanded ? null : challenge.id)}
             >
               <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center shrink-0">
@@ -325,6 +459,23 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                 <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-semibold ${badge.className}`}>
                   {badge.label}
                 </span>
+
+                {/* Delete button (creator only) */}
+                {isCreator && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setChallengeToDelete(challenge);
+                    }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Delete challenge"
+                    aria-label="Delete challenge"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+
                 {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </div>
             </div>
@@ -462,11 +613,72 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                     />
                   </div>
                 )}
+
+                {/* Delete challenge footer action for creator */}
+                {isCreator && (
+                  <div className="pt-3 border-t border-border/30 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">You created this challenge</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setChallengeToDelete(challenge)}
+                      className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      Delete Challenge
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
         );
       })}
+
+      {/* Confirmation Dialog for Deleting Challenge */}
+      <AlertDialog
+        open={!!challengeToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) setChallengeToDelete(null);
+        }}
+      >
+        <AlertDialogContent className="glass-modal border border-border/60 rounded-2xl max-w-md p-6">
+          <AlertDialogHeader>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/15 border border-destructive/30 flex items-center justify-center text-destructive mx-auto mb-2">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <AlertDialogTitle className="text-center font-bold text-lg text-foreground">
+              Delete Challenge?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-xs text-muted-foreground leading-relaxed">
+              Do you confirm you want to delete <span className="font-bold text-foreground">"{challengeToDelete?.title}"</span>? All tasks, scores, and participant data for this challenge will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2 sm:justify-center mt-4">
+            <AlertDialogCancel
+              disabled={!!deletingId}
+              onClick={() => setChallengeToDelete(null)}
+              className="flex-1 rounded-xl border-border/50"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!deletingId}
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              className="flex-1 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-md shadow-destructive/20"
+            >
+              {deletingId ? (
+                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : (
+                'Yes, Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

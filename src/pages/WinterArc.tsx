@@ -198,7 +198,7 @@ const WinterArc: React.FC<WinterArcProps> = ({ initialTab = 'tasks' }) => {
               className="px-3 py-2.5 text-xs font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all flex items-center gap-1.5"
             >
               <Swords className="w-3.5 h-3.5" />
-              Challenges
+              Custom
             </TabsTrigger>
           </TabsList>
 

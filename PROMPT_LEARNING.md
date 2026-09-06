@@ -71,4 +71,12 @@ It's white, like full black, full black, no white.
 **Improved:**
 Update the Instagram Reel player in `src/components/FuelPlayer.tsx` to eliminate the white profile header bar and ensure a pure, 100% full-black viewing experience by masking the top header (`-mt-[58px] h-[calc(100%+60px)] overflow-hidden`) and using pure black backgrounds.
 
+## Prompt 6
 
+**Original:**
+also add 10k steps for 20 xp and remove day 1 day 2 streak like make it personalised for every user because everyone is coming at different days . and also show other player score from day they started
+
+**Improved:**
+1. Add a new fixed daily task "10,000 Steps" awarding +20 XP to the Winter Arc daily tasks in database seeds and UI.
+2. Personalize the "Day of Arc" tracker for each user based on their individual enrollment date (e.g., "Day X of Arc" starting from their join date) rather than a fixed global season calendar day.
+3. Update the Winter Arc Leaderboard to track and display each player's accumulated XP starting from their respective join date, including each participant's current day count for transparent, fair comparison.
