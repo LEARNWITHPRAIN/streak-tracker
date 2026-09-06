@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles } from 'lucide-react';
 import { z } from 'zod';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
@@ -242,6 +243,15 @@ const Profile = () => {
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Notifications & Install App */}
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            App Settings
+          </h2>
+          <NotificationSettings />
         </div>
 
         {/* Feedback Card */}

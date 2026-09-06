@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { MusicProvider } from "@/contexts/MusicContext";
 import { FuelProvider } from "@/contexts/FuelContext";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import Welcome from "./pages/Welcome";
 import Auth from "./pages/Auth";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -18,6 +19,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import WinterArc from "./pages/WinterArc";
+
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,7 @@ const App = () => (
               </Routes>
             </AuthProvider>
           </BrowserRouter>
+          <PWAInstallBanner />
         </FuelProvider>
       </MusicProvider>
     </TooltipProvider>
