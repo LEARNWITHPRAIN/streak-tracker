@@ -19,8 +19,17 @@ import {
   ShieldCheck,
   Check,
   AlertCircle,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +93,8 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     shareChallengeLink,
     deleteChallenge,
     addTasksToChallenge,
+    updateChallengeTask,
+    deleteChallengeTask,
   } = useChallenges();
 
   // Create flow state
@@ -96,6 +107,22 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   const [newTasks, setNewTasks] = useState<Omit<ChallengeTask, 'id'>[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Edit existing task modal state
+  const [editingTask, setEditingTask] = useState<{ challengeId: string; task: ChallengeTask } | null>(null);
+  const [editTaskForm, setEditTaskForm] = useState<Partial<ChallengeTask>>({});
+  const [savingEditTask, setSavingEditTask] = useState(false);
+
+  // Quick add task to challenge state
+  const [quickAddType, setQuickAddType] = useState<'fixed' | 'variable' | null>(null);
+  const [quickAddChallengeId, setQuickAddChallengeId] = useState<string | null>(null);
+  const [quickAddTaskForm, setQuickAddTaskForm] = useState<Omit<ChallengeTask, 'id'>>({
+    task_name: '',
+    task_type: 'fixed',
+    xp_flat: 10,
+    sort_order: 0,
+  });
+  const [savingQuickAdd, setSavingQuickAdd] = useState(false);
 
   // Add extra tasks to existing challenge state
   const [addingTasksToId, setAddingTasksToId] = useState<string | null>(null);
@@ -117,6 +144,101 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
   // Copied state for code
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const handleOpenEditTask = (challengeId: string, task: ChallengeTask) => {
+    setEditingTask({ challengeId, task });
+    setEditTaskForm({
+      task_name: task.task_name,
+      task_type: task.task_type,
+      xp_flat: task.xp_flat ?? 10,
+      unit_label: task.unit_label ?? 'minutes',
+      xp_rate: task.xp_rate ?? 1,
+      step_increment: task.step_increment ?? 1,
+      daily_unit_cap: task.daily_unit_cap ?? null,
+    });
+  };
+
+  const handleSaveEditedTask = async () => {
+    if (!editingTask || !editTaskForm.task_name?.trim()) return;
+    setSavingEditTask(true);
+    const { error } = await updateChallengeTask(editingTask.task.id!, editingTask.challengeId, editTaskForm);
+    setSavingEditTask(false);
+
+    if (error) {
+      toast({
+        title: 'Failed to update task',
+        description: error,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Task updated!',
+        description: `Successfully updated "${editTaskForm.task_name}".`,
+      });
+      setEditingTask(null);
+    }
+  };
+
+  const handleDeleteTask = async (challengeId: string, taskId: string, taskName: string) => {
+    const { error } = await deleteChallengeTask(taskId, challengeId);
+    if (error) {
+      toast({
+        title: 'Failed to delete task',
+        description: error,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Task deleted',
+        description: `"${taskName}" was removed from the challenge.`,
+      });
+    }
+  };
+
+  const handleOpenQuickAdd = (challengeId: string, type: 'fixed' | 'variable') => {
+    setQuickAddChallengeId(challengeId);
+    setQuickAddType(type);
+    if (type === 'fixed') {
+      setQuickAddTaskForm({
+        task_name: '',
+        task_type: 'fixed',
+        xp_flat: 10,
+        sort_order: 0,
+      });
+    } else {
+      setQuickAddTaskForm({
+        task_name: '',
+        task_type: 'variable',
+        unit_label: 'minutes',
+        xp_rate: 1,
+        step_increment: 1,
+        daily_unit_cap: null,
+        sort_order: 0,
+      });
+    }
+  };
+
+  const handleSaveQuickAdd = async () => {
+    if (!quickAddChallengeId || !quickAddTaskForm.task_name.trim()) return;
+    setSavingQuickAdd(true);
+    const { error } = await addTasksToChallenge(quickAddChallengeId, [quickAddTaskForm]);
+    setSavingQuickAdd(false);
+
+    if (error) {
+      toast({
+        title: 'Failed to add task',
+        description: error,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Task added!',
+        description: `Added "${quickAddTaskForm.task_name}" to challenge.`,
+      });
+      setQuickAddChallengeId(null);
+      setQuickAddType(null);
+    }
+  };
 
   const handleSaveExtraTasks = async (challengeId: string) => {
     if (extraTasks.length === 0) return;
@@ -754,33 +876,56 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
                         if (isFixed) {
                           return (
-                            <button
-                              key={task.id}
-                              onClick={() => isActive && task.id && logChallengeProgress(challenge.id, task, !isChecked)}
-                              disabled={!isActive}
-                              className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
-                                isChecked
-                                  ? 'bg-primary/10 border-primary/40'
-                                  : 'bg-muted/30 border-border/40 hover:border-primary/30'
-                              } ${!isActive ? 'cursor-default' : ''}`}
-                            >
-                              <div className="shrink-0">
-                                {isChecked
-                                  ? <CheckCircle2 className="w-5 h-5 text-primary" />
-                                  : <Circle className="w-5 h-5 text-muted-foreground/50" />
-                                }
-                              </div>
-                              <span className={`flex-1 text-sm font-medium ${isChecked ? 'text-primary' : 'text-foreground'}`}>
-                                {task.task_name}
-                              </span>
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
-                                isChecked
-                                  ? 'bg-primary/20 text-primary border-primary/30'
-                                  : 'bg-muted/50 text-muted-foreground border-border/40'
-                              }`}>
-                                +{task.xp_flat} XP
-                              </span>
-                            </button>
+                            <div key={task.id} className="flex items-center gap-2">
+                              <button
+                                key={task.id}
+                                onClick={() => isActive && task.id && logChallengeProgress(challenge.id, task, !isChecked)}
+                                disabled={!isActive}
+                                className={`flex-1 flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                                  isChecked
+                                    ? 'bg-primary/10 border-primary/40'
+                                    : 'bg-muted/30 border-border/40 hover:border-primary/30'
+                                } ${!isActive ? 'cursor-default' : ''}`}
+                              >
+                                <div className="shrink-0">
+                                  {isChecked
+                                    ? <CheckCircle2 className="w-5 h-5 text-primary" />
+                                    : <Circle className="w-5 h-5 text-muted-foreground/50" />
+                                  }
+                                </div>
+                                <span className={`flex-1 text-sm font-medium ${isChecked ? 'text-primary' : 'text-foreground'}`}>
+                                  {task.task_name}
+                                </span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
+                                  isChecked
+                                    ? 'bg-primary/20 text-primary border-primary/30'
+                                    : 'bg-muted/50 text-muted-foreground border-border/40'
+                                }`}>
+                                  +{task.xp_flat} XP
+                                </span>
+                              </button>
+
+                              {isCreator && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditTask(challenge.id, task)}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                                    title="Edit Task"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => task.id && handleDeleteTask(challenge.id, task.id, task.task_name)}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    title="Delete Task"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           );
                         } else {
                           return (
@@ -793,11 +938,33 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                                     {task.daily_unit_cap && ` · Max cap: ${task.daily_unit_cap} ${task.unit_label}`}
                                   </p>
                                 </div>
-                                {currentUnits > 0 && (
-                                  <span className="text-xs font-bold text-primary px-2 py-0.5 rounded-lg bg-primary/15 border border-primary/30">
-                                    {Math.round(progress?.capped_xp_earned ?? 0)} XP
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-1.5">
+                                  {currentUnits > 0 && (
+                                    <span className="text-xs font-bold text-primary px-2 py-0.5 rounded-lg bg-primary/15 border border-primary/30">
+                                      {Math.round(progress?.capped_xp_earned ?? 0)} XP
+                                    </span>
+                                  )}
+                                  {isCreator && (
+                                    <div className="flex items-center gap-1 ml-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditTask(challenge.id, task)}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                                        title="Edit Task"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => task.id && handleDeleteTask(challenge.id, task.id, task.task_name)}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                        title="Delete Task"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               {isActive ? (
                                 <VariableStepper
@@ -828,11 +995,32 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
                   {/* Add more tasks for creator */}
                   {isCreator && (
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenQuickAdd(challenge.id, 'fixed')}
+                          className="flex-1 rounded-xl border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-bold h-9"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1.5" />
+                          + Add Fixed Task
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenQuickAdd(challenge.id, 'variable')}
+                          className="flex-1 rounded-xl border-dashed border-purple-500/40 text-purple-400 hover:bg-purple-500/10 text-xs font-bold h-9"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1.5" />
+                          + Add Variable Task
+                        </Button>
+                      </div>
+
                       {addingTasksToId === challenge.id ? (
                         <div className="p-4 rounded-xl bg-muted/40 border border-primary/30 space-y-3 animate-scale-in">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-primary">Add More Fixed or Variable Tasks</span>
+                            <span className="text-xs font-bold text-primary">Add Multiple Tasks</span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -854,19 +1042,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                             {savingExtraTasks ? 'Saving...' : `Save ${extraTasks.length} Task${extraTasks.length === 1 ? '' : 's'}`}
                           </Button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAddingTasksToId(challenge.id);
-                            setExtraTasks([]);
-                          }}
-                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Add More Tasks to Challenge
-                        </button>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -1012,6 +1188,240 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={!!editingTask} onOpenChange={(open) => { if (!open) setEditingTask(null); }}>
+        <DialogContent className="glass-modal border border-border/60 rounded-2xl max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="font-bold text-lg text-foreground flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-primary" />
+              Edit Challenge Task
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Modify task title, type (fixed or variable), and XP values.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block font-medium">Task Name</label>
+              <input
+                value={editTaskForm.task_name || ''}
+                onChange={(e) => setEditTaskForm(prev => ({ ...prev, task_name: e.target.value }))}
+                placeholder="e.g. Morning Workout"
+                className="w-full px-3 py-2.5 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block font-medium">Task Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditTaskForm(prev => ({ ...prev, task_type: 'fixed' }))}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                    editTaskForm.task_type === 'fixed'
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 shadow-sm'
+                      : 'bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground'
+                  }`}
+                >
+                  Fixed (Checkmark)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditTaskForm(prev => ({ ...prev, task_type: 'variable' }))}
+                  className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                    editTaskForm.task_type === 'variable'
+                      ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 shadow-sm'
+                      : 'bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground'
+                  }`}
+                >
+                  Variable (Stepper)
+                </button>
+              </div>
+            </div>
+
+            {editTaskForm.task_type === 'fixed' ? (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block font-medium">XP Value</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={editTaskForm.xp_flat ?? 10}
+                  onChange={(e) => setEditTaskForm(prev => ({ ...prev, xp_flat: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">Unit Label</label>
+                  <input
+                    value={editTaskForm.unit_label ?? ''}
+                    onChange={(e) => setEditTaskForm(prev => ({ ...prev, unit_label: e.target.value }))}
+                    placeholder="e.g. minutes, reps"
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">XP per Unit</label>
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={editTaskForm.xp_rate ?? 1}
+                    onChange={(e) => setEditTaskForm(prev => ({ ...prev, xp_rate: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">Step (+/-)</label>
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={editTaskForm.step_increment ?? 1}
+                    onChange={(e) => setEditTaskForm(prev => ({ ...prev, step_increment: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">Daily Cap (optional)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={editTaskForm.daily_unit_cap ?? ''}
+                    onChange={(e) => setEditTaskForm(prev => ({ ...prev, daily_unit_cap: e.target.value ? Number(e.target.value) : null }))}
+                    placeholder="No cap"
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-end mt-4">
+            <Button
+              variant="ghost"
+              onClick={() => setEditingTask(null)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEditedTask}
+              disabled={savingEditTask || !editTaskForm.task_name?.trim()}
+              className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20"
+            >
+              {savingEditTask ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Task Dialog */}
+      <Dialog open={!!quickAddType} onOpenChange={(open) => { if (!open) { setQuickAddType(null); setQuickAddChallengeId(null); } }}>
+        <DialogContent className="glass-modal border border-border/60 rounded-2xl max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="font-bold text-lg text-foreground flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" />
+              Add {quickAddType === 'fixed' ? 'Fixed' : 'Variable'} Task
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {quickAddType === 'fixed'
+                ? 'Add a single-completion checkmark task with flat XP.'
+                : 'Add a scalable stepper task (e.g. minutes, pages, reps) with XP per unit.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block font-medium">Task Name</label>
+              <input
+                value={quickAddTaskForm.task_name}
+                onChange={(e) => setQuickAddTaskForm(prev => ({ ...prev, task_name: e.target.value }))}
+                placeholder={quickAddType === 'fixed' ? 'e.g. Read 1 Chapter' : 'e.g. Study Time'}
+                className="w-full px-3 py-2.5 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+              />
+            </div>
+
+            {quickAddType === 'fixed' ? (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block font-medium">XP Value</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={quickAddTaskForm.xp_flat ?? 10}
+                  onChange={(e) => setQuickAddTaskForm(prev => ({ ...prev, xp_flat: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">Unit Label</label>
+                  <input
+                    value={quickAddTaskForm.unit_label ?? ''}
+                    onChange={(e) => setQuickAddTaskForm(prev => ({ ...prev, unit_label: e.target.value }))}
+                    placeholder="e.g. minutes, pages"
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">XP per Unit</label>
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={quickAddTaskForm.xp_rate ?? 1}
+                    onChange={(e) => setQuickAddTaskForm(prev => ({ ...prev, xp_rate: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">Step (+/-)</label>
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={quickAddTaskForm.step_increment ?? 1}
+                    onChange={(e) => setQuickAddTaskForm(prev => ({ ...prev, step_increment: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">Daily Cap (optional)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={quickAddTaskForm.daily_unit_cap ?? ''}
+                    onChange={(e) => setQuickAddTaskForm(prev => ({ ...prev, daily_unit_cap: e.target.value ? Number(e.target.value) : null }))}
+                    placeholder="No cap"
+                    className="w-full px-3 py-2 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-end mt-4">
+            <Button
+              variant="ghost"
+              onClick={() => { setQuickAddType(null); setQuickAddChallengeId(null); }}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveQuickAdd}
+              disabled={savingQuickAdd || !quickAddTaskForm.task_name.trim()}
+              className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20"
+            >
+              {savingQuickAdd ? 'Adding...' : 'Add Task'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

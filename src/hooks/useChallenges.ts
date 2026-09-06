@@ -386,13 +386,27 @@ export const useChallenges = () => {
     if (!user) return { error: 'Not authenticated' };
 
     try {
-      // Use SECURITY DEFINER RPC to bypass RLS on child tables during cascade delete
-      const { data, error: rpcErr } = await (supabase.rpc as any)('delete_challenge_as_creator', {
-        p_challenge_id: challengeId,
-      });
+      // First attempt using RPC
+      let rpcSucceeded = false;
+      try {
+        const { data, error: rpcErr } = await (supabase.rpc as any)('delete_challenge_as_creator', {
+          p_challenge_id: challengeId,
+        });
+        if (!rpcErr && (!data || data.success !== false)) {
+          rpcSucceeded = true;
+        }
+      } catch {
+        rpcSucceeded = false;
+      }
 
-      if (rpcErr) throw rpcErr;
-      if (data && data.success === false) throw new Error(data.error || 'Failed to delete challenge');
+      // If RPC didn't complete, perform client-side cascade delete using RLS
+      if (!rpcSucceeded) {
+        await supabase.from('challenge_progress').delete().eq('challenge_id', challengeId);
+        await supabase.from('challenge_tasks').delete().eq('challenge_id', challengeId);
+        await supabase.from('challenge_participants').delete().eq('challenge_id', challengeId);
+        const { error: delErr } = await supabase.from('challenges').delete().eq('id', challengeId).eq('creator_id', user.id);
+        if (delErr) throw delErr;
+      }
 
       // Optimistic state update
       setMyChallenges(prev => prev.filter(c => c.id !== challengeId));
@@ -425,6 +439,79 @@ export const useChallenges = () => {
     }
   }, [user, myChallenges, fetchMyChallenges]);
 
+  // ── Update a task in a challenge ──────────────────────────────────────────
+  const updateChallengeTask = useCallback(async (
+    taskId: string,
+    challengeId: string,
+    updates: Partial<ChallengeTask>
+  ): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'Not authenticated' };
+
+    const ch = myChallenges.find(c => c.id === challengeId);
+    if (!ch || ch.creator_id !== user.id) return { error: 'Not authorized' };
+
+    try {
+      const payload: Record<string, any> = {
+        task_name: updates.task_name,
+        task_type: updates.task_type,
+      };
+
+      if (updates.task_type === 'fixed') {
+        payload.xp_flat = updates.xp_flat ?? 10;
+        payload.unit_label = null;
+        payload.xp_rate = null;
+        payload.step_increment = null;
+        payload.daily_unit_cap = null;
+      } else {
+        payload.xp_flat = null;
+        payload.unit_label = updates.unit_label ?? 'units';
+        payload.xp_rate = updates.xp_rate ?? 1;
+        payload.step_increment = updates.step_increment ?? 1;
+        payload.daily_unit_cap = updates.daily_unit_cap ?? null;
+      }
+
+      const { error } = await supabase
+        .from('challenge_tasks')
+        .update(payload)
+        .eq('id', taskId)
+        .eq('challenge_id', challengeId);
+
+      if (error) throw error;
+
+      await fetchMyChallenges();
+      return { error: null };
+    } catch (e: any) {
+      return { error: e?.message ?? 'Failed to update task' };
+    }
+  }, [user, myChallenges, fetchMyChallenges]);
+
+  // ── Delete a task from a challenge ────────────────────────────────────────
+  const deleteChallengeTask = useCallback(async (
+    taskId: string,
+    challengeId: string
+  ): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'Not authenticated' };
+
+    const ch = myChallenges.find(c => c.id === challengeId);
+    if (!ch || ch.creator_id !== user.id) return { error: 'Not authorized' };
+
+    try {
+      await supabase.from('challenge_progress').delete().eq('task_id', taskId);
+      const { error } = await supabase
+        .from('challenge_tasks')
+        .delete()
+        .eq('id', taskId)
+        .eq('challenge_id', challengeId);
+
+      if (error) throw error;
+
+      await fetchMyChallenges();
+      return { error: null };
+    } catch (e: any) {
+      return { error: e?.message ?? 'Failed to delete task' };
+    }
+  }, [user, myChallenges, fetchMyChallenges]);
+
   return {
     myChallenges,
     todayProgress,
@@ -440,5 +527,7 @@ export const useChallenges = () => {
     shareChallengeLink,
     deleteChallenge,
     addTasksToChallenge,
+    updateChallengeTask,
+    deleteChallengeTask,
   };
 };
