@@ -30,6 +30,7 @@ interface DailyTasksTabProps {
   todayTotalXP: number;
   onFixedToggle: (taskId: string, checked: boolean) => void;
   onVariableChange: (taskId: string, units: number) => void;
+  onResetStartDate?: () => Promise<{ error: string | null }>;
 }
 
 export const DailyTasksTab: React.FC<DailyTasksTabProps> = ({
@@ -41,6 +42,7 @@ export const DailyTasksTab: React.FC<DailyTasksTabProps> = ({
   todayTotalXP,
   onFixedToggle,
   onVariableChange,
+  onResetStartDate,
 }) => {
   const fixedTasks = useMemo(() => tasks.filter(t => t.task_type === 'fixed'), [tasks]);
   const variableTasks = useMemo(() => tasks.filter(t => t.task_type === 'variable'), [tasks]);
@@ -55,13 +57,28 @@ export const DailyTasksTab: React.FC<DailyTasksTabProps> = ({
       <div className="glass rounded-2xl p-5 border border-border/60 shadow-xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Arc day count */}
-            <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-primary/15 border border-primary/30">
+            {/* Arc day count - personalized for each user */}
+            <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-primary/15 border border-primary/30 min-w-[84px]">
               <span className="text-2xl font-black text-primary leading-none">{arcDayCount}</span>
-              <span className="text-[10px] text-muted-foreground font-medium mt-0.5">Day of Arc</span>
+              <span className="text-[10px] text-muted-foreground font-medium mt-0.5">Your Day</span>
+              {onResetStartDate && arcDayCount > 1 && (
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Restart your personalized Winter Arc start date from today (Day 1)?')) {
+                      await onResetStartDate();
+                    }
+                  }}
+                  className="mt-1 text-[9px] text-primary/80 hover:text-primary underline font-medium"
+                  title="Reset your personalized start date to today (Day 1)"
+                >
+                  Start today
+                </button>
+              )}
             </div>
             {/* Streak */}
-            <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-orange-500/15 border border-orange-500/30">
+            <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-orange-500/15 border border-orange-500/30 min-w-[84px]">
               <div className="flex items-center gap-1">
                 <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
                 <span className="text-2xl font-black text-orange-500 leading-none">{streak.current_streak}</span>

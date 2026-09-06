@@ -38,6 +38,7 @@ const WinterArc: React.FC<WinterArcProps> = ({ initialTab = 'tasks' }) => {
     joinArc,
     logFixedTask,
     logVariableTask,
+    resetStartDate,
   } = useWinterArc();
 
   const { lookupChallengeByCode, acceptChallenge, declineChallenge } = useChallenges();
@@ -212,6 +213,7 @@ const WinterArc: React.FC<WinterArcProps> = ({ initialTab = 'tasks' }) => {
               todayTotalXP={todayTotalXP}
               onFixedToggle={logFixedTask}
               onVariableChange={logVariableTask}
+              onResetStartDate={resetStartDate}
             />
           </TabsContent>
 

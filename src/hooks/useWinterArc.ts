@@ -41,11 +41,11 @@ export interface UserSettings {
   social_media_limit_minutes: number;
 }
 
-// Daily XP ceiling constant (sum of all capped tasks)
-export const DAILY_XP_CEILING = 380;
+// Daily XP ceiling constant (sum of all capped tasks: 150 + 20 for 10k steps + 230 variable = 400)
+export const DAILY_XP_CEILING = 400;
 
 // Completion threshold: 50% of daily XP ceiling
-export const COMPLETION_XP_THRESHOLD = 190;
+export const COMPLETION_XP_THRESHOLD = 200;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -99,8 +99,34 @@ export const useWinterArc = () => {
       .select('*')
       .eq('season_id', seasonId)
       .order('sort_order');
-    if (error) return [];
-    return (data || []) as WinterArcTask[];
+
+    let currentTasks = (data || []) as WinterArcTask[];
+
+    // Self-heal: ensure 10,000 Steps task exists in the season
+    const has10kSteps = currentTasks.some(t => t.task_name === '10,000 Steps' || t.task_name === '10k Steps');
+    if (!has10kSteps && seasonId) {
+      try {
+        const { data: newTask, error: insertErr } = await supabase
+          .from('winter_arc_daily_tasks')
+          .insert({
+            season_id: seasonId,
+            task_name: '10,000 Steps',
+            task_type: 'fixed',
+            xp_flat: 20,
+            sort_order: 8,
+          })
+          .select()
+          .single();
+
+        if (newTask && !insertErr) {
+          currentTasks = [...currentTasks, newTask as WinterArcTask].sort((a, b) => a.sort_order - b.sort_order);
+        }
+      } catch {
+        // Fallback handled
+      }
+    }
+
+    return currentTasks;
   }, []);
 
   // ── Fetch today's progress ────────────────────────────────────────────────
@@ -317,14 +343,36 @@ export const useWinterArc = () => {
   const todayTotalXP = Object.values(todayProgress).reduce((sum, p) => sum + (p.capped_xp_earned ?? 0), 0);
   const todayUncappedXP = Object.values(todayProgress).reduce((sum, p) => sum + (p.xp_earned ?? 0), 0);
 
-  // Day count in arc (relative to joined_date)
+  // Day count in arc (relative to joined_date - personalized for each user)
   const arcDayCount = (() => {
-    if (!joinedDate) return 0;
-    const joined = new Date(joinedDate);
-    const today = new Date();
-    const diff = Math.floor((today.getTime() - joined.getTime()) / (1000 * 60 * 60 * 24));
-    return diff + 1; // Day 1 on join date
+    if (!joinedDate) return 1;
+    try {
+      const [jy, jm, jd] = joinedDate.split('-').map(Number);
+      const todayStr = getTodayKey();
+      const [ty, tm, td] = todayStr.split('-').map(Number);
+      const joinUtc = Date.UTC(jy, jm - 1, jd);
+      const todayUtc = Date.UTC(ty, tm - 1, td);
+      const diff = Math.floor((todayUtc - joinUtc) / (1000 * 60 * 60 * 24));
+      return Math.max(1, diff + 1); // Day 1 on join date
+    } catch {
+      return 1;
+    }
   })();
+
+  // ── Reset or change personalized start date ──────────────────────────────
+  const resetStartDate = useCallback(async (newDate?: string) => {
+    if (!user || !activeSeason) return { error: 'Not enrolled' };
+    const dateToSet = newDate || getTodayKey();
+    const { error: updateErr } = await supabase
+      .from('winter_arc_enrollment')
+      .update({ joined_date: dateToSet })
+      .eq('user_id', user.id)
+      .eq('season_id', activeSeason.id);
+
+    if (updateErr) return { error: updateErr.message };
+    setJoinedDate(dateToSet);
+    return { error: null };
+  }, [user, activeSeason]);
 
   return {
     activeSeason,
@@ -343,6 +391,7 @@ export const useWinterArc = () => {
     joinArc,
     logFixedTask,
     logVariableTask,
+    resetStartDate,
     refetch: load,
   };
 };

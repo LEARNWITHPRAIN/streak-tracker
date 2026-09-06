@@ -31,7 +31,8 @@ VALUES
   (v_season_id, 'No Sugar',           'fixed', 20, 4),
   (v_season_id, 'Social Media Limit', 'fixed', 30, 5),
   (v_season_id, '3–5L Water',         'fixed', 10, 6),
-  (v_season_id, 'Sleep 7–9 hrs',      'fixed', 20, 7)
+  (v_season_id, 'Sleep 7–9 hrs',      'fixed', 20, 7),
+  (v_season_id, '10,000 Steps',       'fixed', 20, 8)
 ON CONFLICT DO NOTHING;
 
 -- ── Variable Tasks ────────────────────────────────────────
@@ -39,10 +40,10 @@ ON CONFLICT DO NOTHING;
 INSERT INTO public.winter_arc_daily_tasks
   (season_id, task_name, task_type, unit_label, xp_rate, step_increment, daily_unit_cap, sort_order)
 VALUES
-  (v_season_id, 'Exercise',    'variable', 'reps',    0.1,  10,   500, 8),
-  (v_season_id, 'Meditation',  'variable', 'minutes', 1.0,  1,     60, 9),
-  (v_season_id, 'Work/Study',  'variable', 'hours',   10.0, 0.25,   8, 10),
-  (v_season_id, 'Reading',     'variable', 'pages',   2.0,  1,     20, 11)
+  (v_season_id, 'Exercise',    'variable', 'reps',    0.1,  10,   500, 9),
+  (v_season_id, 'Meditation',  'variable', 'minutes', 1.0,  1,     60, 10),
+  (v_season_id, 'Work/Study',  'variable', 'hours',   10.0, 0.25,   8, 11),
+  (v_season_id, 'Reading',     'variable', 'pages',   2.0,  1,     20, 12)
 ON CONFLICT DO NOTHING;
 
 END $$;

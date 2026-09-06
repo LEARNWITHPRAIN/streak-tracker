@@ -30,13 +30,28 @@ function getInitials(name: string | null): string {
     .toUpperCase();
 }
 
+function formatStartedDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    if (dateStr === today) return 'Today';
+
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
 export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({ entry, isCurrentUser }) => {
   const topStyle = RANK_STYLES[entry.rank - 1];
   const isTop3 = entry.rank <= 3;
+  const startedLabel = formatStartedDate(entry.joined_date);
 
   return (
     <div
-      className={`flex items-center gap-4 p-3.5 rounded-2xl border transition-all ${
+      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-3.5 rounded-2xl border transition-all ${
         isCurrentUser
           ? 'bg-primary/10 border-primary/40 shadow-sm shadow-primary/20'
           : isTop3
@@ -60,27 +75,47 @@ export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({ entry, isCurrent
         {getInitials(entry.display_name)}
       </div>
 
-      {/* Name */}
+      {/* Name and personalized journey info */}
       <div className="flex-1 min-w-0">
-        <p className={`font-semibold text-sm truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
-          {entry.display_name ?? 'Anonymous'}
-          {isCurrentUser && <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(you)</span>}
-        </p>
-        {entry.current_streak > 0 && (
-          <div className="flex items-center gap-1 mt-0.5">
-            <Flame className="w-3 h-3 text-orange-500" />
-            <span className="text-[10px] text-muted-foreground">{entry.current_streak}d streak</span>
-          </div>
-        )}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className={`font-semibold text-sm truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
+            {entry.display_name ?? 'Anonymous'}
+          </p>
+          {isCurrentUser && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/20 text-primary font-bold">
+              you
+            </span>
+          )}
+          {entry.day_count !== undefined && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-semibold border border-border/40">
+              Day {entry.day_count}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+          {startedLabel && (
+            <span>Started {startedLabel}</span>
+          )}
+          {entry.current_streak > 0 && (
+            <div className="flex items-center gap-1">
+              {startedLabel && <span>·</span>}
+              <Flame className="w-3 h-3 text-orange-500" />
+              <span>{entry.current_streak}d streak</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* XP */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0 text-right">
         <Zap className="w-3.5 h-3.5 text-primary" />
-        <span className="text-sm font-bold text-foreground tabular-nums">
-          {Math.round(entry.total_xp).toLocaleString()}
-        </span>
-        <span className="text-xs text-muted-foreground">XP</span>
+        <div>
+          <span className="text-sm font-bold text-foreground tabular-nums block leading-tight">
+            {Math.round(entry.total_xp).toLocaleString()}
+          </span>
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider block font-semibold">XP</span>
+        </div>
       </div>
     </div>
   );
