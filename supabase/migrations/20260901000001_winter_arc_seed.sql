@@ -42,7 +42,7 @@ INSERT INTO public.winter_arc_daily_tasks
 VALUES
   (v_season_id, 'Exercise',    'variable', 'reps',    0.1,  10,   500, 9),
   (v_season_id, 'Meditation',  'variable', 'minutes', 1.0,  1,     60, 10),
-  (v_season_id, 'Work/Study',  'variable', 'hours',   10.0, 0.25,   8, 11),
+  (v_season_id, 'Work/Study',  'variable', 'hours',   10.0, 0.5,    12, 11),
   (v_season_id, 'Reading',     'variable', 'pages',   2.0,  1,     20, 12)
 ON CONFLICT DO NOTHING;
 

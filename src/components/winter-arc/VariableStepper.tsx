@@ -48,8 +48,20 @@ export const VariableStepper: React.FC<VariableStepperProps> = ({
     onChange(taskId, value + amount);
   };
 
-  const displayValue = Number.isInteger(value) ? value : value.toFixed(2);
-  const unitDisplay = unitLabel || 'units';
+  const formatDisplay = (val: number, label: string) => {
+    if (label !== 'hours') return Number.isInteger(val) ? val.toString() : val.toFixed(2);
+    
+    const hrs = Math.floor(val);
+    const mins = Math.round((val - hrs) * 60);
+    
+    if (hrs === 0 && mins === 0) return '0 hr';
+    if (hrs === 0) return `${mins} min`;
+    if (mins === 0) return `${hrs} hr`;
+    return `${hrs} hr ${mins} min`;
+  };
+
+  const displayValue = formatDisplay(value, unitLabel);
+  const unitDisplay = unitLabel === 'hours' ? '' : (unitLabel || 'units');
 
   return (
     <div className="space-y-2">
@@ -68,7 +80,9 @@ export const VariableStepper: React.FC<VariableStepperProps> = ({
         {/* Value display */}
         <div className="flex-1 text-center">
           <span className="text-2xl font-bold text-foreground tabular-nums">{displayValue}</span>
-          <span className="text-xs text-muted-foreground ml-1.5">{unitDisplay}</span>
+          {unitDisplay && (
+            <span className="text-xs text-muted-foreground ml-1.5">{unitDisplay}</span>
+          )}
         </div>
 
         {/* Add */}
