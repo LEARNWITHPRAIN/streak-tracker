@@ -389,7 +389,6 @@ export const useChallenges = () => {
       // Use SECURITY DEFINER RPC to bypass RLS on child tables during cascade delete
       const { data, error: rpcErr } = await (supabase.rpc as any)('delete_challenge_as_creator', {
         p_challenge_id: challengeId,
-        p_user_id: user.id,
       });
 
       if (rpcErr) throw rpcErr;
