@@ -14,9 +14,6 @@ import {
   ArrowRight,
   Trash2,
   Calendar,
-  Sparkles,
-  CreditCard,
-  ShieldCheck,
   Check,
   AlertCircle,
   Pencil,
@@ -41,7 +38,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useChallenges, ChallengeWithMeta, ChallengeTask } from '@/hooks/useChallenges';
-import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from '@/hooks/use-toast';
 import { LeaderboardTab } from './LeaderboardTab';
 import { TaskBuilder } from './TaskBuilder';
@@ -67,18 +63,6 @@ interface ChallengesTabProps {
 }
 
 export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl }) => {
-  // Subscription state
-  const {
-    isSubscribed,
-    subscription,
-    loading: subLoading,
-    subscribing,
-    cancelling,
-    subscribe,
-    cancelSubscription,
-  } = useSubscription();
-  const [showManageSub, setShowManageSub] = useState(false);
-
   const {
     myChallenges,
     todayProgress,
@@ -263,10 +247,8 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   };
 
   useEffect(() => {
-    if (isSubscribed) {
-      fetchMyChallenges();
-    }
-  }, [fetchMyChallenges, isSubscribed]);
+    fetchMyChallenges();
+  }, [fetchMyChallenges]);
 
   // Auto-lookup if arriving with a code
   useEffect(() => {
@@ -391,107 +373,10 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     }
   };
 
-  // ── Subscription Loading State ──────────────────────────────────────────
-  if (subLoading) {
-    return (
-      <div className="py-16 flex flex-col items-center justify-center space-y-3">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-muted-foreground animate-pulse">Checking subscription status...</p>
-      </div>
-    );
-  }
-
-  // ── PAYWALL: Render when user is NOT subscribed ──────────────────────────
-  if (!isSubscribed) {
-    return (
-      <div className="space-y-6 animate-scale-in">
-        <div className="glass rounded-3xl p-6 sm:p-8 border border-primary/30 shadow-2xl space-y-6 relative overflow-hidden">
-          {/* Subtle glow orbs */}
-          <div className="absolute -right-16 -top-16 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Hero Header */}
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary/30 to-purple-500/20 border border-primary/40 flex items-center justify-center shadow-lg shadow-primary/20">
-              <Swords className="w-8 h-8 text-primary animate-pulse" />
-            </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              Winter Arc Custom
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-              Unlock 1v1 Custom Duels
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
-              Challenge your friends, design custom habit routines, and settle the score on real-time 1v1 leaderboards.
-            </p>
-          </div>
-
-          {/* Feature List */}
-          <div className="space-y-3 py-2 max-w-md mx-auto">
-            {[
-              { icon: Swords, text: 'Create private 1v1 challenges with invite codes' },
-              { icon: Calendar, text: 'Custom duration (7, 14, 30, 90, or custom days 1-365)' },
-              { icon: Zap, text: 'Build custom tasks with flat or variable XP' },
-              { icon: ShieldCheck, text: 'Dedicated real-time 1v1 scoreboard & duel stats' },
-            ].map((feat, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
-                <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
-                  <feat.icon className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-xs sm:text-sm font-medium text-foreground">{feat.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Pricing Box & Subscribe Button */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-muted/30 to-purple-500/10 border border-primary/30 text-center space-y-4 max-w-md mx-auto">
-            <div>
-              <div className="flex items-baseline justify-center gap-1">
-                <span className="text-3xl sm:text-4xl font-black text-foreground">₹149</span>
-                <span className="text-muted-foreground text-sm font-semibold">/ month</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Full access to Winter Arc Custom · Cancel anytime</p>
-            </div>
-
-            <Button
-              onClick={async () => {
-                const res = await subscribe();
-                if (res.success) {
-                  window.location.reload();
-                }
-              }}
-              disabled={subscribing}
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-xl shadow-primary/30 hover:bg-primary/90 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
-            >
-              {subscribing ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
-                  <span>Opening Razorpay Checkout...</span>
-                </div>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>Subscribe for ₹149/month</span>
-                </>
-              )}
-            </Button>
-
-            <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
-              <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
-              <span>Secured by Razorpay Subscriptions · UPI, Cards, NetBanking</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── ACTIVE SUBSCRIBER VIEW: Full Feature Access ──────────────────────────
   return (
     <div className="space-y-6 animate-scale-in">
 
-      {/* Header + create button + manage subscription badge */}
+      {/* Header + create button */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
@@ -500,31 +385,22 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-foreground">Custom Challenges</h3>
-              <span className="px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30 text-[10px] font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                ₹149/mo Active
+              <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 text-[10px] font-bold">
+                Free
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">1v1 with friends · custom tasks</p>
+            <p className="text-xs text-muted-foreground">Solo or 1v1 with friends · custom tasks</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Manage subscription button */}
-          <button
-            type="button"
-            onClick={() => setShowManageSub(true)}
-            className="px-3 py-2 rounded-xl bg-muted/40 border border-border/40 text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-          >
-            Manage Plan
-          </button>
           <Button
             onClick={() => setShowCreate(v => !v)}
             size="sm"
             className="rounded-xl bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 text-xs font-bold"
           >
             <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Create
+            Create Challenge
           </Button>
         </div>
       </div>
@@ -1124,70 +1000,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Subscription Management Modal */}
-      <AlertDialog open={showManageSub} onOpenChange={setShowManageSub}>
-        <AlertDialogContent className="glass-modal border border-border/60 rounded-2xl max-w-md p-6">
-          <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary mx-auto mb-2">
-              <CreditCard className="w-6 h-6" />
-            </div>
-            <AlertDialogTitle className="text-center font-bold text-lg text-foreground">
-              Winter Arc Custom Plan
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-xs text-muted-foreground">
-              Manage your monthly membership details and billing preferences.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
 
-          <div className="space-y-3 py-3 text-xs">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
-              <span className="text-muted-foreground">Plan</span>
-              <span className="font-bold text-foreground">Winter Arc Custom (₹149/mo)</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
-              <span className="text-muted-foreground">Status</span>
-              <span className="font-bold text-green-400 capitalize">{subscription?.status || 'Active'}</span>
-            </div>
-            {subscription?.current_period_end && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
-                <span className="text-muted-foreground">Next Billing / Expiry</span>
-                <span className="font-bold text-foreground">
-                  {new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
-            )}
-            {subscription?.razorpay_payment_id && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/40">
-                <span className="text-muted-foreground">Payment ID</span>
-                <span className="font-mono text-foreground">{subscription.razorpay_payment_id.slice(-8)}...</span>
-              </div>
-            )}
-          </div>
-
-          <AlertDialogFooter className="flex gap-2 sm:justify-between mt-2">
-            <AlertDialogCancel className="flex-1 rounded-xl">
-              Close
-            </AlertDialogCancel>
-            <Button
-              variant="destructive"
-              disabled={cancelling}
-              onClick={async () => {
-                if (window.confirm('Are you sure you want to cancel your Winter Arc Custom subscription?')) {
-                  await cancelSubscription();
-                  setShowManageSub(false);
-                }
-              }}
-              className="flex-1 rounded-xl font-bold"
-            >
-              {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Edit Task Dialog */}
       <Dialog open={!!editingTask} onOpenChange={(open) => { if (!open) setEditingTask(null); }}>
