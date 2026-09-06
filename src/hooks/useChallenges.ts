@@ -384,11 +384,7 @@ export const useChallenges = () => {
     if (!user) return { error: 'Not authenticated' };
 
     try {
-      // Clean up child tables to prevent any foreign key constraint issues
-      await supabase.from('challenge_progress').delete().eq('challenge_id', challengeId);
-      await supabase.from('challenge_tasks').delete().eq('challenge_id', challengeId);
-      await supabase.from('challenge_participants').delete().eq('challenge_id', challengeId);
-
+      // Rely on ON DELETE CASCADE for child tables.
       const { error: dErr } = await supabase
         .from('challenges')
         .delete()
@@ -405,6 +401,29 @@ export const useChallenges = () => {
     }
   }, [user]);
 
+  // ── Add tasks to existing challenge ───────────────────────────────────────
+  const addTasksToChallenge = useCallback(async (challengeId: string, tasks: Omit<ChallengeTask, 'id'>[]): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'Not authenticated' };
+    
+    const ch = myChallenges.find(c => c.id === challengeId);
+    if (!ch || ch.creator_id !== user.id) return { error: 'Not authorized' };
+
+    try {
+      const { data: existingTasks } = await supabase.from('challenge_tasks').select('sort_order').eq('challenge_id', challengeId);
+      const maxOrder = existingTasks?.reduce((max, t) => Math.max(max, t.sort_order ?? 0), -1) ?? -1;
+
+      const taskRows = tasks.map((t, i) => ({ ...t, challenge_id: challengeId, sort_order: maxOrder + 1 + i }));
+      const { error } = await supabase.from('challenge_tasks').insert(taskRows);
+      
+      if (error) throw error;
+
+      await fetchMyChallenges();
+      return { error: null };
+    } catch (e: any) {
+      return { error: e?.message ?? 'Failed to add tasks' };
+    }
+  }, [user, myChallenges, fetchMyChallenges]);
+
   return {
     myChallenges,
     todayProgress,
@@ -419,5 +438,6 @@ export const useChallenges = () => {
     logChallengeProgress,
     shareChallengeLink,
     deleteChallenge,
+    addTasksToChallenge,
   };
 };
