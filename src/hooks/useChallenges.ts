@@ -386,14 +386,14 @@ export const useChallenges = () => {
     if (!user) return { error: 'Not authenticated' };
 
     try {
-      // Rely on ON DELETE CASCADE for child tables.
-      const { error: dErr } = await supabase
-        .from('challenges')
-        .delete()
-        .eq('id', challengeId)
-        .eq('creator_id', user.id);
+      // Use SECURITY DEFINER RPC to bypass RLS on child tables during cascade delete
+      const { data, error: rpcErr } = await (supabase.rpc as any)('delete_challenge_as_creator', {
+        p_challenge_id: challengeId,
+        p_user_id: user.id,
+      });
 
-      if (dErr) throw dErr;
+      if (rpcErr) throw rpcErr;
+      if (data && data.success === false) throw new Error(data.error || 'Failed to delete challenge');
 
       // Optimistic state update
       setMyChallenges(prev => prev.filter(c => c.id !== challengeId));

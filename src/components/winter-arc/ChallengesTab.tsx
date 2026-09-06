@@ -83,6 +83,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     logChallengeProgress,
     shareChallengeLink,
     deleteChallenge,
+    addTasksToChallenge,
   } = useChallenges();
 
   // Create flow state
@@ -95,6 +96,11 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   const [newTasks, setNewTasks] = useState<Omit<ChallengeTask, 'id'>[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Add extra tasks to existing challenge state
+  const [addingTasksToId, setAddingTasksToId] = useState<string | null>(null);
+  const [extraTasks, setExtraTasks] = useState<Omit<ChallengeTask, 'id'>[]>([]);
+  const [savingExtraTasks, setSavingExtraTasks] = useState(false);
 
   // Delete challenge confirmation modal state
   const [challengeToDelete, setChallengeToDelete] = useState<ChallengeWithMeta | null>(null);
@@ -111,6 +117,28 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
   // Copied state for code
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const handleSaveExtraTasks = async (challengeId: string) => {
+    if (extraTasks.length === 0) return;
+    setSavingExtraTasks(true);
+    const { error } = await addTasksToChallenge(challengeId, extraTasks);
+    setSavingExtraTasks(false);
+
+    if (error) {
+      toast({
+        title: 'Failed to add tasks',
+        description: error,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Tasks added!',
+        description: `Successfully added ${extraTasks.length} task(s) to challenge.`,
+      });
+      setAddingTasksToId(null);
+      setExtraTasks([]);
+    }
+  };
 
   useEffect(() => {
     if (isSubscribed) {
@@ -395,35 +423,49 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Challenge Type</label>
-            <div className="flex gap-2">
+            <label className="text-xs text-muted-foreground mb-2 block font-semibold">Challenge Type</label>
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setNewMode('solo')}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                className={`py-3 px-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1.5 ${
                   newMode === 'solo'
-                    ? 'bg-primary/20 text-primary border-primary/40 shadow-sm'
-                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60'
+                    ? 'bg-primary/20 text-primary border-primary/50 shadow-md shadow-primary/10'
+                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60 hover:text-foreground'
                 }`}
               >
-                Solo Challenge
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-4 h-4" />
+                  <span>Create for yourself</span>
+                </div>
+                <span className="text-[10px] font-normal opacity-80">Starts immediately</span>
               </button>
               <button
                 type="button"
                 onClick={() => setNewMode('duel')}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                className={`py-3 px-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1.5 ${
                   newMode === 'duel'
-                    ? 'bg-primary/20 text-primary border-primary/40 shadow-sm'
-                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60'
+                    ? 'bg-primary/20 text-primary border-primary/50 shadow-md shadow-primary/10'
+                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60 hover:text-foreground'
                 }`}
               >
-                Challenge a Friend
+                <div className="flex items-center gap-1.5">
+                  <Swords className="w-4 h-4" />
+                  <span>Create against friend</span>
+                </div>
+                <span className="text-[10px] font-normal opacity-80">Requires invite code</span>
               </button>
             </div>
             {newMode === 'solo' ? (
-              <p className="text-[11px] text-muted-foreground mt-2">Challenge yourself. The challenge will begin immediately.</p>
+              <p className="text-[11px] text-muted-foreground mt-2 bg-primary/10 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2 text-primary font-medium">
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                This challenge starts immediately for you. No friend invite or code needed!
+              </p>
             ) : (
-              <p className="text-[11px] text-muted-foreground mt-2">You will get an invite code to share with a friend.</p>
+              <p className="text-[11px] text-muted-foreground mt-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5 flex items-center gap-2 text-yellow-400 font-medium">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                You will get a 6-character invite code to challenge and compete with your friend.
+              </p>
             )}
           </div>
 
@@ -500,7 +542,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Tasks</label>
+            <label className="text-xs text-muted-foreground mb-2 block font-semibold">Challenge Tasks</label>
             <TaskBuilder tasks={newTasks} onChange={setNewTasks} />
           </div>
 
@@ -519,7 +561,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
             >
               {creating
                 ? <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
-                : newMode === 'solo' ? 'Start Challenge' : 'Create & Get Code'}
+                : newMode === 'solo' ? 'Start Challenge Immediately' : 'Create & Get Invite Code'}
             </Button>
           </div>
         </div>
@@ -623,7 +665,11 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground truncate">{challenge.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  vs {challenge.opponent_name ?? (challenge.status === 'pending' ? 'Waiting for opponent' : 'Friend')} · {challenge.duration_days}d
+                  {challenge.opponent_name
+                    ? `vs ${challenge.opponent_name}`
+                    : challenge.status === 'pending'
+                    ? 'Waiting for opponent'
+                    : 'Solo Challenge'} · {challenge.duration_days}d
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -689,16 +735,16 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                   </div>
                 )}
 
-                {/* Interactive Challenge Task Logging (Active only) */}
-                {isActive && challenge.tasks.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                        Today's Challenge Tasks
-                      </h5>
-                      <span className="text-[10px] text-primary font-semibold">Log your daily progress</span>
-                    </div>
+                {/* Challenge Tasks */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                      {isActive ? "Today's Challenge Tasks" : "Challenge Tasks"}
+                    </h5>
+                    {isActive && <span className="text-[10px] text-primary font-semibold">Log your daily progress</span>}
+                  </div>
 
+                  {challenge.tasks.length > 0 ? (
                     <div className="space-y-2.5">
                       {challenge.tasks.map(task => {
                         const progress = task.id ? todayProgress[task.id] : undefined;
@@ -710,12 +756,13 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                           return (
                             <button
                               key={task.id}
-                              onClick={() => task.id && logChallengeProgress(challenge.id, task, !isChecked)}
+                              onClick={() => isActive && task.id && logChallengeProgress(challenge.id, task, !isChecked)}
+                              disabled={!isActive}
                               className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
                                 isChecked
                                   ? 'bg-primary/10 border-primary/40'
                                   : 'bg-muted/30 border-border/40 hover:border-primary/30'
-                              }`}
+                              } ${!isActive ? 'cursor-default' : ''}`}
                             >
                               <div className="shrink-0">
                                 {isChecked
@@ -752,27 +799,77 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                                   </span>
                                 )}
                               </div>
-                              <VariableStepper
-                                taskId={task.id || ''}
-                                unitLabel={task.unit_label || 'units'}
-                                value={currentUnits}
-                                stepIncrement={task.step_increment || 1}
-                                dailyUnitCap={task.daily_unit_cap || null}
-                                xpRate={task.xp_rate || 1}
-                                quickAddChips={[
-                                  (task.step_increment || 1) * 2,
-                                  (task.step_increment || 1) * 5,
-                                  (task.step_increment || 1) * 10
-                                ]}
-                                onChange={(_, newVal) => logChallengeProgress(challenge.id, task, newVal)}
-                              />
+                              {isActive ? (
+                                <VariableStepper
+                                  taskId={task.id || ''}
+                                  unitLabel={task.unit_label || 'units'}
+                                  value={currentUnits}
+                                  stepIncrement={task.step_increment || 1}
+                                  dailyUnitCap={task.daily_unit_cap || null}
+                                  xpRate={task.xp_rate || 1}
+                                  quickAddChips={[
+                                    (task.step_increment || 1) * 2,
+                                    (task.step_increment || 1) * 5,
+                                    (task.step_increment || 1) * 10
+                                  ]}
+                                  onChange={(_, newVal) => logChallengeProgress(challenge.id, task, newVal)}
+                                />
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">Steppers unlock when challenge begins.</p>
+                              )}
                             </div>
                           );
                         }
                       })}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic py-2">No tasks added yet.</p>
+                  )}
+
+                  {/* Add more tasks for creator */}
+                  {isCreator && (
+                    <div className="pt-2">
+                      {addingTasksToId === challenge.id ? (
+                        <div className="p-4 rounded-xl bg-muted/40 border border-primary/30 space-y-3 animate-scale-in">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-primary">Add More Fixed or Variable Tasks</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setAddingTasksToId(null);
+                                setExtraTasks([]);
+                              }}
+                              className="h-7 px-2 text-xs text-muted-foreground"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                          <TaskBuilder tasks={extraTasks} onChange={setExtraTasks} />
+                          <Button
+                            onClick={() => handleSaveExtraTasks(challenge.id)}
+                            disabled={savingExtraTasks || extraTasks.length === 0}
+                            className="w-full rounded-xl bg-primary text-primary-foreground font-bold text-xs h-9 shadow-md shadow-primary/20"
+                          >
+                            {savingExtraTasks ? 'Saving...' : `Save ${extraTasks.length} Task${extraTasks.length === 1 ? '' : 's'}`}
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddingTasksToId(challenge.id);
+                            setExtraTasks([]);
+                          }}
+                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add More Tasks to Challenge
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* 1v1 Leaderboard (active/ended) */}
                 {(challenge.status === 'active' || challenge.status === 'ended') && (
