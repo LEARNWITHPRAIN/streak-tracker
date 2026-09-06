@@ -88,6 +88,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   // Create flow state
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [newMode, setNewMode] = useState<'solo' | 'duel'>('duel');
   const [newDuration, setNewDuration] = useState(30);
   const [isCustomDuration, setIsCustomDuration] = useState(false);
   const [customDaysInput, setCustomDaysInput] = useState('45');
@@ -170,7 +171,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
     setCreating(true);
     setCreateError(null);
-    const { challenge, error } = await createChallenge(newTitle.trim(), durationToUse, newTasks);
+    const { challenge, error } = await createChallenge(newTitle.trim(), durationToUse, newTasks, newMode);
     setCreating(false);
 
     if (error) {
@@ -180,6 +181,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
 
     setShowCreate(false);
     setNewTitle('');
+    setNewMode('duel');
     setNewTasks([]);
     setNewDuration(30);
     setIsCustomDuration(false);
@@ -393,6 +395,39 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
           </div>
 
           <div>
+            <label className="text-xs text-muted-foreground mb-2 block">Challenge Type</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setNewMode('solo')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                  newMode === 'solo'
+                    ? 'bg-primary/20 text-primary border-primary/40 shadow-sm'
+                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60'
+                }`}
+              >
+                Solo Challenge
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewMode('duel')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                  newMode === 'duel'
+                    ? 'bg-primary/20 text-primary border-primary/40 shadow-sm'
+                    : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60'
+                }`}
+              >
+                Challenge a Friend
+              </button>
+            </div>
+            {newMode === 'solo' ? (
+              <p className="text-[11px] text-muted-foreground mt-2">Challenge yourself. The challenge will begin immediately.</p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground mt-2">You will get an invite code to share with a friend.</p>
+            )}
+          </div>
+
+          <div>
             <label className="text-xs text-muted-foreground mb-2 block">Duration</label>
             <div className="flex gap-2 flex-wrap items-center">
               {DURATION_OPTIONS.map(opt => (
@@ -484,7 +519,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
             >
               {creating
                 ? <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
-                : 'Create & Get Code'}
+                : newMode === 'solo' ? 'Start Challenge' : 'Create & Get Code'}
             </Button>
           </div>
         </div>

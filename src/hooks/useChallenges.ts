@@ -172,7 +172,8 @@ export const useChallenges = () => {
   const createChallenge = useCallback(async (
     title: string,
     durationDays: number,
-    tasks: Omit<ChallengeTask, 'id'>[]
+    tasks: Omit<ChallengeTask, 'id'>[],
+    mode: 'solo' | 'duel' = 'duel'
   ): Promise<{ challenge: Challenge | null; error: string | null }> => {
     if (!user) return { challenge: null, error: 'Not authenticated' };
 
@@ -188,7 +189,8 @@ export const useChallenges = () => {
         duration_days: durationDays,
         invite_code,
         expires_at,
-        status: 'pending',
+        status: mode === 'solo' ? 'active' : 'pending',
+        start_date: mode === 'solo' ? new Date().toISOString().split('T')[0] : null,
       })
       .select()
       .single();
