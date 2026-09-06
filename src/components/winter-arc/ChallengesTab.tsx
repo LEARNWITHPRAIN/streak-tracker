@@ -303,7 +303,12 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
             </div>
 
             <Button
-              onClick={subscribe}
+              onClick={async () => {
+                const res = await subscribe();
+                if (res.success) {
+                  window.location.reload();
+                }
+              }}
               disabled={subscribing}
               className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-xl shadow-primary/30 hover:bg-primary/90 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
             >
