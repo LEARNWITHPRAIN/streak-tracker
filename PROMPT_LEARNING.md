@@ -80,3 +80,11 @@ also add 10k steps for 20 xp and remove day 1 day 2 streak like make it personal
 1. Add a new fixed daily task "10,000 Steps" awarding +20 XP to the Winter Arc daily tasks in database seeds and UI.
 2. Personalize the "Day of Arc" tracker for each user based on their individual enrollment date (e.g., "Day X of Arc" starting from their join date) rather than a fixed global season calendar day.
 3. Update the Winter Arc Leaderboard to track and display each player's accumulated XP starting from their respective join date, including each participant's current day count for transparent, fair comparison.
+
+## Prompt 7
+
+**Original:**
+Add a ₹149 subscription plan to my YodhaMode website (yodhamode.cloud). The subscription should be connected specifically to the Winter R Custom option. Add a ₹149/month subscription for Winter R Custom with a clear Subscribe button, integrate Razorpay Subscriptions, verify payments server-side without exposing the secret key, store subscription status in the database, lock/unlock access accordingly, and support cancellation.
+
+**Improved:**
+Integrate a server-side verified Razorpay ₹149/month recurring subscription plan specifically for Winter Arc Custom on YodhaMode (`yodhamode.cloud`). Add a subscription paywall with a prominent 'Subscribe for ₹149/month' checkout trigger, verify payments via HMAC SHA-256 serverless endpoints while keeping the secret key server-side only, store subscription records in Supabase (`user_subscriptions`), gate custom duel/habit features for active subscribers, and provide in-app cancellation management without altering existing features.
