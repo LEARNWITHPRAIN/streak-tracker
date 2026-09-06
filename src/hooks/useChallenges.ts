@@ -421,7 +421,7 @@ export const useChallenges = () => {
     if (!user) return { error: 'Not authenticated' };
     
     const ch = myChallenges.find(c => c.id === challengeId);
-    if (!ch || ch.creator_id !== user.id) return { error: 'Not authorized' };
+    if (!ch) return { error: 'Challenge not found' };
 
     try {
       const { data: existingTasks } = await supabase.from('challenge_tasks').select('sort_order').eq('challenge_id', challengeId);
@@ -448,7 +448,7 @@ export const useChallenges = () => {
     if (!user) return { error: 'Not authenticated' };
 
     const ch = myChallenges.find(c => c.id === challengeId);
-    if (!ch || ch.creator_id !== user.id) return { error: 'Not authorized' };
+    if (!ch) return { error: 'Challenge not found' };
 
     try {
       const payload: Record<string, any> = {
@@ -493,7 +493,7 @@ export const useChallenges = () => {
     if (!user) return { error: 'Not authenticated' };
 
     const ch = myChallenges.find(c => c.id === challengeId);
-    if (!ch || ch.creator_id !== user.id) return { error: 'Not authorized' };
+    if (!ch) return { error: 'Challenge not found' };
 
     try {
       await supabase.from('challenge_progress').delete().eq('task_id', taskId);

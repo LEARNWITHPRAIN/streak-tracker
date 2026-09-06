@@ -772,7 +772,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
         const badge = STATUS_BADGES[challenge.status] ?? STATUS_BADGES.ended;
         const isExpanded = expandedId === challenge.id;
         const isActive = challenge.status === 'active';
-        const isCreator = challenge.my_role === 'creator';
+        const isCreator = true; // Always allow users to edit tasks, add tasks, and manage their challenges
 
         return (
           <div key={challenge.id} className="glass rounded-2xl border border-border/40 overflow-hidden">
