@@ -3,17 +3,16 @@
 -- Problem: ON DELETE CASCADE on child tables fails because RLS on
 --          challenge_participants, challenge_tasks, challenge_progress
 --          blocks the cascade delete even for the creator.
--- Solution: Create a SECURITY DEFINER RPC function that the
---           creator calls to delete their challenge safely.
+-- Solution: Create a single unambiguous SECURITY DEFINER RPC function
 -- ============================================================
 
--- Drop old functions if exists
+-- Drop all old signatures
 DROP FUNCTION IF EXISTS public.delete_challenge_as_creator(UUID, UUID);
-DROP FUNCTION IF EXISTS public.delete_challenge_as_creator(UUID);
 DROP FUNCTION IF EXISTS public.delete_challenge_as_creator(TEXT, TEXT);
 DROP FUNCTION IF EXISTS public.delete_challenge_as_creator(TEXT);
+DROP FUNCTION IF EXISTS public.delete_challenge_as_creator(UUID);
 
--- Create secure deletion function (SECURITY DEFINER bypasses RLS for internals)
+-- Create single unambiguous deletion function (UUID only)
 CREATE OR REPLACE FUNCTION public.delete_challenge_as_creator(
   p_challenge_id UUID
 )
@@ -55,25 +54,8 @@ BEGIN
 END;
 $$;
 
--- Overload for string/text parameters
-CREATE OR REPLACE FUNCTION public.delete_challenge_as_creator(
-  p_challenge_id TEXT
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN public.delete_challenge_as_creator(p_challenge_id::UUID);
-EXCEPTION WHEN OTHERS THEN
-  RETURN jsonb_build_object('success', false, 'error', 'Invalid challenge ID format');
-END;
-$$;
-
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.delete_challenge_as_creator(UUID) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.delete_challenge_as_creator(TEXT) TO authenticated, anon;
 
 -- Reload schema cache
 NOTIFY pgrst, 'reload schema';
