@@ -99,11 +99,11 @@ async function onRequestPost2(context) {
           period: "monthly",
           interval: 1,
           item: {
-            name: "Winter Arc Custom Subscription",
+            name: "Winter Arc Duel Pass",
             amount: 14900,
             // in paise = ₹149
             currency: "INR",
-            description: "Monthly access to Winter Arc Custom challenges on YodhaMode"
+            description: "Monthly recurring subscription to create Winter Arc challenges against friends"
           }
         })
       });
@@ -126,7 +126,8 @@ async function onRequestPost2(context) {
             customer_notify: 1,
             notes: {
               user_id: userId || "unknown",
-              plan: "winter_arc_custom_149"
+              plan: "winter_arc_duel_pass",
+              country: "IN"
             }
           })
         });
@@ -140,7 +141,7 @@ async function onRequestPost2(context) {
               amount: 14900,
               currency: "INR",
               name: "Yodha Mode",
-              description: "Winter Arc Custom - \u20B9149/month"
+              description: "Winter Arc Duel Pass - \u20B9149/month"
             }),
             { headers: corsHeaders }
           );
@@ -159,8 +160,9 @@ async function onRequestPost2(context) {
         receipt: `wrc_${Date.now()}`,
         notes: {
           user_id: userId || "unknown",
-          plan: "winter_arc_custom_149",
-          period: "monthly"
+          plan: "winter_arc_duel_pass",
+          period: "monthly",
+          country: "IN"
         }
       })
     });
@@ -180,7 +182,7 @@ async function onRequestPost2(context) {
         amount: 14900,
         currency: "INR",
         name: "Yodha Mode",
-        description: "Winter Arc Custom - \u20B9149/month"
+        description: "Winter Arc Duel Pass - \u20B9149/month"
       }),
       { headers: corsHeaders }
     );
@@ -291,7 +293,7 @@ async function onRequestPost3(context) {
 }
 __name(onRequestPost3, "onRequestPost");
 
-// ../.wrangler/tmp/pages-HyB1ld/functionsRoutes-0.7095423129441383.mjs
+// ../.wrangler/tmp/pages-4CunFA/functionsRoutes-0.6520853119920448.mjs
 var routes = [
   {
     routePath: "/api/cancel-subscription",
