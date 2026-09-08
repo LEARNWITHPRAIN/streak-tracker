@@ -50,10 +50,10 @@ function razorpayDevApiPlugin() {
                     period: "monthly",
                     interval: 1,
                     item: {
-                      name: "Winter Arc Custom Subscription",
+                      name: "Winter Arc Duel Pass",
                       amount: 14900,
                       currency: "INR",
-                      description: "Monthly access to Winter Arc Custom challenges",
+                      description: "Monthly recurring subscription to create Winter Arc challenges against friends",
                     },
                   }),
                 });
@@ -74,7 +74,7 @@ function razorpayDevApiPlugin() {
                       total_count: 12,
                       quantity: 1,
                       customer_notify: 1,
-                      notes: { user_id: body.userId || "unknown", plan: "winter_arc_custom_149" },
+                      notes: { user_id: body.userId || "unknown", plan: "winter_arc_duel_pass", country: "IN" },
                     }),
                   });
                   if (subRes.ok) {
@@ -86,7 +86,7 @@ function razorpayDevApiPlugin() {
                       amount: 14900,
                       currency: "INR",
                       name: "Yodha Mode",
-                      description: "Winter Arc Custom - ₹149/month",
+                      description: "Winter Arc Duel Pass - ₹149/month",
                     }));
                   }
                 } catch {}
@@ -100,7 +100,7 @@ function razorpayDevApiPlugin() {
                   amount: 14900,
                   currency: "INR",
                   receipt: `wrc_${Date.now()}`,
-                  notes: { user_id: body.userId || "unknown", plan: "winter_arc_custom_149", period: "monthly" },
+                  notes: { user_id: body.userId || "unknown", plan: "winter_arc_duel_pass", period: "monthly", country: "IN" },
                 }),
               });
               const orderData: any = await orderRes.json();
@@ -111,7 +111,7 @@ function razorpayDevApiPlugin() {
                 amount: 14900,
                 currency: "INR",
                 name: "Yodha Mode",
-                description: "Winter Arc Custom - ₹149/month",
+                description: "Winter Arc Duel Pass - ₹149/month",
               }));
             } catch (err: any) {
               res.statusCode = 500;

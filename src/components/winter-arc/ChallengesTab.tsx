@@ -17,6 +17,11 @@ import {
   Check,
   AlertCircle,
   Pencil,
+  Crown,
+  Gift,
+  Lock,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,10 +43,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useChallenges, ChallengeWithMeta, ChallengeTask } from '@/hooks/useChallenges';
+import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from '@/hooks/use-toast';
 import { LeaderboardTab } from './LeaderboardTab';
 import { TaskBuilder } from './TaskBuilder';
 import { VariableStepper } from './VariableStepper';
+import { WinterArcSubscriptionModal } from './WinterArcSubscriptionModal';
 
 const DURATION_OPTIONS = [
   { label: '7 Days',  value: 7 },
@@ -80,6 +87,18 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
     updateChallengeTask,
     deleteChallengeTask,
   } = useChallenges();
+
+  // Subscription state (Winter Arc Duel Pass ₹149/mo)
+  const {
+    isSubscribed,
+    subscribe,
+    subscribing,
+    subscription,
+    cancelSubscription,
+    cancelling,
+  } = useSubscription();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showManageSubModal, setShowManageSubModal] = useState(false);
 
   // Create flow state
   const [showCreate, setShowCreate] = useState(false);
@@ -285,6 +304,12 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   };
 
   const handleCreate = async () => {
+    // Creating against a friend requires active Winter Arc Duel Pass subscription (₹149/month)
+    if (newMode === 'duel' && !isSubscribed) {
+      setShowSubscriptionModal(true);
+      return;
+    }
+
     if (!newTitle.trim()) {
       setCreateError('Please enter a challenge title.');
       return;
@@ -376,7 +401,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
   return (
     <div className="space-y-6 animate-scale-in">
 
-      {/* Header + create button */}
+      {/* Header + create button + subscription status */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
@@ -385,24 +410,130 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-foreground">Custom Challenges</h3>
-              <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 text-[10px] font-bold">
-                Free
-              </span>
+              {isSubscribed ? (
+                <button
+                  type="button"
+                  onClick={() => setShowManageSubModal(true)}
+                  className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-500/25 transition-all"
+                >
+                  <Crown className="w-3 h-3" />
+                  <span>Duel Pass Active (₹149/mo)</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowSubscriptionModal(true)}
+                  className="px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 text-[10px] font-bold flex items-center gap-1 hover:bg-primary/25 transition-all"
+                >
+                  <span>🇮🇳</span>
+                  <span>₹149/mo to Duel Friends</span>
+                </button>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">Solo or 1v1 with friends · custom tasks</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {!isSubscribed && (
+            <Button
+              onClick={() => setShowSubscriptionModal(true)}
+              size="sm"
+              variant="outline"
+              className="rounded-xl border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold"
+            >
+              <Crown className="w-3.5 h-3.5 mr-1" />
+              Get Duel Pass (₹149)
+            </Button>
+          )}
+
           <Button
             onClick={() => setShowCreate(v => !v)}
             size="sm"
-            className="rounded-xl bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 text-xs font-bold"
+            className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 text-xs"
           >
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             Create Challenge
           </Button>
         </div>
+      </div>
+
+      {/* ── Top Section: Join a Friend's Challenge (100% Free for Friends) ── */}
+      <div className="rounded-2xl p-5 bg-gradient-to-br from-emerald-500/10 via-background to-primary/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 space-y-3.5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
+              <Gift className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-foreground text-sm">Join Friend's Challenge</h4>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black tracking-wide">
+                  100% Free for Friends
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Have an invite code from a friend? Paste your 6-character code below to start dueling. No subscription needed!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Hash className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              value={joinCode}
+              onChange={e => handleCodeChange(e.target.value)}
+              placeholder="ENTER 6-CHAR CODE"
+              maxLength={6}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-muted/60 border border-border/50 text-sm text-foreground font-mono tracking-widest placeholder:tracking-normal placeholder:text-muted-foreground/40 focus:outline-none focus:border-emerald-500/60 uppercase font-bold"
+            />
+          </div>
+          <Button
+            onClick={handleJoinAndStart}
+            disabled={joining || joinCode.length < 6}
+            className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-md shadow-emerald-600/20 px-5 transition-all"
+          >
+            {joining ? (
+              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            ) : (
+              <span className="flex items-center gap-1.5">
+                Join Free <ArrowRight className="w-4 h-4" />
+              </span>
+            )}
+          </Button>
+        </div>
+
+        {joinError && <p className="text-xs text-destructive">{joinError}</p>}
+
+        {/* Preview popup card when code found */}
+        {joinPreview && (
+          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3 animate-scale-in">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400">
+                  Challenge Found · Free to Join
+                </p>
+                <p className="font-bold text-foreground text-base mt-0.5">{joinPreview.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Created by {joinPreview.creator_name ?? 'Friend'} · {joinPreview.duration_days} days · {joinPreview.task_count} tasks
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
+                Zero Cost
+              </span>
+            </div>
+
+            <Button
+              onClick={handleJoinAndStart}
+              disabled={joining}
+              className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-600/20"
+            >
+              {joining ? 'Starting Duel...' : 'Accept & Start Duel Now'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Create form */}
@@ -436,12 +567,17 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                   <Zap className="w-4 h-4" />
                   <span>Create for yourself</span>
                 </div>
-                <span className="text-[10px] font-normal opacity-80">Starts immediately</span>
+                <span className="text-[10px] font-normal opacity-80">Free · Starts immediately</span>
               </button>
               <button
                 type="button"
-                onClick={() => setNewMode('duel')}
-                className={`py-3 px-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1.5 ${
+                onClick={() => {
+                  setNewMode('duel');
+                  if (!isSubscribed) {
+                    setShowSubscriptionModal(true);
+                  }
+                }}
+                className={`py-3 px-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1.5 relative ${
                   newMode === 'duel'
                     ? 'bg-primary/20 text-primary border-primary/50 shadow-md shadow-primary/10'
                     : 'bg-muted/40 text-muted-foreground border-border/40 hover:border-border/60 hover:text-foreground'
@@ -451,18 +587,47 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
                   <Swords className="w-4 h-4" />
                   <span>Create against friend</span>
                 </div>
-                <span className="text-[10px] font-normal opacity-80">Requires invite code</span>
+                <span className="text-[10px] font-normal opacity-80 flex items-center gap-1">
+                  {!isSubscribed ? (
+                    <span className="text-primary font-bold flex items-center gap-0.5">
+                      <Lock className="w-3 h-3" /> ₹149/mo
+                    </span>
+                  ) : (
+                    'Requires invite code'
+                  )}
+                </span>
               </button>
             </div>
+
             {newMode === 'solo' ? (
               <p className="text-[11px] text-muted-foreground mt-2 bg-primary/10 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2 text-primary font-medium">
                 <Check className="w-3.5 h-3.5 shrink-0" />
                 This challenge starts immediately for you. No friend invite or code needed!
               </p>
+            ) : !isSubscribed ? (
+              <div className="mt-2 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between gap-3 animate-scale-in">
+                <div>
+                  <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-primary shrink-0" />
+                    Winter Arc Duel Pass Required (₹149/mo)
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Recurring monthly subscription in INR. <strong>Your invited friend joins 100% free!</strong>
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setShowSubscriptionModal(true)}
+                  className="rounded-xl bg-primary text-primary-foreground font-bold text-xs shrink-0 shadow-md shadow-primary/20"
+                >
+                  Unlock ₹149
+                </Button>
+              </div>
             ) : (
               <p className="text-[11px] text-muted-foreground mt-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5 flex items-center gap-2 text-yellow-400 font-medium">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
-                You will get a 6-character invite code to challenge and compete with your friend.
+                You will get a 6-character invite code. Your friend can join completely free!
               </p>
             )}
           </div>
@@ -557,75 +722,19 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
               disabled={creating}
               className="flex-1 rounded-xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20"
             >
-              {creating
-                ? <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
-                : newMode === 'solo' ? 'Start Challenge Immediately' : 'Create & Get Invite Code'}
+              {creating ? (
+                <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+              ) : newMode === 'solo' ? (
+                'Start Challenge Immediately'
+              ) : !isSubscribed ? (
+                'Unlock Pass & Create Duel (₹149/mo)'
+              ) : (
+                'Create & Get Invite Code'
+              )}
             </Button>
           </div>
         </div>
       )}
-
-      {/* Join by code */}
-      <div className="glass rounded-2xl p-5 border border-border/40 space-y-3">
-        <h4 className="font-bold text-foreground flex items-center gap-2">
-          <Hash className="w-4 h-4 text-muted-foreground" />
-          Join Challenge
-        </h4>
-        <p className="text-xs text-muted-foreground">
-          Paste the 6-character code from a friend to start competing immediately.
-        </p>
-
-        <div className="flex gap-2">
-          <input
-            value={joinCode}
-            onChange={e => handleCodeChange(e.target.value)}
-            placeholder="PASTE CODE HERE"
-            maxLength={6}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-muted/50 border border-border/40 text-sm text-foreground font-mono tracking-widest placeholder:tracking-normal placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 uppercase font-bold"
-          />
-          <Button
-            onClick={handleJoinAndStart}
-            disabled={joining || joinCode.length < 6}
-            className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 px-5"
-          >
-            {joining ? (
-              <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
-            ) : (
-              <span className="flex items-center gap-1.5">
-                Join & Start <ArrowRight className="w-4 h-4" />
-              </span>
-            )}
-          </Button>
-        </div>
-
-        {joinError && <p className="text-xs text-destructive">{joinError}</p>}
-
-        {/* Preview popup card when code found */}
-        {joinPreview && (
-          <div className="mt-3 p-4 rounded-xl bg-primary/10 border border-primary/30 space-y-3 animate-scale-in">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-wider font-semibold text-primary">Challenge Found</p>
-                <p className="font-bold text-foreground text-base mt-0.5">{joinPreview.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Created by {joinPreview.creator_name ?? 'Friend'} · {joinPreview.duration_days} days · {joinPreview.task_count} tasks
-                </p>
-              </div>
-              <span className="px-2.5 py-1 rounded-lg bg-primary/20 text-primary text-xs font-bold border border-primary/30">
-                Ready to Start
-              </span>
-            </div>
-
-            <Button
-              onClick={handleJoinAndStart}
-              disabled={joining}
-              className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20"
-            >
-              {joining ? 'Starting Challenge...' : 'Accept & Start Challenge Now'}
-            </Button>
-          </div>
-        )}
-      </div>
 
       {/* My challenges list */}
       {loading && (
@@ -1231,6 +1340,86 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
               className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20"
             >
               {savingQuickAdd ? 'Adding...' : 'Add Task'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Subscription Modal (Winter Arc Duel Pass ₹149/mo) ── */}
+      <WinterArcSubscriptionModal
+        open={showSubscriptionModal}
+        onOpenChange={setShowSubscriptionModal}
+        onSubscribe={async () => {
+          const res = await subscribe();
+          if (res.success) {
+            setShowSubscriptionModal(false);
+          }
+        }}
+        subscribing={subscribing}
+      />
+
+      {/* ── Manage Subscription Dialog ── */}
+      <Dialog open={showManageSubModal} onOpenChange={setShowManageSubModal}>
+        <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                <Crown className="w-4 h-4 text-emerald-400" />
+              </div>
+              <DialogTitle>Winter Arc Duel Pass</DialogTitle>
+            </div>
+            <DialogDescription>
+              Your active subscription status and billing information.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Plan</span>
+              <span className="font-bold text-foreground">Winter Arc Duel Pass (₹149/mo)</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Status</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold">
+                Active
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Billing Cycle Ends</span>
+              <span className="font-medium text-foreground">
+                {subscription?.current_period_end
+                  ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : '30 Days Access'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Invited Friends</span>
+              <span className="text-emerald-400 font-semibold">100% Free (No paywall for friends)</span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowManageSubModal(false)}
+              className="rounded-xl flex-1"
+            >
+              Close
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancelling}
+              onClick={async () => {
+                await cancelSubscription();
+                setShowManageSubModal(false);
+              }}
+              className="rounded-xl flex-1"
+            >
+              {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
             </Button>
           </DialogFooter>
         </DialogContent>

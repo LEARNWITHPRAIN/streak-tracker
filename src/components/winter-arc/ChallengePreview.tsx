@@ -96,6 +96,17 @@ export const ChallengePreview: React.FC<ChallengePreviewProps> = ({
           </div>
         )}
 
+        {/* Free Friend Badge */}
+        <div className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2.5">
+          <span className="text-base">🎁</span>
+          <div>
+            <strong className="text-emerald-200">100% Free to Join!</strong>
+            <p className="text-[11px] text-emerald-300/80 mt-0.5">
+              You do not need any subscription to accept this duel. Compete against your friend for free!
+            </p>
+          </div>
+        </div>
+
         {/* PWA note */}
         <div className="px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
           <strong>Tip:</strong> Install Yodha Mode as a PWA to receive challenge notifications. Open in Safari/Chrome and use "Add to Home Screen".

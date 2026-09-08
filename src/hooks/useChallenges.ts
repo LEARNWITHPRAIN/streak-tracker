@@ -368,11 +368,11 @@ export const useChallenges = () => {
   // ── Share challenge link ──────────────────────────────────────────────────
   const shareChallengeLink = useCallback(async (challenge: Challenge) => {
     const url = `${window.location.origin}/challenge/${challenge.invite_code}`;
-    const text = `Join my Winter Arc challenge "${challenge.title}" on Yodha Mode!`;
+    const text = `⚔️ Duel me in Winter Arc: "${challenge.title}" on Yodha Mode!\n🔑 Use Code: ${challenge.invite_code}\n🎁 100% Free to join — No subscription needed!`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Winter Arc Challenge', text, url });
+        await navigator.share({ title: `Winter Arc Duel: ${challenge.title}`, text, url });
       } catch {
         // User cancelled share
       }

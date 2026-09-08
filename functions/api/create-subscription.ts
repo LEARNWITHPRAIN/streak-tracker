@@ -46,10 +46,10 @@ export async function onRequestPost(context: any) {
           period: 'monthly',
           interval: 1,
           item: {
-            name: 'Winter Arc Custom Subscription',
+            name: 'Winter Arc Duel Pass',
             amount: 14900, // in paise = ₹149
             currency: 'INR',
-            description: 'Monthly access to Winter Arc Custom challenges on YodhaMode',
+            description: 'Monthly recurring subscription to create Winter Arc challenges against friends',
           },
         }),
       });
@@ -75,7 +75,8 @@ export async function onRequestPost(context: any) {
             customer_notify: 1,
             notes: {
               user_id: userId || 'unknown',
-              plan: 'winter_arc_custom_149',
+              plan: 'winter_arc_duel_pass',
+              country: 'IN',
             },
           }),
         });
@@ -90,7 +91,7 @@ export async function onRequestPost(context: any) {
               amount: 14900,
               currency: 'INR',
               name: 'Yodha Mode',
-              description: 'Winter Arc Custom - ₹149/month',
+              description: 'Winter Arc Duel Pass - ₹149/month',
             }),
             { headers: corsHeaders }
           );
@@ -110,8 +111,9 @@ export async function onRequestPost(context: any) {
         receipt: `wrc_${Date.now()}`,
         notes: {
           user_id: userId || 'unknown',
-          plan: 'winter_arc_custom_149',
+          plan: 'winter_arc_duel_pass',
           period: 'monthly',
+          country: 'IN',
         },
       }),
     });
@@ -133,7 +135,7 @@ export async function onRequestPost(context: any) {
         amount: 14900,
         currency: 'INR',
         name: 'Yodha Mode',
-        description: 'Winter Arc Custom - ₹149/month',
+        description: 'Winter Arc Duel Pass - ₹149/month',
       }),
       { headers: corsHeaders }
     );

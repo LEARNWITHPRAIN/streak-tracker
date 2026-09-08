@@ -20,6 +20,22 @@ export interface UserSubscription {
   created_at: string;
 }
 
+export const isLikelyIndianUser = (): boolean => {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const lang = navigator.language || '';
+    return (
+      tz.includes('Calcutta') ||
+      tz.includes('Kolkata') ||
+      tz.includes('India') ||
+      lang.includes('en-IN') ||
+      lang.includes('hi')
+    );
+  } catch {
+    return true;
+  }
+};
+
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TYcHlwMW8l6WFa';
 
 // Helper to dynamically load Razorpay Checkout script
@@ -128,8 +144,8 @@ export const useSubscription = () => {
         const options: any = {
           key: orderData.key_id || RAZORPAY_KEY_ID,
           name: 'Yodha Mode',
-          description: 'Winter Arc Custom - ₹149/month',
-          image: '/favicon.ico',
+          description: 'Winter Arc Duel Pass - ₹149/month',
+          image: '/yodha-favicon.png',
           currency: orderData.currency || 'INR',
           theme: { color: '#f97316' }, // Yodha orange
           prefill: {
@@ -170,7 +186,7 @@ export const useSubscription = () => {
                 .upsert({
                   user_id: user.id,
                   plan_id: 'plan_winter_custom_149',
-                  plan_name: 'Winter Arc Custom',
+                  plan_name: 'Winter Arc Duel Pass',
                   amount: 149,
                   currency: 'INR',
                   status: 'active',
@@ -193,7 +209,7 @@ export const useSubscription = () => {
                 id: 'local_' + Date.now(),
                 user_id: user.id,
                 plan_id: 'plan_winter_custom_149',
-                plan_name: 'Winter Arc Custom',
+                plan_name: 'Winter Arc Duel Pass',
                 amount: 149,
                 currency: 'INR',
                 status: 'active',
@@ -207,7 +223,7 @@ export const useSubscription = () => {
               });
 
               toast({
-                title: 'Winter Arc Custom Unlocked! 🔥',
+                title: 'Winter Arc Duel Pass Active! ⚔️',
                 description: 'Your ₹149/month subscription is active. Create challenges and duel friends anytime!',
               });
 
