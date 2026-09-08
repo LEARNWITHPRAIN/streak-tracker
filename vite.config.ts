@@ -4,8 +4,8 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import crypto from "crypto";
 
-const RAZORPAY_KEY_ID = process.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TYcHlwMW8l6WFa";
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "VMfyoCVGp3jDXN7USxxq98dX";
+const RAZORPAY_KEY_ID = process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TZPoNoEqMJ8HKq";
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "ufuPxNPIIEdGu6DatQCIPjhG";
 
 function razorpayDevApiPlugin() {
   return {

@@ -33,7 +33,7 @@ export async function onRequestPost(context: any) {
   };
 
   try {
-    const keySecret = context.env?.RAZORPAY_KEY_SECRET || 'VMfyoCVGp3jDXN7USxxq98dX';
+    const keySecret = context.env?.RAZORPAY_KEY_SECRET || 'ufuPxNPIIEdGu6DatQCIPjhG';
 
     let body: any = {};
     try {

@@ -458,6 +458,125 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ inviteCodeFromUrl 
         </div>
       </div>
 
+      {/* ── Prominent Payment Gateway Card ── */}
+      {!isSubscribed ? (
+        <div className="rounded-3xl p-6 bg-gradient-to-br from-primary/20 via-orange-500/10 to-background border-2 border-primary/40 shadow-xl shadow-primary/10 space-y-4 relative overflow-hidden animate-scale-in">
+          {/* Decorative glow */}
+          <div className="absolute -right-12 -top-12 w-44 h-44 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg shadow-primary/30 text-primary-foreground shrink-0">
+                <Swords className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider">
+                    Winter Arc Duel Pass
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                    <span>🇮🇳</span> For Indian Users
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-foreground mt-1">
+                  Create Custom 1v1 Challenges Against Friends
+                </h3>
+              </div>
+            </div>
+
+            <div className="text-left sm:text-right">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-black text-foreground">₹149</span>
+                <span className="text-xs text-muted-foreground font-semibold">/ month</span>
+              </div>
+              <p className="text-[11px] text-emerald-400 font-bold mt-0.5">Recurring Monthly · 1-Click Cancel</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Create custom challenges with custom durations and habit steppers. Track real-time 1v1 leaderboards against your friends.
+            <strong className="text-foreground ml-1">Your invited friends join 100% FREE without needing any subscription!</strong>
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            <div className="p-2.5 rounded-xl bg-background/60 border border-border/50 flex items-center gap-2 text-xs">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-foreground font-medium">Create Duels</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-background/60 border border-border/50 flex items-center gap-2 text-xs">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-foreground font-medium">Friends Join Free</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-background/60 border border-border/50 flex items-center gap-2 text-xs">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-foreground font-medium">7 to 365 Days</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-background/60 border border-border/50 flex items-center gap-2 text-xs">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="text-foreground font-medium">Live 1v1 Ranks</span>
+            </div>
+          </div>
+
+          {/* Payment Methods Bar + Big Live CTA Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-border/40">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <CreditCard className="w-4 h-4 text-primary shrink-0" />
+              <span>
+                <strong>Razorpay Live:</strong> UPI (GPay, PhonePe, Paytm), RuPay, Cards & NetBanking
+              </span>
+            </div>
+
+            <Button
+              onClick={async () => {
+                await subscribe();
+              }}
+              disabled={subscribing}
+              size="lg"
+              className="w-full sm:w-auto px-8 h-12 rounded-2xl bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-primary-foreground font-black text-sm shadow-xl shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {subscribing ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+                  <span>Connecting to Razorpay...</span>
+                </div>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span>Pay ₹149 & Unlock Duel Pass</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+              <Crown className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-foreground text-sm">Winter Arc Duel Pass Active</h4>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                  ₹149/mo Active
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                You can create unlimited custom challenges. Your invited friends join for free!
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowManageSubModal(true)}
+            className="rounded-xl border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold"
+          >
+            Manage Subscription
+          </Button>
+        </div>
+      )}
+
       {/* ── Top Section: Join a Friend's Challenge (100% Free for Friends) ── */}
       <div className="rounded-2xl p-5 bg-gradient-to-br from-emerald-500/10 via-background to-primary/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 space-y-3.5">
         <div className="flex items-center justify-between flex-wrap gap-2">

@@ -36,7 +36,7 @@ export const isLikelyIndianUser = (): boolean => {
   }
 };
 
-const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TYcHlwMW8l6WFa';
+const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TZPoNoEqMJ8HKq';
 
 // Helper to dynamically load Razorpay Checkout script
 function loadRazorpayScript(): Promise<boolean> {

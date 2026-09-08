@@ -18,8 +18,8 @@ export async function onRequestPost(context: any) {
   };
 
   try {
-    const keyId = context.env?.RAZORPAY_KEY_ID || 'rzp_test_TYcHlwMW8l6WFa';
-    const keySecret = context.env?.RAZORPAY_KEY_SECRET || 'VMfyoCVGp3jDXN7USxxq98dX';
+    const keyId = context.env?.RAZORPAY_KEY_ID || 'rzp_live_TZPoNoEqMJ8HKq';
+    const keySecret = context.env?.RAZORPAY_KEY_SECRET || 'ufuPxNPIIEdGu6DatQCIPjhG';
 
     const basicAuth = btoa(`${keyId}:${keySecret}`);
     const headers = {
