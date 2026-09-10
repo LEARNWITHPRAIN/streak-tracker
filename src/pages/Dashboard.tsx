@@ -20,6 +20,7 @@ import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
+import { DisplayNameModal } from '@/components/DisplayNameModal';
 import { usePWA } from '@/hooks/usePWA';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,6 +31,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const { notifPermission, dualReminders } = usePWA();
   const [showNotifModal, setShowNotifModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
   const { getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
   const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
@@ -111,15 +113,6 @@ const Dashboard = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    if (user && !dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-      const timer = setTimeout(() => {
-        setShowNotifModal(true);
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [user, dualReminders.hasPromptedOnboarding, notifPermission]);
-
-  useEffect(() => {
     if (user) {
       loadCalendarHistory();
       // Fetch display name from profile
@@ -129,11 +122,21 @@ const Dashboard = () => {
           .select('display_name')
           .eq('user_id', user.id)
           .single();
-        setDisplayName(data?.display_name || null);
+        
+        const fetchedName = data?.display_name?.trim() || null;
+        setDisplayName(fetchedName);
+
+        // If user has not configured their display name yet, prompt them first
+        if (!fetchedName) {
+          setShowNameModal(true);
+        } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+          // If name is already present and notifications haven't been configured, prompt notifications
+          setShowNotifModal(true);
+        }
       };
       fetchDisplayName();
     }
-  }, [user, loadCalendarHistory]);
+  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission]);
 
   // Listen for progress updates to refresh calendar
   useEffect(() => {
@@ -461,9 +464,27 @@ const Dashboard = () => {
         </p>
       </footer>
 
+      {/* Display Name Modal (Prompted first if user has no display_name configured) */}
+      {user && (
+        <DisplayNameModal
+          isOpen={showNameModal}
+          userId={user.id}
+          onSuccess={(savedName) => {
+            setDisplayName(savedName);
+            setShowNameModal(false);
+            // After name is configured, if notifications haven't been configured, prompt them
+            if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+              setTimeout(() => {
+                setShowNotifModal(true);
+              }, 400);
+            }
+          }}
+        />
+      )}
+
       {/* Notification Onboarding Prompt Modal on sign in / sign up */}
       <NotificationOnboardingModal
-        isOpen={showNotifModal}
+        isOpen={showNotifModal && !showNameModal}
         onClose={() => setShowNotifModal(false)}
         todayProgress={todayProgressPercent}
       />

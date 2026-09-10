@@ -18,8 +18,8 @@ async function onRequestPost(context) {
     "Content-Type": "application/json"
   };
   try {
-    const keyId = context.env?.RAZORPAY_KEY_ID || "rzp_test_TYcHlwMW8l6WFa";
-    const keySecret = context.env?.RAZORPAY_KEY_SECRET || "VMfyoCVGp3jDXN7USxxq98dX";
+    const keyId = context.env?.RAZORPAY_KEY_ID || "rzp_live_TZPoNoEqMJ8HKq";
+    const keySecret = context.env?.RAZORPAY_KEY_SECRET || "ufuPxNPIIEdGu6DatQCIPjhG";
     let body = {};
     try {
       body = await context.request.json();
@@ -76,8 +76,8 @@ async function onRequestPost2(context) {
     "Content-Type": "application/json"
   };
   try {
-    const keyId = context.env?.RAZORPAY_KEY_ID || "rzp_test_TYcHlwMW8l6WFa";
-    const keySecret = context.env?.RAZORPAY_KEY_SECRET || "VMfyoCVGp3jDXN7USxxq98dX";
+    const keyId = context.env?.RAZORPAY_KEY_ID || "rzp_live_TZPoNoEqMJ8HKq";
+    const keySecret = context.env?.RAZORPAY_KEY_SECRET || "ufuPxNPIIEdGu6DatQCIPjhG";
     const basicAuth = btoa(`${keyId}:${keySecret}`);
     const headers = {
       "Authorization": `Basic ${basicAuth}`,
@@ -227,7 +227,7 @@ async function onRequestPost3(context) {
     "Content-Type": "application/json"
   };
   try {
-    const keySecret = context.env?.RAZORPAY_KEY_SECRET || "VMfyoCVGp3jDXN7USxxq98dX";
+    const keySecret = context.env?.RAZORPAY_KEY_SECRET || "ufuPxNPIIEdGu6DatQCIPjhG";
     let body = {};
     try {
       body = await context.request.json();
@@ -293,7 +293,7 @@ async function onRequestPost3(context) {
 }
 __name(onRequestPost3, "onRequestPost");
 
-// ../.wrangler/tmp/pages-4CunFA/functionsRoutes-0.6520853119920448.mjs
+// ../.wrangler/tmp/pages-tlZPdz/functionsRoutes-0.30274295655683836.mjs
 var routes = [
   {
     routePath: "/api/cancel-subscription",
