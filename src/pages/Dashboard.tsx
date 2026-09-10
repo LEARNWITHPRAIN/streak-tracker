@@ -19,7 +19,8 @@ import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
-
+import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
+import { usePWA } from '@/hooks/usePWA';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -27,6 +28,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
+  const { notifPermission, dualReminders } = usePWA();
+  const [showNotifModal, setShowNotifModal] = useState(false);
   const timer = useTimer();
   const { getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
   const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
@@ -106,6 +109,15 @@ const Dashboard = () => {
       navigate('/');
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user && !dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+      const timer = setTimeout(() => {
+        setShowNotifModal(true);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [user, dualReminders.hasPromptedOnboarding, notifPermission]);
 
   useEffect(() => {
     if (user) {
@@ -448,6 +460,13 @@ const Dashboard = () => {
           Built with dedication • Yodha Mode
         </p>
       </footer>
+
+      {/* Notification Onboarding Prompt Modal on sign in / sign up */}
+      <NotificationOnboardingModal
+        isOpen={showNotifModal}
+        onClose={() => setShowNotifModal(false)}
+        todayProgress={todayProgressPercent}
+      />
     </div>
   );
 };

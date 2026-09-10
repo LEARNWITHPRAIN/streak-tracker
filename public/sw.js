@@ -69,7 +69,9 @@ self.addEventListener('notificationclick', (event) => {
       const existing = clients.find((c) => c.url.includes(self.location.origin));
       if (existing) {
         existing.focus();
-        existing.navigate(targetUrl);
+        if ('navigate' in existing) {
+          existing.navigate(targetUrl);
+        }
       } else {
         self.clients.openWindow(targetUrl);
       }

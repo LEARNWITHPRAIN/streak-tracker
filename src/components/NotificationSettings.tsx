@@ -1,6 +1,6 @@
 import React from 'react';
-import { Bell, BellOff, Clock, CheckCircle2, AlertCircle, Download, Smartphone } from 'lucide-react';
-import { usePWA } from '@/hooks/usePWA';
+import { Bell, Clock, CheckCircle2, AlertCircle, Download, Smartphone, Snowflake, Dumbbell, Send } from 'lucide-react';
+import { usePWA, getStoredTodayWorkoutProgress } from '@/hooks/usePWA';
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTE_OPTIONS = [0, 30];
@@ -18,8 +18,8 @@ export const NotificationSettings: React.FC = () => {
     swReady,
     requestNotificationPermission,
     sendTestNotification,
-    reminder,
-    updateReminder,
+    dualReminders,
+    updateDualReminders,
     isInstalled,
     isIOS,
     isInstallable,
@@ -29,17 +29,40 @@ export const NotificationSettings: React.FC = () => {
   const handleEnableNotifications = async () => {
     const result = await requestNotificationPermission();
     if (result === 'granted') {
-      updateReminder({ enabled: true });
+      updateDualReminders({
+        winterArc: { ...dualReminders.winterArc, enabled: true },
+        workout: { ...dualReminders.workout, enabled: true },
+      });
     }
   };
 
-  const handleToggleReminder = async () => {
+  const handleToggleWinterArc = async () => {
     if (notifPermission !== 'granted') {
       await handleEnableNotifications();
     } else {
-      updateReminder({ enabled: !reminder.enabled });
+      updateDualReminders({
+        winterArc: {
+          ...dualReminders.winterArc,
+          enabled: !dualReminders.winterArc.enabled,
+        },
+      });
     }
   };
+
+  const handleToggleWorkout = async () => {
+    if (notifPermission !== 'granted') {
+      await handleEnableNotifications();
+    } else {
+      updateDualReminders({
+        workout: {
+          ...dualReminders.workout,
+          enabled: !dualReminders.workout.enabled,
+        },
+      });
+    }
+  };
+
+  const currentWorkoutPct = getStoredTodayWorkoutProgress();
 
   return (
     <div className="space-y-5">
@@ -89,14 +112,14 @@ export const NotificationSettings: React.FC = () => {
       </div>
 
       {/* Notifications Section */}
-      <div className="glass rounded-2xl p-5 border border-border/40 space-y-4">
+      <div className="glass rounded-2xl p-5 border border-border/40 space-y-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
             <Bell className="w-4.5 h-4.5 text-purple-400" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-foreground text-sm">Notifications</h3>
-            <p className="text-xs text-muted-foreground">Daily reminders to keep your streak alive</p>
+            <h3 className="font-bold text-foreground text-sm">Notifications & Reminders</h3>
+            <p className="text-xs text-muted-foreground">Custom schedules for your scorecard & workout</p>
           </div>
         </div>
 
@@ -125,63 +148,185 @@ export const NotificationSettings: React.FC = () => {
           </button>
         )}
 
-        {/* Daily reminder toggle */}
-        {notifPermission === 'granted' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/40">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">Daily Reminder</span>
+        {/* Reminder 1: Winter ARC Scorecard */}
+        <div className="p-4 rounded-xl bg-muted/30 border border-border/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center">
+                <Snowflake className="w-4 h-4 text-cyan-400" />
               </div>
-              {/* Toggle */}
-              <button
-                onClick={handleToggleReminder}
-                className={`relative w-11 h-6 rounded-full transition-colors ${reminder.enabled ? 'bg-primary' : 'bg-muted/60 border border-border/60'}`}
-              >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${reminder.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
+              <div>
+                <span className="text-sm font-semibold text-foreground">Winter ARC Scorecard</span>
+                <p className="text-[11px] text-muted-foreground">Reminds you to record daily tasks & claim XP</p>
+              </div>
             </div>
+            {/* Toggle */}
+            <button
+              onClick={handleToggleWinterArc}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                dualReminders.winterArc.enabled ? 'bg-primary' : 'bg-muted/60 border border-border/60'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                  dualReminders.winterArc.enabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
 
-            {/* Time picker */}
-            {reminder.enabled && (
-              <div className="p-3 rounded-xl bg-muted/20 border border-border/30 space-y-2 animate-scale-in">
-                <p className="text-xs text-muted-foreground font-medium">Remind me at</p>
+          {dualReminders.winterArc.enabled && (
+            <div className="pt-2 border-t border-border/40 space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                  Time:
+                </span>
                 <div className="flex gap-2">
                   <select
-                    value={reminder.hour}
-                    onChange={(e) => updateReminder({ hour: parseInt(e.target.value) })}
-                    className="flex-1 px-3 py-2 rounded-xl bg-background border border-border/50 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                    value={dualReminders.winterArc.hour}
+                    onChange={(e) =>
+                      updateDualReminders({
+                        winterArc: { ...dualReminders.winterArc, hour: parseInt(e.target.value) },
+                      })
+                    }
+                    className="px-2.5 py-1 rounded-lg bg-background border border-border/50 text-xs text-foreground focus:outline-none"
                   >
                     {HOUR_OPTIONS.map((h) => (
-                      <option key={h} value={h}>{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}</option>
+                      <option key={h} value={h}>
+                        {h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}
+                      </option>
                     ))}
                   </select>
                   <select
-                    value={reminder.minute}
-                    onChange={(e) => updateReminder({ minute: parseInt(e.target.value) })}
-                    className="w-24 px-3 py-2 rounded-xl bg-background border border-border/50 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                    value={dualReminders.winterArc.minute}
+                    onChange={(e) =>
+                      updateDualReminders({
+                        winterArc: { ...dualReminders.winterArc, minute: parseInt(e.target.value) },
+                      })
+                    }
+                    className="w-16 px-2 py-1 rounded-lg bg-background border border-border/50 text-xs text-foreground focus:outline-none"
                   >
                     {MINUTE_OPTIONS.map((m) => (
-                      <option key={m} value={m}>{m === 0 ? ':00' : ':30'}</option>
+                      <option key={m} value={m}>
+                        {m === 0 ? ':00' : ':30'}
+                      </option>
                     ))}
                   </select>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Next reminder: <span className="text-primary font-semibold">{formatTime(reminder.hour, reminder.minute)}</span> daily
-                </p>
-
-                {/* Test notification */}
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-muted-foreground">
+                  Fires at: <strong className="text-foreground">{formatTime(dualReminders.winterArc.hour, dualReminders.winterArc.minute)}</strong> daily
+                </span>
                 <button
-                  onClick={() => sendTestNotification('Yodha Mode 🔥', "This is a test reminder — keep that streak alive!")}
-                  className="w-full py-2 rounded-xl border border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
+                  onClick={() =>
+                    sendTestNotification(
+                      'Winter ARC Scorecard ❄️',
+                      "Don't let the day slip away! Update your scorecard and bank today's XP.",
+                      '/winter-arc'
+                    )
+                  }
+                  className="px-2.5 py-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-[11px] font-medium flex items-center gap-1 hover:bg-cyan-500/25 transition-colors"
                 >
-                  Send Test Notification
+                  <Send className="w-3 h-3" /> Test
                 </button>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+
+        {/* Reminder 2: Workout Progress */}
+        <div className="p-4 rounded-xl bg-muted/30 border border-border/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+                <Dumbbell className="w-4 h-4 text-orange-400" />
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-foreground">Today's Workout Progress</span>
+                <p className="text-[11px] text-muted-foreground">
+                  Alerts you with current completion % ({currentWorkoutPct}% right now)
+                </p>
+              </div>
+            </div>
+            {/* Toggle */}
+            <button
+              onClick={handleToggleWorkout}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                dualReminders.workout.enabled ? 'bg-primary' : 'bg-muted/60 border border-border/60'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
+                  dualReminders.workout.enabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
-        )}
+
+          {dualReminders.workout.enabled && (
+            <div className="pt-2 border-t border-border/40 space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-orange-400" />
+                  Time:
+                </span>
+                <div className="flex gap-2">
+                  <select
+                    value={dualReminders.workout.hour}
+                    onChange={(e) =>
+                      updateDualReminders({
+                        workout: { ...dualReminders.workout, hour: parseInt(e.target.value) },
+                      })
+                    }
+                    className="px-2.5 py-1 rounded-lg bg-background border border-border/50 text-xs text-foreground focus:outline-none"
+                  >
+                    {HOUR_OPTIONS.map((h) => (
+                      <option key={h} value={h}>
+                        {h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={dualReminders.workout.minute}
+                    onChange={(e) =>
+                      updateDualReminders({
+                        workout: { ...dualReminders.workout, minute: parseInt(e.target.value) },
+                      })
+                    }
+                    className="w-16 px-2 py-1 rounded-lg bg-background border border-border/50 text-xs text-foreground focus:outline-none"
+                  >
+                    {MINUTE_OPTIONS.map((m) => (
+                      <option key={m} value={m}>
+                        {m === 0 ? ':00' : ':30'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-muted-foreground">
+                  Fires at: <strong className="text-foreground">{formatTime(dualReminders.workout.hour, dualReminders.workout.minute)}</strong> daily
+                </span>
+                <button
+                  onClick={() =>
+                    sendTestNotification(
+                      "Complete Today's Workout 💪",
+                      `You have completed ${currentWorkoutPct}% of today's workout! Step in and finish strong 🔥`,
+                      '/dashboard'
+                    )
+                  }
+                  className="px-2.5 py-1 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[11px] font-medium flex items-center gap-1 hover:bg-orange-500/25 transition-colors"
+                >
+                  <Send className="w-3 h-3" /> Test
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+

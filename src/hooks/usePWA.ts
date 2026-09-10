@@ -3,28 +3,86 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // ── Types ───────────────────────────────────────────────────────────────────
 type NotifPermission = 'default' | 'granted' | 'denied';
 
-interface ReminderSettings {
-  enabled: boolean;
-  hour: number;   // 0-23
-  minute: number; // 0 or 30
+export interface DualReminderSettings {
+  // Winter ARC Scorecard reminder
+  winterArc: {
+    enabled: boolean;
+    hour: number;   // 0-23
+    minute: number; // 0 or 30
+  };
+  // Workout progress reminder
+  workout: {
+    enabled: boolean;
+    hour: number;   // 0-23
+    minute: number; // 0 or 30
+  };
+  hasPromptedOnboarding: boolean;
 }
 
-const REMINDER_KEY = 'yodha_reminder_settings';
+// Fallback legacy interface
+interface LegacyReminderSettings {
+  enabled: boolean;
+  hour: number;
+  minute: number;
+}
 
-function loadReminderSettings(): ReminderSettings {
+const REMINDER_KEY = 'yodha_dual_reminder_settings';
+const LEGACY_REMINDER_KEY = 'yodha_reminder_settings';
+
+const DEFAULT_SETTINGS: DualReminderSettings = {
+  winterArc: {
+    enabled: true,
+    hour: 23, // 11:00 PM
+    minute: 0,
+  },
+  workout: {
+    enabled: true,
+    hour: 19, // 7:00 PM
+    minute: 0,
+  },
+  hasPromptedOnboarding: false,
+};
+
+function loadDualReminderSettings(): DualReminderSettings {
   try {
     const raw = localStorage.getItem(REMINDER_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        winterArc: { ...DEFAULT_SETTINGS.winterArc, ...parsed.winterArc },
+        workout: { ...DEFAULT_SETTINGS.workout, ...parsed.workout },
+        hasPromptedOnboarding: parsed.hasPromptedOnboarding ?? false,
+      };
+    }
+
+    // Check if legacy setting exists
+    const legacyRaw = localStorage.getItem(LEGACY_REMINDER_KEY);
+    if (legacyRaw) {
+      const legacy: LegacyReminderSettings = JSON.parse(legacyRaw);
+      return {
+        winterArc: {
+          enabled: legacy.enabled,
+          hour: 23,
+          minute: 0,
+        },
+        workout: {
+          enabled: legacy.enabled,
+          hour: legacy.hour ?? 19,
+          minute: legacy.minute ?? 0,
+        },
+        hasPromptedOnboarding: true,
+      };
+    }
   } catch {}
-  return { enabled: false, hour: 20, minute: 0 }; // default: 8:00 PM
+  return DEFAULT_SETTINGS;
 }
 
-function saveReminderSettings(s: ReminderSettings) {
+function saveDualReminderSettings(s: DualReminderSettings) {
   localStorage.setItem(REMINDER_KEY, JSON.stringify(s));
 }
 
 // ── Calculate ms until the next occurrence of HH:MM ────────────────────────
-function msUntilNextTime(hour: number, minute: number): number {
+export function msUntilNextTime(hour: number, minute: number): number {
   const now = new Date();
   const target = new Date(now);
   target.setHours(hour, minute, 0, 0);
@@ -32,6 +90,48 @@ function msUntilNextTime(hour: number, minute: number): number {
     target.setDate(target.getDate() + 1); // tomorrow
   }
   return target.getTime() - now.getTime();
+}
+
+/**
+ * Retrieve today's workout progress percentage from localStorage (synced by useTodayProgress)
+ */
+export function getStoredTodayWorkoutProgress(): number {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const raw = localStorage.getItem(`today-workout-progress-${todayStr}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // parsed is { [exerciseId]: setsDone }
+      let totalDone = 0;
+      Object.values(parsed).forEach((v) => {
+        if (typeof v === 'number') totalDone += v;
+      });
+      // Try reading user's cached schedule to calculate actual percentage
+      const cachedSchedRaw = localStorage.getItem('user-schedule');
+      if (cachedSchedRaw) {
+        const sched = JSON.parse(cachedSchedRaw);
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const todayDay = sched.find((d: any) => d.day === dayName);
+        if (todayDay && Array.isArray(todayDay.exercises) && todayDay.exercises.length > 0) {
+          let totalTargetSets = 0;
+          let completedSets = 0;
+          todayDay.exercises.forEach((ex: any) => {
+            const match = ex.setsReps ? String(ex.setsReps).match(/^(\d+)/) : null;
+            const targetSets = match ? parseInt(match[1], 10) : 1;
+            totalTargetSets += targetSets;
+            completedSets += Math.min(parsed[ex.id] || 0, targetSets);
+          });
+          if (totalTargetSets > 0) {
+            return Math.round((completedSets / totalTargetSets) * 100);
+          }
+        }
+      }
+      if (totalDone > 0) return Math.min(100, totalDone * 10);
+    }
+  } catch (e) {
+    console.warn('Could not read stored workout progress:', e);
+  }
+  return 0;
 }
 
 // ── Hook ────────────────────────────────────────────────────────────────────
@@ -45,8 +145,9 @@ export const usePWA = () => {
   // Notifications
   const [notifPermission, setNotifPermission] = useState<NotifPermission>('default');
   const [swReady, setSwReady] = useState(false);
-  const [reminder, setReminderState] = useState<ReminderSettings>(loadReminderSettings);
-  const reminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dualReminders, setDualReminders] = useState<DualReminderSettings>(loadDualReminderSettings);
+  const winterArcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const workoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Register service worker ────────────────────────────────────────────
   useEffect(() => {
@@ -88,33 +189,68 @@ export const usePWA = () => {
     }
   }, []);
 
-  // ── Schedule/reschedule reminder whenever settings change ──────────────
-  const scheduleReminder = useCallback((settings: ReminderSettings) => {
-    // Clear existing timer
-    if (reminderTimerRef.current) clearTimeout(reminderTimerRef.current);
-    if (!settings.enabled || !swReady) return;
-    if (notifPermission !== 'granted') return;
+  // ── Schedule Winter ARC reminder ─────────────────────────────────────────
+  const scheduleWinterArc = useCallback((settings: DualReminderSettings) => {
+    if (winterArcTimerRef.current) clearTimeout(winterArcTimerRef.current);
+    if (!settings.winterArc.enabled || !swReady || notifPermission !== 'granted') return;
 
-    const delay = msUntilNextTime(settings.hour, settings.minute);
-
-    reminderTimerRef.current = setTimeout(async () => {
-      const reg = await navigator.serviceWorker.ready;
-      reg.active?.postMessage({
-        type: 'SHOW_NOTIFICATION',
-        title: 'Yodha Mode 🔥',
-        body: "Don't break your streak! Log today's tasks now.",
-        tag: 'yodha-daily-reminder',
-        url: '/dashboard',
-      });
-      // Reschedule for tomorrow
-      scheduleReminder(settings);
+    const delay = msUntilNextTime(settings.winterArc.hour, settings.winterArc.minute);
+    winterArcTimerRef.current = setTimeout(async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        reg.active?.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: 'Winter ARC Scorecard ❄️',
+          body: "Don't let the day slip away! Update your scorecard and bank today's XP.",
+          tag: 'yodha-winter-arc',
+          url: '/winter-arc',
+        });
+      } catch (err) {
+        console.warn('Failed to dispatch Winter ARC notification:', err);
+      }
+      scheduleWinterArc(settings);
     }, delay);
   }, [swReady, notifPermission]);
 
+  // ── Schedule Workout reminder ────────────────────────────────────────────
+  const scheduleWorkout = useCallback((settings: DualReminderSettings) => {
+    if (workoutTimerRef.current) clearTimeout(workoutTimerRef.current);
+    if (!settings.workout.enabled || !swReady || notifPermission !== 'granted') return;
+
+    const delay = msUntilNextTime(settings.workout.hour, settings.workout.minute);
+    workoutTimerRef.current = setTimeout(async () => {
+      try {
+        const pct = getStoredTodayWorkoutProgress();
+        const bodyText = pct >= 100
+          ? "You crushed 100% of today's workout! Outstanding dedication, warrior 🔥"
+          : pct > 0
+          ? `You have completed ${pct}% of today's workout! Step in and finish strong 🔥`
+          : "You haven't started today's workout yet! Complete it to keep your streak alive 🔥";
+
+        const reg = await navigator.serviceWorker.ready;
+        reg.active?.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: "Complete Today's Workout 💪",
+          body: bodyText,
+          tag: 'yodha-workout-progress',
+          url: '/dashboard',
+        });
+      } catch (err) {
+        console.warn('Failed to dispatch workout notification:', err);
+      }
+      scheduleWorkout(settings);
+    }, delay);
+  }, [swReady, notifPermission]);
+
+  // Schedule both timers whenever settings or permissions change
   useEffect(() => {
-    scheduleReminder(reminder);
-    return () => { if (reminderTimerRef.current) clearTimeout(reminderTimerRef.current); };
-  }, [reminder, scheduleReminder]);
+    scheduleWinterArc(dualReminders);
+    scheduleWorkout(dualReminders);
+    return () => {
+      if (winterArcTimerRef.current) clearTimeout(winterArcTimerRef.current);
+      if (workoutTimerRef.current) clearTimeout(workoutTimerRef.current);
+    };
+  }, [dualReminders, scheduleWinterArc, scheduleWorkout]);
 
   // ── Public API: trigger install ────────────────────────────────────────
   const promptInstall = useCallback(async (): Promise<'accepted' | 'dismissed' | 'unavailable'> => {
@@ -135,17 +271,46 @@ export const usePWA = () => {
   }, []);
 
   // ── Public API: send a one-off notification right now ─────────────────
-  const sendTestNotification = useCallback(async (title: string, body: string) => {
+  const sendTestNotification = useCallback(async (title: string, body: string, url = '/dashboard') => {
     if (notifPermission !== 'granted' || !swReady) return;
     const reg = await navigator.serviceWorker.ready;
-    reg.active?.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag: 'yodha-test', url: '/dashboard' });
+    reg.active?.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      title,
+      body,
+      tag: 'yodha-test-' + Date.now(),
+      url,
+    });
   }, [notifPermission, swReady]);
 
-  // ── Public API: update reminder settings ──────────────────────────────
-  const updateReminder = useCallback((patch: Partial<ReminderSettings>) => {
-    setReminderState((prev) => {
-      const next = { ...prev, ...patch };
-      saveReminderSettings(next);
+  // ── Public API: update dual reminder settings ─────────────────────────
+  const updateDualReminders = useCallback((patch: Partial<DualReminderSettings> | ((prev: DualReminderSettings) => DualReminderSettings)) => {
+    setDualReminders((prev) => {
+      const next = typeof patch === 'function' ? patch(prev) : { ...prev, ...patch };
+      saveDualReminderSettings(next);
+      return next;
+    });
+  }, []);
+
+  // Legacy helper mapping for backwards compatibility
+  const reminder = {
+    enabled: dualReminders.workout.enabled || dualReminders.winterArc.enabled,
+    hour: dualReminders.workout.hour,
+    minute: dualReminders.workout.minute,
+  };
+
+  const updateReminder = useCallback((patch: { enabled?: boolean; hour?: number; minute?: number }) => {
+    setDualReminders((prev) => {
+      const next: DualReminderSettings = {
+        ...prev,
+        workout: {
+          ...prev.workout,
+          ...(patch.enabled !== undefined && { enabled: patch.enabled }),
+          ...(patch.hour !== undefined && { hour: patch.hour }),
+          ...(patch.minute !== undefined && { minute: patch.minute }),
+        },
+      };
+      saveDualReminderSettings(next);
       return next;
     });
   }, []);
@@ -161,7 +326,10 @@ export const usePWA = () => {
     swReady,
     requestNotificationPermission,
     sendTestNotification,
-    // Reminder
+    // Dual Reminder Preferences
+    dualReminders,
+    updateDualReminders,
+    // Legacy fallback
     reminder,
     updateReminder,
   };
