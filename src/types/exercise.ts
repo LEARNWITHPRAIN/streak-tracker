@@ -5,6 +5,11 @@ export interface Exercise {
   name: string;
   status: ExerciseStatus;
   order: number;
+  /**
+   * Weight for the exercise in kilograms.
+   * `null` indicates body-weight only.
+   */
+  weight: number | null;
 }
 
 export interface DayProgress {
