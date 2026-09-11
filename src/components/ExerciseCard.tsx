@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Exercise, ExerciseStatus } from '@/types/exercise';
 import { Clock, CheckCircle, SkipForward, Pencil, Trash2, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
 interface ExerciseCardProps {
@@ -104,6 +105,11 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         <div className="flex-1 min-w-0">
           <p className={`font-medium truncate ${exercise.status === 'skipped' ? 'line-through text-muted-foreground' : ''}`}>
             {exercise.name}
+            {exercise.weight !== null && (
+              <Badge variant="outline" className="ml-2 text-xs bg-background/60 font-mono">
+                Weight: {exercise.weight}kg
+              </Badge>
+            )}
           </p>
           <p className={`text-xs capitalize ${getStatusClass()}`}>
             {exercise.status}

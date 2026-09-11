@@ -7,6 +7,10 @@ export interface Exercise {
   id: string;
   name: string;
   setsReps: string;
+  /**
+   * Weight in kilograms. Null indicates body weight.
+   */
+  weight: number | null;
 }
 
 export interface DaySchedule {
@@ -24,10 +28,10 @@ const defaultSchedule: DaySchedule[] = [
     title: 'Push Day',
     subtitle: 'Chest & Triceps',
     exercises: [
-      { id: 'mon-1', name: 'Bench Press', setsReps: '4×8' },
-      { id: 'mon-2', name: 'Incline Dumbbell Press', setsReps: '3×10' },
-      { id: 'mon-3', name: 'Dips', setsReps: '3×12' },
-      { id: 'mon-4', name: 'Tricep Pushdowns', setsReps: '3×15' },
+      { id: 'mon-1', name: 'Bench Press', setsReps: '4×8', weight: null },
+      { id: 'mon-2', name: 'Incline Dumbbell Press', setsReps: '3×10', weight: null },
+      { id: 'mon-3', name: 'Dips', setsReps: '3×12', weight: null },
+      { id: 'mon-4', name: 'Tricep Pushdowns', setsReps: '3×15', weight: null },
     ],
   },
   {
@@ -36,10 +40,10 @@ const defaultSchedule: DaySchedule[] = [
     title: 'Pull Day',
     subtitle: 'Back & Biceps',
     exercises: [
-      { id: 'tue-1', name: 'Pull-ups', setsReps: '4×8' },
-      { id: 'tue-2', name: 'Barbell Rows', setsReps: '4×10' },
-      { id: 'tue-3', name: 'Face Pulls', setsReps: '3×15' },
-      { id: 'tue-4', name: 'Bicep Curls', setsReps: '3×12' },
+      { id: 'tue-1', name: 'Pull-ups', setsReps: '4×8', weight: null },
+      { id: 'tue-2', name: 'Barbell Rows', setsReps: '4×10', weight: null },
+      { id: 'tue-3', name: 'Face Pulls', setsReps: '3×15', weight: null },
+      { id: 'tue-4', name: 'Bicep Curls', setsReps: '3×12', weight: null },
     ],
   },
   {
@@ -48,9 +52,9 @@ const defaultSchedule: DaySchedule[] = [
     title: 'Active Recovery',
     subtitle: 'Mobility & Light Cardio',
     exercises: [
-      { id: 'wed-1', name: 'Yoga Flow', setsReps: '20 min' },
-      { id: 'wed-2', name: 'Light Cardio', setsReps: '15 min' },
-      { id: 'wed-3', name: 'Stretching', setsReps: '10 min' },
+      { id: 'wed-1', name: 'Yoga Flow', setsReps: '20 min', weight: null },
+      { id: 'wed-2', name: 'Light Cardio', setsReps: '15 min', weight: null },
+      { id: 'wed-3', name: 'Stretching', setsReps: '10 min', weight: null },
     ],
   },
   {
@@ -59,10 +63,10 @@ const defaultSchedule: DaySchedule[] = [
     title: 'Legs & Core',
     subtitle: 'Lower Body Power',
     exercises: [
-      { id: 'thu-1', name: 'Squats', setsReps: '4×8' },
-      { id: 'thu-2', name: 'Romanian Deadlifts', setsReps: '3×10' },
-      { id: 'thu-3', name: 'Walking Lunges', setsReps: '3×12' },
-      { id: 'thu-4', name: 'Plank Hold', setsReps: '3×45s' },
+      { id: 'thu-1', name: 'Squats', setsReps: '4×8', weight: null },
+      { id: 'thu-2', name: 'Romanian Deadlifts', setsReps: '3×10', weight: null },
+      { id: 'thu-3', name: 'Walking Lunges', setsReps: '3×12', weight: null },
+      { id: 'thu-4', name: 'Plank Hold', setsReps: '3×45s', weight: null },
     ],
   },
   {
@@ -71,10 +75,10 @@ const defaultSchedule: DaySchedule[] = [
     title: 'Upper Body Focus',
     subtitle: 'Shoulders & Arms',
     exercises: [
-      { id: 'fri-1', name: 'Overhead Press', setsReps: '4×8' },
-      { id: 'fri-2', name: 'Lateral Raises', setsReps: '3×12' },
-      { id: 'fri-3', name: 'Hammer Curls', setsReps: '3×10' },
-      { id: 'fri-4', name: 'Skull Crushers', setsReps: '3×12' },
+      { id: 'fri-1', name: 'Overhead Press', setsReps: '4×8', weight: null },
+      { id: 'fri-2', name: 'Lateral Raises', setsReps: '3×12', weight: null },
+      { id: 'fri-3', name: 'Hammer Curls', setsReps: '3×10', weight: null },
+      { id: 'fri-4', name: 'Skull Crushers', setsReps: '3×12', weight: null },
     ],
   },
   {
@@ -83,9 +87,9 @@ const defaultSchedule: DaySchedule[] = [
     title: 'Full Body Intensity',
     subtitle: 'Compound Movements',
     exercises: [
-      { id: 'sat-1', name: 'Deadlifts', setsReps: '5×5' },
-      { id: 'sat-2', name: 'Clean & Press', setsReps: '4×6' },
-      { id: 'sat-3', name: 'Burpees', setsReps: '3×15' },
+      { id: 'sat-1', name: 'Deadlifts', setsReps: '5×5', weight: null },
+      { id: 'sat-2', name: 'Clean & Press', setsReps: '4×6', weight: null },
+      { id: 'sat-3', name: 'Burpees', setsReps: '3×15', weight: null },
     ],
   },
   {
