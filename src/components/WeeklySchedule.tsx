@@ -32,9 +32,9 @@ export const WeeklySchedule: React.FC = () => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: '', subtitle: '' });
-  const [exerciseForm, setExerciseForm] = useState({ name: '', setsReps: '' });
+  const [exerciseForm, setExerciseForm] = useState({ name: '', setsReps: '', weightOption: 'body' as 'body' | 'custom', weightKg: '' });
   const [addingExercise, setAddingExercise] = useState<string | null>(null);
-  const [newExercise, setNewExercise] = useState({ name: '', setsReps: '' });
+  const [newExercise, setNewExercise] = useState({ name: '', setsReps: '', weightOption: 'body' as 'body' | 'custom', weightKg: '' });
   
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
@@ -52,15 +52,22 @@ export const WeeklySchedule: React.FC = () => {
   };
 
   const startEditExercise = (exercise: Exercise) => {
-    setExerciseForm({ name: exercise.name, setsReps: exercise.setsReps });
+    const hasWeight = exercise.weight !== null && exercise.weight !== undefined;
+    setExerciseForm({
+      name: exercise.name,
+      setsReps: exercise.setsReps,
+      weightOption: hasWeight ? 'custom' : 'body',
+      weightKg: hasWeight ? String(exercise.weight) : '',
+    });
     setEditingExercise(exercise.id);
   };
 
   const saveEditExercise = async (dayName: string, exerciseId: string) => {
     const day = schedule.find(d => d.day === dayName);
     if (day) {
-      const updatedExercises = day.exercises.map(e => 
-        e.id === exerciseId ? { ...e, name: exerciseForm.name, setsReps: exerciseForm.setsReps } : e
+      const weight = exerciseForm.weightOption === 'custom' && exerciseForm.weightKg !== '' ? Number(exerciseForm.weightKg) : null;
+      const updatedExercises = day.exercises.map(e =>
+        e.id === exerciseId ? { ...e, name: exerciseForm.name, setsReps: exerciseForm.setsReps, weight } : e
       );
       await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
     }
@@ -77,18 +84,19 @@ export const WeeklySchedule: React.FC = () => {
 
   const addExercise = async (dayName: string) => {
     if (!newExercise.name.trim()) return;
-    
     const day = schedule.find(d => d.day === dayName);
     if (day) {
+      const weight = newExercise.weightOption === 'custom' && newExercise.weightKg !== '' ? Number(newExercise.weightKg) : null;
       const newEx: Exercise = {
         id: `${dayName}-${Date.now()}`,
         name: newExercise.name,
-        setsReps: newExercise.setsReps || '3×10'
+        setsReps: newExercise.setsReps || '3×10',
+        weight,
       };
       const updatedExercises = [...day.exercises, newEx];
       await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
     }
-    setNewExercise({ name: '', setsReps: '' });
+    setNewExercise({ name: '', setsReps: '', weightOption: 'body', weightKg: '' });
     setAddingExercise(null);
   };
 
@@ -180,25 +188,47 @@ export const WeeklySchedule: React.FC = () => {
                   if (isEditing) {
                     return (
                       <Card key={exercise.id} className="bg-card/70 border-primary/40 rounded-2xl">
-                        <CardContent className="p-4 flex items-center gap-2">
-                          <Input
-                            value={exerciseForm.name}
-                            onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
-                            className="flex-1 h-9 bg-background/70 rounded-xl"
-                            placeholder="Exercise name"
-                          />
-                          <Input
-                            value={exerciseForm.setsReps}
-                            onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value })}
-                            className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
-                            placeholder="3×10"
-                          />
-                          <Button size="icon" variant="ghost" onClick={() => saveEditExercise(day.day, exercise.id)} className="h-9 w-9 rounded-xl">
-                            <Check className="w-4 h-4 text-primary" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-9 w-9 rounded-xl">
-                            <X className="w-4 h-4" />
-                          </Button>
+                        <CardContent className="p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={exerciseForm.name}
+                              onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
+                              className="flex-1 h-9 bg-background/70 rounded-xl"
+                              placeholder="Exercise name"
+                            />
+                            <Input
+                              value={exerciseForm.setsReps}
+                              onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value })}
+                              className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
+                              placeholder="3×10"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={exerciseForm.weightOption}
+                              onChange={(e) => setExerciseForm({ ...exerciseForm, weightOption: e.target.value as 'body' | 'custom' })}
+                              className="flex-1 h-8 rounded-lg border border-border bg-background/70 text-xs px-2"
+                            >
+                              <option value="body">Body weight</option>
+                              <option value="custom">Weight (kg)</option>
+                            </select>
+                            {exerciseForm.weightOption === 'custom' && (
+                              <Input
+                                type="number"
+                                min="0"
+                                value={exerciseForm.weightKg}
+                                onChange={(e) => setExerciseForm({ ...exerciseForm, weightKg: e.target.value })}
+                                className="w-20 h-8 bg-background/70 text-center rounded-lg font-mono text-xs"
+                                placeholder="kg"
+                              />
+                            )}
+                            <Button size="icon" variant="ghost" onClick={() => saveEditExercise(day.day, exercise.id)} className="h-8 w-8 rounded-lg">
+                              <Check className="w-4 h-4 text-primary" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-8 w-8 rounded-lg">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     );
@@ -244,28 +274,50 @@ export const WeeklySchedule: React.FC = () => {
                 {/* Add Exercise Form */}
                 {addingExercise === day.day && (
                   <Card className="bg-card/60 border-dashed border-primary/50 rounded-2xl">
-                    <CardContent className="p-4 flex items-center gap-2">
-                      <Input
-                        value={newExercise.name}
-                        onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
-                        className="flex-1 h-9 bg-background/70 rounded-xl"
-                        placeholder="Exercise name"
-                        autoFocus
-                        onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
-                      />
-                      <Input
-                        value={newExercise.setsReps}
-                        onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value })}
-                        className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
-                        placeholder="3×10"
-                        onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
-                      />
-                      <Button size="icon" variant="ghost" onClick={() => addExercise(day.day)} className="h-9 w-9 rounded-xl">
-                        <Check className="w-4 h-4 text-primary" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setAddingExercise(null)} className="h-9 w-9 rounded-xl">
-                        <X className="w-4 h-4" />
-                      </Button>
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={newExercise.name}
+                          onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
+                          className="flex-1 h-9 bg-background/70 rounded-xl"
+                          placeholder="Exercise name"
+                          autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
+                        />
+                        <Input
+                          value={newExercise.setsReps}
+                          onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value })}
+                          className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
+                          placeholder="3×10"
+                          onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={newExercise.weightOption}
+                          onChange={(e) => setNewExercise({ ...newExercise, weightOption: e.target.value as 'body' | 'custom' })}
+                          className="flex-1 h-8 rounded-lg border border-border bg-background/70 text-xs px-2"
+                        >
+                          <option value="body">Body weight</option>
+                          <option value="custom">Weight (kg)</option>
+                        </select>
+                        {newExercise.weightOption === 'custom' && (
+                          <Input
+                            type="number"
+                            min="0"
+                            value={newExercise.weightKg}
+                            onChange={(e) => setNewExercise({ ...newExercise, weightKg: e.target.value })}
+                            className="w-20 h-8 bg-background/70 text-center rounded-lg font-mono text-xs"
+                            placeholder="kg"
+                          />
+                        )}
+                        <Button size="icon" variant="ghost" onClick={() => addExercise(day.day)} className="h-8 w-8 rounded-lg">
+                          <Check className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setAddingExercise(null)} className="h-8 w-8 rounded-lg">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 )}

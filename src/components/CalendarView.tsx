@@ -7,12 +7,14 @@ interface CalendarViewProps {
   history: Record<string, DayProgress>;
   currentMonth: Date;
   onMonthChange: (date: Date) => void;
+  onDayClick?: (dateKey: string) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   history,
   currentMonth,
   onMonthChange,
+  onDayClick,
 }) => {
   const monthData = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -191,15 +193,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
 
         <div className="grid grid-cols-7 gap-2">
-          {monthData.map((day, index) => (
-            <div
-              key={index}
-              className={`${getDayClass(day)} relative`}
-            >
-              <span className="text-sm md:text-base font-semibold">{day}</span>
-              {getCompletionIndicator(day)}
-            </div>
-          ))}
+          {monthData.map((day, index) => {
+            const dateKey = day !== null ? getDateKey(day) : null;
+            const hasHistory = dateKey ? !!history[dateKey] : false;
+            return (
+              <div
+                key={index}
+                className={`${getDayClass(day)} relative ${hasHistory ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all' : ''}`}
+                onClick={() => {
+                  if (day !== null && dateKey && hasHistory && onDayClick) {
+                    onDayClick(dateKey);
+                  }
+                }}
+              >
+                <span className="text-sm md:text-base font-semibold">{day}</span>
+                {getCompletionIndicator(day)}
+              </div>
+            );
+          })}
         </div>
       </div>
 

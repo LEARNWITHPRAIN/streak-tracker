@@ -47,9 +47,9 @@ export const CustomRoutine: React.FC = () => {
   const [editingHeader, setEditingHeader] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', subtitle: '' });
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
-  const [exerciseForm, setExerciseForm] = useState({ name: '', setsReps: '' });
+  const [exerciseForm, setExerciseForm] = useState({ name: '', setsReps: '', weightOption: 'body' as 'body' | 'custom', weightKg: '' });
   const [addingExercise, setAddingExercise] = useState(false);
-  const [newExercise, setNewExercise] = useState({ name: '', setsReps: '' });
+  const [newExercise, setNewExercise] = useState({ name: '', setsReps: '', weightOption: 'body' as 'body' | 'custom', weightKg: '' });
 
   const fetchCustomRoutine = useCallback(async () => {
     if (!user) {
@@ -150,7 +150,13 @@ export const CustomRoutine: React.FC = () => {
   };
 
   const startEditExercise = (exercise: Exercise) => {
-    setExerciseForm({ name: exercise.name, setsReps: exercise.setsReps });
+    const hasWeight = exercise.weight !== null && exercise.weight !== undefined;
+    setExerciseForm({
+      name: exercise.name,
+      setsReps: exercise.setsReps,
+      weightOption: hasWeight ? 'custom' : 'body',
+      weightKg: hasWeight ? String(exercise.weight) : '',
+    });
     setEditingExercise(exercise.id);
   };
 
@@ -160,8 +166,9 @@ export const CustomRoutine: React.FC = () => {
       toast.error(validation.error.errors[0].message);
       return;
     }
+    const weight = exerciseForm.weightOption === 'custom' && exerciseForm.weightKg !== '' ? Number(exerciseForm.weightKg) : null;
     const updatedExercises = routine.exercises.map(e =>
-      e.id === exerciseId ? { ...e, name: validation.data.name, setsReps: validation.data.setsReps } : e
+      e.id === exerciseId ? { ...e, name: validation.data.name, setsReps: validation.data.setsReps, weight } : e
     );
     await updateRoutine({ exercises: updatedExercises });
     setEditingExercise(null);
@@ -177,20 +184,20 @@ export const CustomRoutine: React.FC = () => {
       name: newExercise.name,
       setsReps: newExercise.setsReps || '3×10',
     });
-    
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
       return;
     }
-
+    const weight = newExercise.weightOption === 'custom' && newExercise.weightKg !== '' ? Number(newExercise.weightKg) : null;
     const newEx: Exercise = {
       id: `custom-${Date.now()}`,
       name: validation.data.name,
       setsReps: validation.data.setsReps,
+      weight,
     };
     const updatedExercises = [...routine.exercises, newEx];
     await updateRoutine({ exercises: updatedExercises });
-    setNewExercise({ name: '', setsReps: '' });
+    setNewExercise({ name: '', setsReps: '', weightOption: 'body', weightKg: '' });
     setAddingExercise(false);
   };
 
@@ -276,27 +283,49 @@ export const CustomRoutine: React.FC = () => {
           if (isEditing) {
             return (
               <Card key={exercise.id} className="bg-card/70 border-primary/40 rounded-2xl">
-                <CardContent className="p-4 flex items-center gap-2">
-                  <Input
-                    value={exerciseForm.name}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value.slice(0, 100) })}
-                    className="flex-1 h-9 bg-background/70 rounded-xl"
-                    placeholder="Exercise name"
-                    maxLength={100}
-                  />
-                  <Input
-                    value={exerciseForm.setsReps}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value.slice(0, 20) })}
-                    className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
-                    placeholder="3×10"
-                    maxLength={20}
-                  />
-                  <Button size="icon" variant="ghost" onClick={() => saveEditExercise(exercise.id)} className="h-9 w-9 rounded-xl">
-                    <Check className="w-4 h-4 text-primary" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-9 w-9 rounded-xl">
-                    <X className="w-4 h-4" />
-                  </Button>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={exerciseForm.name}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value.slice(0, 100) })}
+                      className="flex-1 h-9 bg-background/70 rounded-xl"
+                      placeholder="Exercise name"
+                      maxLength={100}
+                    />
+                    <Input
+                      value={exerciseForm.setsReps}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value.slice(0, 20) })}
+                      className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
+                      placeholder="3×10"
+                      maxLength={20}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={exerciseForm.weightOption}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, weightOption: e.target.value as 'body' | 'custom' })}
+                      className="flex-1 h-8 rounded-lg border border-border bg-background/70 text-xs px-2"
+                    >
+                      <option value="body">Body weight</option>
+                      <option value="custom">Weight (kg)</option>
+                    </select>
+                    {exerciseForm.weightOption === 'custom' && (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={exerciseForm.weightKg}
+                        onChange={(e) => setExerciseForm({ ...exerciseForm, weightKg: e.target.value })}
+                        className="w-20 h-8 bg-background/70 text-center rounded-lg font-mono text-xs"
+                        placeholder="kg"
+                      />
+                    )}
+                    <Button size="icon" variant="ghost" onClick={() => saveEditExercise(exercise.id)} className="h-8 w-8 rounded-lg">
+                      <Check className="w-4 h-4 text-primary" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-8 w-8 rounded-lg">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -342,30 +371,52 @@ export const CustomRoutine: React.FC = () => {
         {/* Add Exercise Form */}
         {addingExercise && (
           <Card className="bg-card/60 border-dashed border-primary/50 rounded-2xl">
-            <CardContent className="p-4 flex items-center gap-2">
-              <Input
-                value={newExercise.name}
-                onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value.slice(0, 100) })}
-                className="flex-1 h-9 bg-background/70 rounded-xl"
-                placeholder="Exercise name"
-                autoFocus
-                maxLength={100}
-                onKeyDown={(e) => e.key === 'Enter' && addExercise()}
-              />
-              <Input
-                value={newExercise.setsReps}
-                onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value.slice(0, 20) })}
-                className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
-                placeholder="3×10"
-                maxLength={20}
-                onKeyDown={(e) => e.key === 'Enter' && addExercise()}
-              />
-              <Button size="icon" variant="ghost" onClick={addExercise} className="h-9 w-9 rounded-xl">
-                <Check className="w-4 h-4 text-primary" />
-              </Button>
-              <Button size="icon" variant="ghost" onClick={() => setAddingExercise(false)} className="h-9 w-9 rounded-xl">
-                <X className="w-4 h-4" />
-              </Button>
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newExercise.name}
+                  onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value.slice(0, 100) })}
+                  className="flex-1 h-9 bg-background/70 rounded-xl"
+                  placeholder="Exercise name"
+                  autoFocus
+                  maxLength={100}
+                  onKeyDown={(e) => e.key === 'Enter' && addExercise()}
+                />
+                <Input
+                  value={newExercise.setsReps}
+                  onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value.slice(0, 20) })}
+                  className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
+                  placeholder="3×10"
+                  maxLength={20}
+                  onKeyDown={(e) => e.key === 'Enter' && addExercise()}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={newExercise.weightOption}
+                  onChange={(e) => setNewExercise({ ...newExercise, weightOption: e.target.value as 'body' | 'custom' })}
+                  className="flex-1 h-8 rounded-lg border border-border bg-background/70 text-xs px-2"
+                >
+                  <option value="body">Body weight</option>
+                  <option value="custom">Weight (kg)</option>
+                </select>
+                {newExercise.weightOption === 'custom' && (
+                  <Input
+                    type="number"
+                    min="0"
+                    value={newExercise.weightKg}
+                    onChange={(e) => setNewExercise({ ...newExercise, weightKg: e.target.value })}
+                    className="w-20 h-8 bg-background/70 text-center rounded-lg font-mono text-xs"
+                    placeholder="kg"
+                  />
+                )}
+                <Button size="icon" variant="ghost" onClick={addExercise} className="h-8 w-8 rounded-lg">
+                  <Check className="w-4 h-4 text-primary" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setAddingExercise(false)} className="h-8 w-8 rounded-lg">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -21,6 +21,7 @@ import { FuelPlayer } from '@/components/FuelPlayer';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
 import { DisplayNameModal } from '@/components/DisplayNameModal';
+import DayDetailModal, { ExerciseLog } from '@/components/DayDetailModal';
 import { usePWA } from '@/hooks/usePWA';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -41,6 +42,9 @@ const Dashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarHistory, setCalendarHistory] = useState<Record<string, any>>({});
   const [displayName, setDisplayName] = useState<string | null>(null);
+  // Day detail modal
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [dayLogs, setDayLogs] = useState<ExerciseLog[]>([]);
   // Skip-animation state: when timer is skipped, circle sweeps from 0 → current %
   const [justSkipped, setJustSkipped] = useState(false);
   const [skipAnimTarget, setSkipAnimTarget] = useState(0);
@@ -101,10 +105,35 @@ const Dashboard = () => {
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month + 1, 0).getDate();
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    
     const history = await fetchCalendarHistory(startDate, endDate);
     setCalendarHistory(history);
   }, [currentMonth, fetchCalendarHistory]);
+
+  // Fetch detailed logs for a specific day (for modal)
+  const handleDayClick = useCallback(async (dateKey: string) => {
+    setSelectedDay(dateKey);
+    setDayLogs([]);
+    try {
+      const { data, error } = await supabase
+        .from('workout_logs')
+        .select('exercise_id, exercise_name, sets_completed, total_sets')
+        .eq('user_id', user!.id)
+        .eq('date', dateKey);
+      if (!error && data) {
+        setDayLogs(
+          data.map((row: any) => ({
+            exercise_id: row.exercise_id,
+            exercise_name: row.exercise_name,
+            sets_completed: row.sets_completed,
+            total_sets: row.total_sets,
+            weight_kg: null, // weight stored on schedule, not logs currently
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Error fetching day logs:', err);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -423,6 +452,7 @@ const Dashboard = () => {
               history={calendarHistory}
               currentMonth={currentMonth}
               onMonthChange={setCurrentMonth}
+              onDayClick={handleDayClick}
             />
           </TabsContent>
 
@@ -488,6 +518,15 @@ const Dashboard = () => {
         onClose={() => setShowNotifModal(false)}
         todayProgress={todayProgressPercent}
       />
+
+      {/* Day Detail Modal — shown when user clicks a calendar day */}
+      {selectedDay && (
+        <DayDetailModal
+          date={selectedDay}
+          logs={dayLogs}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
     </div>
   );
 };
