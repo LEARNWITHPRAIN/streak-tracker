@@ -312,7 +312,14 @@ export const CustomRoutine: React.FC = () => {
                   <Dumbbell className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground truncate">{exercise.name}</p>
+                  <p className="text-sm font-bold text-foreground truncate">
+                    {exercise.name}
+                    {exercise.weight !== null && (
+                      <Badge variant="outline" className="ml-2 text-xs bg-background/60 font-mono">
+                        {exercise.weight}kg
+                      </Badge>
+                    )}
+                  </p>
                   <div className="mt-1">
                     <Badge variant="outline" className="text-xs bg-background/60 font-mono">
                       {exercise.setsReps}

@@ -215,13 +215,18 @@ export const WeeklySchedule: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-foreground truncate">
-                            {exercise.name}
-                          </p>
-                          <div className="mt-1">
-                            <Badge variant="outline" className="text-xs bg-background/60 font-mono">
-                              {exercise.setsReps}
-                            </Badge>
-                          </div>
+  {exercise.name}
+  {exercise.weight !== null && (
+    <Badge variant="outline" className="ml-2 text-xs bg-background/60 font-mono">
+      {exercise.weight}kg
+    </Badge>
+  )}
+</p>
+<div className="mt-1">
+  <Badge variant="outline" className="text-xs bg-background/60 font-mono">
+    {exercise.setsReps}
+  </Badge>
+</div>
                         </div>
                         <div className="flex gap-1">
                           <Button size="icon" variant="ghost" onClick={() => startEditExercise(exercise)} className="h-8 w-8 rounded-lg hover:bg-muted">
