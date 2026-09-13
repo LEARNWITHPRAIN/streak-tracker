@@ -23,7 +23,7 @@ export const RazorpayButton: React.FC<RazorpayButtonProps> = ({
       onClick={() => initiatePayment()}
       disabled={loading}
       size={size}
-      className={`relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:via-indigo-500 hover:to-pink-500 text-white font-bold shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${className}`}
+      className={`relative overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-primary-foreground font-bold shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${className}`}
     >
       {loading ? (
         <Loader2 className="w-5 h-5 mr-2 animate-spin" />

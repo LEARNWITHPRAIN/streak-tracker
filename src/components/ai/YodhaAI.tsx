@@ -193,17 +193,17 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={handleAssistantClick}
-          className="group relative flex items-center gap-2 p-3 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold shadow-2xl shadow-purple-500/40 border border-purple-400/40 transition-all duration-300 hover:scale-105 active:scale-95"
+          className="group relative flex items-center gap-2 p-3 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:from-orange-500 hover:to-amber-500 text-white font-bold shadow-2xl shadow-orange-500/30 border border-orange-400/40 transition-all duration-300 hover:scale-105 active:scale-95"
         >
           {/* Animated pulsing aura */}
-          <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 opacity-60 blur-md group-hover:opacity-100 animate-pulse transition duration-500" />
+          <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 opacity-60 blur-md group-hover:opacity-100 animate-pulse transition duration-500" />
 
           <div className="relative flex items-center gap-2">
             <div className="relative">
-              <Bot className="w-5 h-5 text-yellow-300" />
+              <Bot className="w-5 h-5 text-white" />
               <span className="absolute -top-1 -right-1 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-300" />
               </span>
             </div>
 
@@ -222,17 +222,17 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
 
       {/* Floating Chat Modal (Unlocked for PRO) */}
       {isOpen && isPremium && (
-        <div className="fixed bottom-20 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[400px] h-[520px] max-h-[80vh] z-50 rounded-2xl bg-card/95 backdrop-blur-2xl border border-purple-500/40 shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-300">
+        <div className="fixed bottom-20 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[400px] h-[520px] max-h-[80vh] z-50 rounded-2xl bg-card/95 backdrop-blur-2xl border border-primary/40 shadow-2xl shadow-primary/10 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-300">
           {/* Header */}
-          <div className="p-3.5 bg-gradient-to-r from-purple-950/60 via-background to-background border-b border-border/80 flex items-center justify-between">
+          <div className="p-3.5 bg-gradient-to-r from-orange-950/40 via-background to-background border-b border-border/80 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-purple-500/20 text-yellow-400 border border-purple-500/40">
+              <div className="p-2 rounded-xl bg-primary/15 text-primary border border-primary/30">
                 <Bot className="w-4 h-4" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                   Yodha AI Commander
-                  <span className="text-[10px] font-mono text-purple-400 px-1.5 py-0.2 rounded bg-purple-500/15">Active</span>
+                  <span className="text-[10px] font-mono text-primary px-1.5 py-0.2 rounded bg-primary/15">Active</span>
                 </h4>
                 <p className="text-[10px] text-muted-foreground">Voice & Nutrition Assistant</p>
               </div>
@@ -244,7 +244,7 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
                 onClick={() => setVoiceEnabled(!voiceEnabled)}
                 className={`p-1.5 rounded-lg border transition-colors ${
                   voiceEnabled
-                    ? 'border-purple-500/40 text-purple-400 bg-purple-500/10'
+                    ? 'border-primary/40 text-primary bg-primary/10'
                     : 'border-border text-muted-foreground hover:text-foreground'
                 }`}
                 title={voiceEnabled ? 'Mute AI Voice' : 'Enable AI Voice'}
@@ -270,14 +270,14 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
                 className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {m.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-purple-600/30 border border-purple-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="w-3.5 h-3.5 text-purple-400" />
+                  <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0 mt-0.5">
+                    <Bot className="w-3.5 h-3.5 text-primary" />
                   </div>
                 )}
                 <div
                   className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
                     m.role === 'user'
-                      ? 'bg-purple-600 text-white font-medium rounded-br-none shadow-md'
+                      ? 'bg-primary text-primary-foreground font-medium rounded-br-none shadow-md'
                       : 'bg-muted/60 border border-border/80 text-foreground rounded-bl-none shadow-sm'
                   }`}
                 >
@@ -288,11 +288,11 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
 
             {loadingResponse && (
               <div className="flex gap-2.5 items-center">
-                <div className="w-6 h-6 rounded-full bg-purple-600/30 border border-purple-500/40 flex items-center justify-center shrink-0">
-                  <Bot className="w-3.5 h-3.5 text-purple-400" />
+                <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0">
+                  <Bot className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="p-2.5 rounded-2xl bg-muted/60 border border-border/80 text-xs flex items-center gap-1.5 text-muted-foreground">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                   <span>Strategizing...</span>
                 </div>
               </div>
@@ -316,7 +316,7 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
                 className={`p-2 rounded-xl border transition-all ${
                   isListening
                     ? 'bg-red-500 text-white border-red-400 animate-pulse'
-                    : 'bg-muted/70 text-muted-foreground hover:text-purple-400 hover:border-purple-500/40'
+                    : 'bg-muted/70 text-muted-foreground hover:text-primary hover:border-primary/40'
                 }`}
                 title="Speak to Yodha AI"
               >
@@ -328,14 +328,14 @@ Help the user track exercise reps, sets, diet macros, posture tips, and recovery
                 placeholder={isListening ? 'Listening to your voice...' : 'Ask workout or diet advice...'}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="flex-1 bg-card/60 border-border text-foreground text-xs"
+                className="flex-1 bg-card/60 border-border text-foreground text-xs rounded-xl"
               />
 
               <Button
                 type="submit"
                 size="sm"
                 disabled={!inputText.trim() || loadingResponse}
-                className="bg-purple-600 hover:bg-purple-500 text-white h-9 px-3"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-3 rounded-xl font-bold"
               >
                 <Send className="w-3.5 h-3.5" />
               </Button>

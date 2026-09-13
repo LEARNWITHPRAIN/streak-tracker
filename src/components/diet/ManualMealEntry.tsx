@@ -109,7 +109,7 @@ export const ManualMealEntry: React.FC<ManualMealEntryProps> = ({ onAddMeal }) =
             type="button"
             size="sm"
             onClick={() => setIsOpen(!isOpen)}
-            className="bg-purple-600 hover:bg-purple-500 text-white text-xs"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs rounded-xl font-bold"
           >
             <Plus className="w-3.5 h-3.5 mr-1" />
             {isOpen ? 'Close' : 'Add Food'}
@@ -129,10 +129,10 @@ export const ManualMealEntry: React.FC<ManualMealEntryProps> = ({ onAddMeal }) =
                 key={idx}
                 type="button"
                 onClick={() => handlePresetSelect(preset)}
-                className="text-xs px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/60 hover:bg-purple-500/15 hover:border-purple-500/40 text-foreground transition-colors text-left flex items-center gap-1.5"
+                className="text-xs px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/60 hover:bg-primary/15 hover:border-primary/40 text-foreground transition-colors text-left flex items-center gap-1.5"
               >
                 <span>{preset.name}</span>
-                <span className="text-[10px] font-mono text-purple-400 font-semibold">({preset.protein}g P)</span>
+                <span className="text-[10px] font-mono text-primary font-semibold">({preset.protein}g P)</span>
               </button>
             ))}
           </div>
@@ -168,7 +168,7 @@ export const ManualMealEntry: React.FC<ManualMealEntryProps> = ({ onAddMeal }) =
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs text-purple-400">Protein (g)</Label>
+              <Label className="text-xs text-primary">Protein (g)</Label>
               <Input
                 type="number"
                 placeholder="35"
@@ -218,7 +218,7 @@ export const ManualMealEntry: React.FC<ManualMealEntryProps> = ({ onAddMeal }) =
               type="submit"
               size="sm"
               disabled={saving || !form.meal_name.trim()}
-              className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow-md shadow-primary/20"
             >
               <Check className="w-3.5 h-3.5 mr-1" />
               {saving ? 'Adding...' : 'Save Meal'}

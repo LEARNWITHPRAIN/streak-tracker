@@ -274,10 +274,10 @@ const Dashboard = () => {
               {isAdmin && (
                 <button
                   onClick={() => navigate('/admin')}
-                  className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-purple-500/20"
+                  className="px-3 py-1.5 rounded-xl bg-primary/15 hover:bg-primary/25 text-primary border border-primary/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-primary/20"
                   title="Admin Command Dashboard"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                   <span className="hidden sm:inline">Admin</span>
                 </button>
               )}

@@ -27,7 +27,7 @@ export const DietTab: React.FC = () => {
   if (dietLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
         <p className="text-sm text-muted-foreground">Loading your personalized nutrition plan...</p>
       </div>
     );
@@ -38,7 +38,7 @@ export const DietTab: React.FC = () => {
     return (
       <div className="space-y-6 max-w-4xl mx-auto py-4">
         <div className="text-center space-y-2 mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-semibold">
             <Salad className="w-3.5 h-3.5" /> Nutrition Engine
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
@@ -66,18 +66,18 @@ export const DietTab: React.FC = () => {
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-card/60 backdrop-blur-xl border border-border/80 shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-primary-foreground shadow-md shadow-primary/20">
             <Utensils className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-foreground">Diet & Fuel Tracker</h2>
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
                 {dietProfile.goal === 'lose_fat' ? 'Fat Loss' : dietProfile.goal === 'gain_muscle' ? 'Muscle Hypertrophy' : 'Maintenance'}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Target: <span className="text-orange-400 font-bold">{dietProfile.daily_calories} kcal</span> · <span className="text-purple-400 font-bold">{dietProfile.daily_protein_g}g Protein</span>
+              Target: <span className="text-primary font-bold">{dietProfile.daily_calories} kcal</span> · <span className="text-primary font-bold">{dietProfile.daily_protein_g}g Protein</span>
             </p>
           </div>
         </div>
@@ -87,9 +87,9 @@ export const DietTab: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setIsEditorOpen(true)}
-            className="text-xs border-border/80 hover:border-purple-500/40 hover:bg-purple-500/10 text-foreground"
+            className="text-xs border-border/80 hover:border-primary/40 hover:bg-primary/10 text-foreground rounded-xl"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
             Edit Targets
           </Button>
 
@@ -97,7 +97,7 @@ export const DietTab: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => setShowOnboardingReset(true)}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="text-xs text-muted-foreground hover:text-foreground rounded-xl"
             title="Recalculate BMR and TDEE"
           >
             <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
@@ -131,7 +131,7 @@ export const DietTab: React.FC = () => {
 
         {mealsLoading ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
           </div>
         ) : meals.length === 0 ? (
           <div className="p-8 rounded-2xl border border-dashed border-border/80 text-center bg-card/20 space-y-2">

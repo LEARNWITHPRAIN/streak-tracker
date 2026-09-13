@@ -94,21 +94,21 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
       label: 'Hypertrophy Bulk', 
       desc: 'Caloric surplus (+10%) with max protein for muscle building', 
       badge: 'Muscle Mass', 
-      accent: 'from-purple-500/20 to-pink-500/10 border-purple-500/40 text-purple-400' 
+      accent: 'from-orange-500/20 to-amber-500/10 border-orange-500/40 text-orange-400' 
     },
   ] as const;
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-card/60 backdrop-blur-xl border border-border/80 rounded-2xl shadow-2xl relative overflow-hidden">
       {/* Background ambient glow */}
-      <div className="absolute -top-24 -right-24 w-60 h-60 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-60 h-60 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header & Step progress */}
       <div className="relative mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+            <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/30 text-primary">
               <Flame className="w-6 h-6 animate-pulse" />
             </div>
             <div>
@@ -116,7 +116,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
               <p className="text-xs text-muted-foreground">Science-backed macro formula tailored for warriors</p>
             </div>
           </div>
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
             Step {step} of 4
           </span>
         </div>
@@ -124,7 +124,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
         {/* Progress bar */}
         <div className="w-full bg-muted/40 h-1.5 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-pink-500 transition-all duration-300 ease-out"
+            className="h-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 transition-all duration-300 ease-out"
             style={{ width: `${(step / 4) * 100}%` }}
           />
         </div>
@@ -136,7 +136,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="space-y-1">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <User className="w-4 h-4 text-purple-400" /> What are your body metrics?
+                <User className="w-4 h-4 text-primary" /> What are your body metrics?
               </h3>
               <p className="text-xs text-muted-foreground">These allow us to calculate your Basal Metabolic Rate (BMR) with clinical accuracy.</p>
             </div>
@@ -150,8 +150,8 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                     onClick={() => setFormData({ ...formData, gender: 'male' })}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
                       formData.gender === 'male'
-                        ? 'border-purple-500 bg-purple-500/20 text-purple-300 shadow-sm'
-                        : 'border-border bg-background/50 text-muted-foreground hover:border-purple-500/40'
+                        ? 'border-primary bg-primary/20 text-primary shadow-sm'
+                        : 'border-border bg-background/50 text-muted-foreground hover:border-primary/40'
                     }`}
                   >
                     Male ⚡
@@ -161,8 +161,8 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                     onClick={() => setFormData({ ...formData, gender: 'female' })}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
                       formData.gender === 'female'
-                        ? 'border-purple-500 bg-purple-500/20 text-purple-300 shadow-sm'
-                        : 'border-border bg-background/50 text-muted-foreground hover:border-purple-500/40'
+                        ? 'border-primary bg-primary/20 text-primary shadow-sm'
+                        : 'border-border bg-background/50 text-muted-foreground hover:border-primary/40'
                     }`}
                   >
                     Female 🌸
@@ -179,7 +179,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                     max={100}
                     value={formData.age}
                     onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) || 0 })}
-                    className="bg-background/50 border-border text-foreground pr-12 font-mono"
+                    className="bg-background/50 border-border text-foreground pr-12 font-mono rounded-xl"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">years</span>
                 </div>
@@ -194,7 +194,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                     max={250}
                     value={formData.height_cm}
                     onChange={(e) => setFormData({ ...formData, height_cm: Number(e.target.value) || 0 })}
-                    className="bg-background/50 border-border text-foreground pr-10 font-mono"
+                    className="bg-background/50 border-border text-foreground pr-10 font-mono rounded-xl"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">cm</span>
                 </div>
@@ -210,7 +210,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                     step="0.5"
                     value={formData.weight_kg}
                     onChange={(e) => setFormData({ ...formData, weight_kg: Number(e.target.value) || 0 })}
-                    className="bg-background/50 border-border text-foreground pr-10 font-mono"
+                    className="bg-background/50 border-border text-foreground pr-10 font-mono rounded-xl"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">kg</span>
                 </div>
@@ -224,7 +224,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="space-y-1">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Activity className="w-4 h-4 text-purple-400" /> How active is your lifestyle?
+                <Activity className="w-4 h-4 text-primary" /> How active is your lifestyle?
               </h3>
               <p className="text-xs text-muted-foreground">Determines your Total Daily Energy Expenditure (TDEE).</p>
             </div>
@@ -237,8 +237,8 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                   onClick={() => setFormData({ ...formData, activity_level: opt.id })}
                   className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
                     formData.activity_level === opt.id
-                      ? 'border-purple-500 bg-purple-500/15 shadow-md shadow-purple-500/10'
-                      : 'border-border/70 bg-background/40 hover:bg-background/80 hover:border-purple-500/30'
+                      ? 'border-primary bg-primary/15 shadow-md shadow-primary/10'
+                      : 'border-border/70 bg-background/40 hover:bg-background/80 hover:border-primary/30'
                   }`}
                 >
                   <div className="space-y-0.5">
@@ -259,7 +259,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="space-y-1">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Target className="w-4 h-4 text-purple-400" /> What is your primary objective?
+                <Target className="w-4 h-4 text-primary" /> What is your primary objective?
               </h3>
               <p className="text-xs text-muted-foreground">Select your goal so we can compute the ideal calorie surplus/deficit and macro ratio.</p>
             </div>
@@ -276,8 +276,8 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                   }}
                   className={`w-full text-left p-4 rounded-xl border transition-all ${
                     formData.goal === goal.id
-                      ? `border-purple-500 bg-gradient-to-r ${goal.accent} shadow-md`
-                      : 'border-border/70 bg-background/40 hover:bg-background/80 hover:border-purple-500/30'
+                      ? `border-primary bg-gradient-to-r ${goal.accent} shadow-md`
+                      : 'border-border/70 bg-background/40 hover:bg-background/80 hover:border-primary/30'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -299,7 +299,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-yellow-400" /> Your Calculated Target
+                  <Sparkles className="w-5 h-5 text-amber-400" /> Your Calculated Target
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Personalized plan. You can edit any value below to match your preference.
@@ -309,7 +309,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditingGoals(!isEditingGoals)}
-                className="text-xs border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                className="text-xs border-primary/30 text-primary hover:bg-primary/10 rounded-xl"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
                 {isEditingGoals ? 'Lock Values' : 'Fine Tune'}
@@ -331,18 +331,18 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                         daily_calories: Number(e.target.value) || 0,
                       })
                     }
-                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-orange-500/40"
+                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-orange-500/40 rounded-xl"
                   />
                 ) : (
-                  <div className="text-xl font-extrabold text-foreground mt-1">
+                  <div className="text-xl font-extrabold text-foreground mt-1 font-mono">
                     {activeGoals.daily_calories} <span className="text-xs font-normal text-muted-foreground">kcal</span>
                   </div>
                 )}
               </div>
 
               {/* Protein */}
-              <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-center relative">
-                <span className="text-[11px] font-semibold text-purple-400 uppercase tracking-wider">Protein</span>
+              <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-center relative">
+                <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">Protein</span>
                 {isEditingGoals ? (
                   <Input
                     type="number"
@@ -353,10 +353,10 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                         daily_protein_g: Number(e.target.value) || 0,
                       })
                     }
-                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-purple-500/40"
+                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-primary/40 rounded-xl"
                   />
                 ) : (
-                  <div className="text-xl font-extrabold text-foreground mt-1">
+                  <div className="text-xl font-extrabold text-foreground mt-1 font-mono">
                     {activeGoals.daily_protein_g} <span className="text-xs font-normal text-muted-foreground">g</span>
                   </div>
                 )}
@@ -375,10 +375,10 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                         daily_carbs_g: Number(e.target.value) || 0,
                       })
                     }
-                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-blue-500/40"
+                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-blue-500/40 rounded-xl"
                   />
                 ) : (
-                  <div className="text-xl font-extrabold text-foreground mt-1">
+                  <div className="text-xl font-extrabold text-foreground mt-1 font-mono">
                     {activeGoals.daily_carbs_g} <span className="text-xs font-normal text-muted-foreground">g</span>
                   </div>
                 )}
@@ -397,10 +397,10 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                         daily_fat_g: Number(e.target.value) || 0,
                       })
                     }
-                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-pink-500/40"
+                    className="mt-1 h-8 text-center text-base font-bold bg-background/80 border-pink-500/40 rounded-xl"
                   />
                 ) : (
-                  <div className="text-xl font-extrabold text-foreground mt-1">
+                  <div className="text-xl font-extrabold text-foreground mt-1 font-mono">
                     {activeGoals.daily_fat_g} <span className="text-xs font-normal text-muted-foreground">g</span>
                   </div>
                 )}
@@ -413,7 +413,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
                 <button
                   type="button"
                   onClick={() => setCustomGoals(calculated)}
-                  className="text-xs text-muted-foreground hover:text-purple-400 underline"
+                  className="text-xs text-muted-foreground hover:text-primary underline"
                 >
                   Reset to science formula
                 </button>
@@ -430,7 +430,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
             type="button"
             variant="ghost"
             onClick={handleBack}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground rounded-xl"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
@@ -442,7 +442,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
           <Button
             type="button"
             onClick={handleNext}
-            className="bg-purple-600 hover:bg-purple-500 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold px-6"
           >
             Continue <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
@@ -451,7 +451,7 @@ export const DietOnboarding: React.FC<DietOnboardingProps> = ({ onComplete, init
             type="button"
             onClick={handleSubmit}
             disabled={saving}
-            className="bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold shadow-lg shadow-purple-500/25"
+            className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-primary-foreground font-bold shadow-lg shadow-primary/25 rounded-xl px-6"
           >
             <Check className="w-4 h-4 mr-2" /> {saving ? 'Saving Plan...' : 'Activate Diet Plan'}
           </Button>

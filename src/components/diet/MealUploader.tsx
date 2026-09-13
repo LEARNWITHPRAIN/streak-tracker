@@ -182,21 +182,21 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-950/20 via-card/70 to-background/90 p-5 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-orange-950/20 via-card/70 to-background/90 p-5 shadow-xl">
         {/* Glow accent */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/15 rounded-full blur-2xl pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400">
+              <div className="p-2 rounded-xl bg-primary/15 border border-primary/30 text-primary">
                 <Camera className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                   AI Meal Vision Scanner
                   {!isPremium && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-600 text-primary-foreground shadow-sm">
                       <Lock className="w-2.5 h-2.5" /> PRO
                     </span>
                   )}
@@ -221,11 +221,7 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
             <Button
               onClick={handleTriggerUpload}
               disabled={isScanning}
-              className={`w-full sm:w-auto font-bold shadow-lg transition-all duration-300 ${
-                isPremium
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white'
-                  : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
-              }`}
+              className="w-full sm:w-auto font-bold shadow-lg transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-primary/20"
             >
               {isScanning ? (
                 <>
@@ -259,7 +255,7 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
                 />
                 {isScanning && (
                   <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin mb-2" />
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
                     <p className="text-xs font-semibold text-foreground">Analyzing macros with Llama-3.2 Vision...</p>
                     <p className="text-[10px] text-muted-foreground mt-1">Identifying ingredients and portion sizes</p>
                   </div>
@@ -268,10 +264,10 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
 
               {scanResult && (
                 <div className="md:col-span-2 space-y-3">
-                  <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                  <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20">
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold text-sm text-foreground">{scanResult.meal_name}</h4>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/20 text-primary">
                         AI Detected
                       </span>
                     </div>
@@ -282,8 +278,8 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
                         <div className="text-[10px] text-orange-400 font-semibold">Calories</div>
                         <div className="text-sm font-extrabold text-foreground font-mono">{scanResult.calories_kcal}</div>
                       </div>
-                      <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                        <div className="text-[10px] text-purple-400 font-semibold">Protein</div>
+                      <div className="p-2 rounded-lg bg-primary/15 border border-primary/25">
+                        <div className="text-[10px] text-primary font-semibold">Protein</div>
                         <div className="text-sm font-extrabold text-foreground font-mono">{scanResult.protein_g}g</div>
                       </div>
                       <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -305,14 +301,14 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
                         setPreviewImage(null);
                         setScanResult(null);
                       }}
-                      className="text-xs"
+                      className="text-xs rounded-xl"
                     >
                       Discard
                     </Button>
                     <Button
                       size="sm"
                       onClick={handleConfirmAdd}
-                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow-md shadow-primary/20"
                     >
                       <Check className="w-3.5 h-3.5 mr-1" /> Add to Today's Log
                     </Button>

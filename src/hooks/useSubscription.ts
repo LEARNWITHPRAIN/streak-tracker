@@ -57,24 +57,48 @@ export function useSubscription(): SubscriptionState {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_subscriptions')
-        .select('status, expires_at')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .select('id, user_id, user_email, status, expires_at, created_at')
+        .order('created_at', { ascending: false });
+
+      if (user.email) {
+        query = query.or(`user_id.eq.${user.id},user_email.eq.${user.email.toLowerCase()}`);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data: records, error } = await query;
 
       if (error) throw error;
 
-      if (data) {
-        const expiry = data.expires_at ? new Date(data.expires_at) : null;
-        // Auto-expire: if expires_at is in the past, mark as expired
+      if (records && records.length > 0) {
+        const now = new Date();
+        // Check if there is an active unexpired subscription
+        const activeSub = records.find((rec) => {
+          if (rec.status !== 'active') return false;
+          if (!rec.expires_at) return true;
+          return new Date(rec.expires_at) > now;
+        });
+
+        const chosen = activeSub || records[0];
+        const expiry = chosen.expires_at ? new Date(chosen.expires_at) : null;
         const effectiveStatus =
-          data.status === 'active' && expiry && expiry < new Date()
+          chosen.status === 'active' && expiry && expiry < now
             ? 'expired'
-            : (data.status as 'pending' | 'active' | 'expired');
+            : (chosen.status as 'pending' | 'active' | 'expired');
 
         setStatus(effectiveStatus);
         setExpiresAt(expiry);
+
+        // Opportunistically link user_id if this was an email-only grant
+        if (chosen.id && !chosen.user_id && user.id) {
+          supabase
+            .from('user_subscriptions')
+            .update({ user_id: user.id })
+            .eq('id', chosen.id)
+            .then(() => {});
+        }
       } else {
         setStatus(null);
         setExpiresAt(null);
@@ -139,6 +163,7 @@ export function useSubscription(): SubscriptionState {
             .upsert(
               {
                 user_id: user.id,
+                user_email: user.email ? user.email.toLowerCase() : null,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id ?? null,
                 amount_paise: amount,

@@ -53,7 +53,7 @@ export const MacroGoalEditor: React.FC<MacroGoalEditorProps> = ({
       <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border border-border/80">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
-            <SlidersHorizontal className="w-5 h-5 text-purple-400" />
+            <SlidersHorizontal className="w-5 h-5 text-primary" />
             Adjust Daily Nutrition Targets
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
@@ -81,7 +81,7 @@ export const MacroGoalEditor: React.FC<MacroGoalEditorProps> = ({
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground flex justify-between">
                 <span>Protein (g)</span>
-                <span className="font-mono text-purple-400 font-semibold">{goals.daily_protein_g}g</span>
+                <span className="font-mono text-primary font-semibold">{goals.daily_protein_g}g</span>
               </Label>
               <Input
                 type="number"
@@ -96,7 +96,7 @@ export const MacroGoalEditor: React.FC<MacroGoalEditorProps> = ({
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground flex justify-between">
                 <span>Carbs (g)</span>
-                <span className="font-mono text-blue-400 font-semibold">{goals.daily_carbs_g}g</span>
+                <span className="font-mono text-amber-500 font-semibold">{goals.daily_carbs_g}g</span>
               </Label>
               <Input
                 type="number"
@@ -111,7 +111,7 @@ export const MacroGoalEditor: React.FC<MacroGoalEditorProps> = ({
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground flex justify-between">
                 <span>Fats (g)</span>
-                <span className="font-mono text-pink-400 font-semibold">{goals.daily_fat_g}g</span>
+                <span className="font-mono text-orange-400 font-semibold">{goals.daily_fat_g}g</span>
               </Label>
               <Input
                 type="number"
@@ -162,7 +162,7 @@ export const MacroGoalEditor: React.FC<MacroGoalEditorProps> = ({
                 type="submit"
                 size="sm"
                 disabled={saving}
-                className="bg-purple-600 hover:bg-purple-500 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               >
                 {saving ? 'Saving...' : 'Save Targets'}
               </Button>
