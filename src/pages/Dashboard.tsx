@@ -43,7 +43,6 @@ const Dashboard = () => {
   const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, initializePlanSchedule, refetch } = useUserWorkouts();
   const { onboardingComplete, loading: onboardingLoading, markComplete } = useOnboarding();
   const [showWorkoutOnboarding, setShowWorkoutOnboarding] = useState(false);
-  const [hasDismissedWorkoutOnboarding, setHasDismissedWorkoutOnboarding] = useState(false);
   const { calculateTotalProgress, fetchCalendarHistory, fetchDayDetailedLogs, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -167,26 +166,26 @@ const Dashboard = () => {
         // If user has not configured their display name yet, prompt them first
         if (!fetchedName) {
           setShowNameModal(true);
-        } else if (!onboardingComplete && !onboardingLoading && !hasDismissedWorkoutOnboarding) {
-          // If name is present and onboarding hasn't been completed, prompt workout onboarding
+        } else if (!onboardingComplete && !onboardingLoading) {
+          // Name present but workout onboarding not done — must complete before dashboard access
           setShowWorkoutOnboarding(true);
         } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-          // If name and onboarding are complete and notifications haven't been configured, prompt notifications
+          // Onboarding done — prompt notifications if not yet configured
           setShowNotifModal(true);
         }
       };
       fetchDisplayName();
     }
-  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission, onboardingComplete, onboardingLoading, hasDismissedWorkoutOnboarding]);
+  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission, onboardingComplete, onboardingLoading]);
 
   // Ensure workout onboarding triggers once onboardingLoading finishes for users without a plan
   useEffect(() => {
-    if (!user || loading || onboardingLoading || showNameModal || hasDismissedWorkoutOnboarding) return;
+    if (!user || loading || onboardingLoading || showNameModal) return;
     if (displayName === null) return;
     if (!onboardingComplete) {
       setShowWorkoutOnboarding(true);
     }
-  }, [user, loading, onboardingLoading, onboardingComplete, showNameModal, displayName, hasDismissedWorkoutOnboarding]);
+  }, [user, loading, onboardingLoading, onboardingComplete, showNameModal, displayName]);
 
   // Listen for progress updates to refresh calendar
   useEffect(() => {
@@ -232,7 +231,7 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  if (loading || scheduleLoading || progressLoading) {
+  if (loading || scheduleLoading || progressLoading || onboardingLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -242,6 +241,50 @@ const Dashboard = () => {
 
   if (!user) {
     return null;
+  }
+
+  // ── Onboarding Gate ────────────────────────────────────────────────────────
+  // If display name modal is done but workout onboarding is not complete,
+  // block the entire dashboard behind a full-screen gate.
+  // Users CANNOT dismiss or skip — they must finish the form to proceed.
+  if (!onboardingComplete && !showNameModal && displayName !== null) {
+    return (
+      <div className="min-h-screen bg-background w-full">
+        {/* Show display name modal on top if still needed */}
+        {user && (
+          <DisplayNameModal
+            isOpen={showNameModal}
+            userId={user.id}
+            onSuccess={(savedName) => {
+              setDisplayName(savedName);
+              setShowNameModal(false);
+              setShowWorkoutOnboarding(true);
+            }}
+          />
+        )}
+        {/* Full-screen mandatory onboarding — no close button */}
+        <WorkoutOnboarding
+          isOpen={true}
+          existingData={false}
+          onComplete={async (prefs, template) => {
+            try {
+              const generated = generateWorkoutPlan({ ...prefs, selected_template: template });
+              await initializePlanSchedule(generated);
+              await markComplete(template);
+              setShowWorkoutOnboarding(false);
+              refetch();
+              toast.success('Your personalized plan has been built! 💪');
+            } catch (err) {
+              console.error('Error building plan:', err);
+              toast.error('Something went wrong. Please try again.');
+              throw err;
+            }
+          }}
+          onClose={() => {/* intentionally blocked — onboarding is mandatory */}}
+          isMandatory={true}
+        />
+      </div>
+    );
   }
 
   return (
@@ -552,9 +595,10 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Workout Plan Onboarding Modal on sign up / sign in */}
+      {/* Workout Plan Onboarding — only shown from dashboard when re-triggering (e.g. plan rebuild).
+           First-time mandatory gate is handled above before the dashboard renders. */}
       <WorkoutOnboarding
-        isOpen={showWorkoutOnboarding && !showNameModal}
+        isOpen={showWorkoutOnboarding && !showNameModal && onboardingComplete}
         existingData={schedule.some(d => d.exercises.length > 0)}
         onComplete={async (prefs, template) => {
           try {
@@ -563,7 +607,7 @@ const Dashboard = () => {
             await markComplete(template);
             setShowWorkoutOnboarding(false);
             refetch();
-            toast.success('Your personalized plan has been built! 💪');
+            toast.success('Your personalized plan has been rebuilt! 💪');
             if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
               setTimeout(() => {
                 setShowNotifModal(true);
@@ -577,7 +621,6 @@ const Dashboard = () => {
         }}
         onClose={() => {
           setShowWorkoutOnboarding(false);
-          setHasDismissedWorkoutOnboarding(true);
           if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
             setTimeout(() => {
               setShowNotifModal(true);

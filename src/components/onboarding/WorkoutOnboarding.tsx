@@ -16,6 +16,7 @@ import {
 interface WorkoutOnboardingProps {
   isOpen: boolean;
   existingData?: boolean; // if user already has workout data
+  isMandatory?: boolean;  // if true, user cannot close/skip — must complete
   onComplete: (prefs: OnboardingPreferences, template: TemplateName) => Promise<void>;
   onClose: () => void;
 }
@@ -107,6 +108,7 @@ const TemplateSchedulePreview: React.FC<{ schedule: TemplateRecommendation['sche
 export const WorkoutOnboarding: React.FC<WorkoutOnboardingProps> = ({
   isOpen,
   existingData = false,
+  isMandatory = false,
   onComplete,
   onClose,
 }) => {
@@ -166,15 +168,17 @@ export const WorkoutOnboarding: React.FC<WorkoutOnboardingProps> = ({
               <p className="text-xs text-muted-foreground">Personalized for you</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <StepProgress current={stepIndex} total={totalSteps} />
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {!isMandatory && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -470,10 +474,11 @@ export const WorkoutOnboarding: React.FC<WorkoutOnboardingProps> = ({
             variant="ghost"
             size="sm"
             onClick={stepIndex === 0 ? onClose : prev}
-            className="rounded-xl text-muted-foreground hover:text-foreground gap-1.5"
+            disabled={isMandatory && stepIndex === 0}
+            className="rounded-xl text-muted-foreground hover:text-foreground gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-4 h-4" />
-            {stepIndex === 0 ? 'Cancel' : 'Back'}
+            {stepIndex === 0 ? (isMandatory ? 'Required' : 'Cancel') : 'Back'}
           </Button>
 
           {currentStep === 'confirm' ? (
