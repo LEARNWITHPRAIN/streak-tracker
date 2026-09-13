@@ -490,42 +490,54 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
                   >
                     {/* Set Number & Weight */}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground shrink-0">
+                      <span className="w-8 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
                         S{set.setNumber}
                       </span>
 
                       {isEditingThis ? (
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            type="number"
-                            step="0.5"
-                            autoFocus
-                            placeholder="BW"
-                            value={customWeightVal}
-                            onChange={(e) => setCustomWeightVal(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveEditWeight(idx);
-                              if (e.key === 'Escape') setEditingWeightIdx(null);
-                            }}
-                            className="h-7 w-20 text-xs px-1.5 py-0 bg-background font-mono"
-                          />
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => {
-                              setCustomWeightVal('');
-                              onUpdateWeight(idx, null);
-                              setEditingWeightIdx(null);
-                            }}
-                            className="h-7 px-1.5 text-[10px]"
-                            title="Set to Bodyweight"
-                          >
-                            BW
-                          </Button>
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0 animate-scale-in">
+                          <div className="flex items-center rounded-xl bg-card border border-primary/50 p-0.5 shadow-inner gap-1 flex-1 min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomWeightVal('');
+                                onUpdateWeight(idx, null);
+                                setEditingWeightIdx(null);
+                              }}
+                              className={`h-6 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 shrink-0 ${
+                                customWeightVal === ''
+                                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                              }`}
+                              title="Set to Bodyweight"
+                            >
+                              <Scale className="w-3 h-3" />
+                              BW
+                            </button>
+
+                            <div className="flex items-center flex-1 min-w-0 pr-1">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                autoFocus
+                                placeholder="0"
+                                value={customWeightVal}
+                                onChange={(e) => setCustomWeightVal(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveEditWeight(idx);
+                                  if (e.key === 'Escape') setEditingWeightIdx(null);
+                                }}
+                                className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-right outline-none pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <span className="text-[10px] font-bold text-primary select-none shrink-0">kg</span>
+                            </div>
+                          </div>
+
                           <Button 
                             size="sm" 
                             onClick={() => saveEditWeight(idx)}
-                            className="h-7 px-2 text-xs bg-primary text-primary-foreground"
+                            className="h-7 px-2.5 text-xs bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm shadow-primary/20"
                           >
                             Save
                           </Button>
@@ -534,11 +546,13 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
                         <button
                           type="button"
                           onClick={() => startEditWeight(idx, set.weight)}
-                          className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted/80 border border-border/40 transition-colors"
+                          className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-xl bg-muted/30 hover:bg-muted/70 border border-border/50 hover:border-primary/40 transition-all group"
                           title="Click to edit set weight"
                         >
-                          <Scale className="w-3 h-3 text-primary shrink-0" />
-                          <span>{set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}</span>
+                          <Scale className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform shrink-0" />
+                          <span className="font-semibold text-foreground">
+                            {set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}
+                          </span>
                         </button>
                       )}
                     </div>
@@ -546,32 +560,36 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
                     {/* Reps */}
                     <div className="shrink-0 text-center">
                       {editingRepsIdx === idx ? (
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="text"
-                            autoFocus
-                            placeholder="10"
-                            value={customRepsVal}
-                            onChange={(e) => setCustomRepsVal(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveEditReps(idx);
-                              if (e.key === 'Escape') setEditingRepsIdx(null);
-                            }}
-                            className="h-7 w-16 text-xs px-1.5 py-0 bg-background font-mono text-center"
-                          />
+                        <div className="flex items-center gap-1 animate-scale-in">
+                          <div className="flex items-center rounded-xl bg-card border border-primary/50 p-0.5 shadow-inner w-20">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              autoFocus
+                              placeholder="10"
+                              value={customRepsVal}
+                              onChange={(e) => setCustomRepsVal(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditReps(idx);
+                                if (e.key === 'Escape') setEditingRepsIdx(null);
+                              }}
+                              className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-center outline-none px-1"
+                            />
+                            <span className="text-[10px] font-semibold text-muted-foreground pr-1 select-none">r</span>
+                          </div>
                           <Button 
                             size="sm" 
                             onClick={() => saveEditReps(idx)}
-                            className="h-7 px-1.5 text-xs bg-primary text-primary-foreground"
+                            className="h-7 px-2 text-xs bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm shadow-primary/20"
                           >
-                            OK
+                            Save
                           </Button>
                         </div>
                       ) : (
                         <button
                           type="button"
                           onClick={() => startEditReps(idx, set.reps)}
-                          className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted/80 border border-border/40 transition-colors"
+                          className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-xl bg-muted/30 hover:bg-muted/70 border border-border/50 hover:border-primary/40 transition-all"
                           title="Click to edit reps"
                         >
                           {String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '')} reps

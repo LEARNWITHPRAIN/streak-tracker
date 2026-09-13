@@ -500,72 +500,82 @@ const WeeklyExerciseEditorCard: React.FC<WeeklyExerciseEditorCardProps> = ({
         </div>
 
         {/* Sets Config List */}
-        <div className="space-y-2 pt-1 border-t border-border/50">
+        <div className="space-y-2.5 pt-2 border-t border-border/50">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-            <span>Set & Weight (kg)</span>
-            <span>Target Reps</span>
-            <span></span>
+            <div className="flex items-center gap-2">
+              <span className="w-8 text-center">Set</span>
+              <span>Weight</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-24 text-center">Target Reps</span>
+              {form.sets.length > 1 && <span className="w-8"></span>}
+            </div>
           </div>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5">
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-0.5">
             {form.sets.map((set, idx) => {
               const isBW = set.weight === null;
 
               return (
-                <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-background/70 border border-border/50">
-                  <span className="text-xs font-bold font-mono px-2 py-1 rounded-md bg-muted text-muted-foreground shrink-0">
+                <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-background/80 border border-border/60 hover:border-border/80 transition-colors">
+                  {/* Set Badge */}
+                  <span className="w-8 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
                     S{idx + 1}
                   </span>
 
-                  {/* Weight Toggle / Input */}
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    {isBW ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onUpdateWeight(idx, 20)}
-                        className="h-8 text-xs font-medium px-2.5 bg-muted/40 hover:bg-muted rounded-lg flex-1"
-                      >
-                        Bodyweight (BW)
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-1 flex-1">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          placeholder="kg"
-                          value={set.weight !== null ? set.weight : ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            onUpdateWeight(idx, val === '' ? null : Number(val));
-                          }}
-                          className="h-8 text-xs bg-background font-mono px-2 rounded-lg flex-1"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onUpdateWeight(idx, null)}
-                          className="h-8 px-2 text-[10px] text-muted-foreground hover:text-foreground"
-                          title="Switch to Bodyweight"
-                        >
-                          BW
-                        </Button>
-                      </div>
-                    )}
+                  {/* Weight Control: BW Button + kg Input */}
+                  <div className="flex items-center flex-1 min-w-0 rounded-xl bg-card border border-border/80 p-1 shadow-inner gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateWeight(idx, null)}
+                      className={`h-7 px-2.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+                        isBW
+                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 font-bold'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                      }`}
+                      title="Set as Bodyweight (no added weight)"
+                    >
+                      <Scale className="w-3 h-3" />
+                      <span>BW</span>
+                    </button>
+
+                    <div className={`flex items-center flex-1 min-w-0 px-2 py-0.5 rounded-lg transition-colors border ${
+                      !isBW ? 'bg-background border-primary/40' : 'bg-transparent border-transparent'
+                    }`}>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        placeholder="0"
+                        value={set.weight !== null ? set.weight : ''}
+                        onFocus={() => {
+                          if (isBW) onUpdateWeight(idx, 20);
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          onUpdateWeight(idx, val === '' ? null : Math.max(0, Number(val)));
+                        }}
+                        className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-right outline-none pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className={`text-[11px] font-bold select-none shrink-0 ${!isBW ? 'text-primary' : 'text-muted-foreground/60'}`}>
+                        kg
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Reps Input */}
-                  <div className="w-18 shrink-0">
-                    <Input
+                  {/* Target Reps Input */}
+                  <div className="flex items-center rounded-xl bg-card border border-border/80 p-1 shadow-inner w-24 shrink-0">
+                    <input
                       type="text"
+                      inputMode="numeric"
                       placeholder="10"
-                      value={set.reps || ''}
+                      value={String(set.reps || '').replace(/^[0-9]+\s*[*xX×]\s*/, '')}
                       onChange={(e) => onUpdateReps(idx, e.target.value)}
-                      className="h-8 text-xs font-mono text-center bg-background px-1.5 rounded-lg"
+                      className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-center outline-none px-1"
                     />
+                    <span className="text-[11px] font-semibold text-muted-foreground pr-1.5 select-none">
+                      reps
+                    </span>
                   </div>
 
                   {/* Delete Set */}
@@ -575,7 +585,8 @@ const WeeklyExerciseEditorCard: React.FC<WeeklyExerciseEditorCardProps> = ({
                       size="icon"
                       variant="ghost"
                       onClick={() => onRemoveSet(idx)}
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg shrink-0"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 transition-colors"
+                      title="Remove this set"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
