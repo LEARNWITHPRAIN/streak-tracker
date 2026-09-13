@@ -149,15 +149,28 @@ const SHORT_DAYS: Record<string, string> = {
   friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
 };
 
-// Assign workout vs rest days based on trainingDays — standard patterns
-const getWorkoutDayPattern = (trainingDays: number): boolean[] => {
+// Assign workout vs rest days based on trainingDays and template
+// PPL always keeps Sunday as rest: Mon-Sat workout (or Mon-Wed + Fri-Sat for 5d), Sunday Rest
+const getWorkoutDayPattern = (trainingDays: number, template?: TemplateName): boolean[] => {
+  if (template === 'push_pull_legs') {
+    if (trainingDays >= 6) {
+      return [true, true, true, true, true, true, false];
+    }
+    if (trainingDays === 5) {
+      return [true, true, true, false, true, true, false];
+    }
+    if (trainingDays <= 3) {
+      return [true, false, true, false, true, false, false];
+    }
+    return [true, true, false, true, true, false, false];
+  }
   // true = workout, false = rest
   const patterns: Record<number, boolean[]> = {
     2: [true, false, false, true, false, false, false],
     3: [true, false, true, false, true, false, false],
     4: [true, true, false, true, true, false, false],
     5: [true, true, false, true, true, true, false],
-    6: [true, true, true, false, true, true, true],
+    6: [true, true, true, true, true, true, false],
     7: [true, true, true, true, true, true, true],
   };
   return patterns[trainingDays] || patterns[4];
@@ -345,7 +358,7 @@ const REST_DAY: { title: string; subtitle: string; exercises: Exercise[] } = {
 // ── Main plan generator ────────────────────────────────────────────────────────
 export const generateWorkoutPlan = (prefs: OnboardingPreferences): DaySchedule[] => {
   const template = prefs.selected_template || selectBestTemplate(prefs);
-  const workPattern = getWorkoutDayPattern(prefs.training_days);
+  const workPattern = getWorkoutDayPattern(prefs.training_days, template);
 
   const plan: DaySchedule[] = ALL_DAYS.map((day, dayIndex) => {
     const isWorkoutDay = workPattern[dayIndex];
@@ -465,10 +478,10 @@ export const getTemplateRecommendations = (prefs: OnboardingPreferences): Templa
         { day: 'Mon', type: 'workout', label: 'Push' },
         { day: 'Tue', type: 'workout', label: 'Pull' },
         { day: 'Wed', type: 'workout', label: 'Legs' },
-        { day: 'Thu', type: 'rest', label: 'Rest' },
-        { day: 'Fri', type: 'workout', label: 'Push' },
-        { day: 'Sat', type: 'workout', label: 'Pull' },
-        { day: 'Sun', type: 'workout', label: 'Legs' },
+        { day: 'Thu', type: 'workout', label: 'Push' },
+        { day: 'Fri', type: 'workout', label: 'Pull' },
+        { day: 'Sat', type: 'workout', label: 'Legs' },
+        { day: 'Sun', type: 'rest', label: 'Rest' },
       ],
     },
     {

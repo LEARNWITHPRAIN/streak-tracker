@@ -19,6 +19,10 @@ import { FuelPlayer } from '@/components/FuelPlayer';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
 import { DisplayNameModal } from '@/components/DisplayNameModal';
+import { WorkoutOnboarding } from '@/components/onboarding/WorkoutOnboarding';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { generateWorkoutPlan, OnboardingPreferences, TemplateName } from '@/lib/workoutPlanGenerator';
+import { toast } from 'sonner';
 import DayDetailModal, { ExerciseLog } from '@/components/DayDetailModal';
 import { usePWA } from '@/hooks/usePWA';
 
@@ -32,7 +36,10 @@ const Dashboard = () => {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
-  const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
+  const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, initializePlanSchedule, refetch } = useUserWorkouts();
+  const { onboardingComplete, loading: onboardingLoading, markComplete } = useOnboarding();
+  const [showWorkoutOnboarding, setShowWorkoutOnboarding] = useState(false);
+  const [hasDismissedWorkoutOnboarding, setHasDismissedWorkoutOnboarding] = useState(false);
   const { calculateTotalProgress, fetchCalendarHistory, fetchDayDetailedLogs, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -142,14 +149,26 @@ const Dashboard = () => {
         // If user has not configured their display name yet, prompt them first
         if (!fetchedName) {
           setShowNameModal(true);
+        } else if (!onboardingComplete && !onboardingLoading && !hasDismissedWorkoutOnboarding) {
+          // If name is present and onboarding hasn't been completed, prompt workout onboarding
+          setShowWorkoutOnboarding(true);
         } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-          // If name is already present and notifications haven't been configured, prompt notifications
+          // If name and onboarding are complete and notifications haven't been configured, prompt notifications
           setShowNotifModal(true);
         }
       };
       fetchDisplayName();
     }
-  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission]);
+  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission, onboardingComplete, onboardingLoading, hasDismissedWorkoutOnboarding]);
+
+  // Ensure workout onboarding triggers once onboardingLoading finishes for users without a plan
+  useEffect(() => {
+    if (!user || loading || onboardingLoading || showNameModal || hasDismissedWorkoutOnboarding) return;
+    if (displayName === null) return;
+    if (!onboardingComplete) {
+      setShowWorkoutOnboarding(true);
+    }
+  }, [user, loading, onboardingLoading, onboardingComplete, showNameModal, displayName, hasDismissedWorkoutOnboarding]);
 
   // Listen for progress updates to refresh calendar
   useEffect(() => {
@@ -477,8 +496,12 @@ const Dashboard = () => {
           onSuccess={(savedName) => {
             setDisplayName(savedName);
             setShowNameModal(false);
-            // After name is configured, if notifications haven't been configured, prompt them
-            if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+            // After name is configured, if workout onboarding isn't complete, prompt it
+            if (!onboardingComplete) {
+              setTimeout(() => {
+                setShowWorkoutOnboarding(true);
+              }, 400);
+            } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
               setTimeout(() => {
                 setShowNotifModal(true);
               }, 400);
@@ -487,9 +510,43 @@ const Dashboard = () => {
         />
       )}
 
+      {/* Workout Plan Onboarding Modal on sign up / sign in */}
+      <WorkoutOnboarding
+        isOpen={showWorkoutOnboarding && !showNameModal}
+        existingData={schedule.some(d => d.exercises.length > 0)}
+        onComplete={async (prefs, template) => {
+          try {
+            const generated = generateWorkoutPlan({ ...prefs, selected_template: template });
+            await initializePlanSchedule(generated);
+            await markComplete(template);
+            setShowWorkoutOnboarding(false);
+            refetch();
+            toast.success('Your personalized plan has been built! 💪');
+            if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+              setTimeout(() => {
+                setShowNotifModal(true);
+              }, 500);
+            }
+          } catch (err) {
+            console.error('Error building plan:', err);
+            toast.error('Something went wrong. Please try again.');
+            throw err;
+          }
+        }}
+        onClose={() => {
+          setShowWorkoutOnboarding(false);
+          setHasDismissedWorkoutOnboarding(true);
+          if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+            setTimeout(() => {
+              setShowNotifModal(true);
+            }, 500);
+          }
+        }}
+      />
+
       {/* Notification Onboarding Prompt Modal on sign in / sign up */}
       <NotificationOnboardingModal
-        isOpen={showNotifModal && !showNameModal}
+        isOpen={showNotifModal && !showNameModal && !showWorkoutOnboarding}
         onClose={() => setShowNotifModal(false)}
         todayProgress={todayProgressPercent}
       />
