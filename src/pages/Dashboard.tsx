@@ -25,6 +25,7 @@ import { generateWorkoutPlan, OnboardingPreferences, TemplateName } from '@/lib/
 import { toast } from 'sonner';
 import DayDetailModal, { ExerciseLog } from '@/components/DayDetailModal';
 import { usePWA } from '@/hooks/usePWA';
+import { AppTutorial, shouldShowTutorial } from '@/components/onboarding/AppTutorial';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -39,6 +40,7 @@ const Dashboard = () => {
   const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, initializePlanSchedule, refetch } = useUserWorkouts();
   const { onboardingComplete, loading: onboardingLoading, markComplete } = useOnboarding();
   const [showWorkoutOnboarding, setShowWorkoutOnboarding] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const { calculateTotalProgress, fetchCalendarHistory, fetchDayDetailedLogs, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -270,6 +272,8 @@ const Dashboard = () => {
               setShowWorkoutOnboarding(false);
               refetch();
               toast.success('Your personalized plan has been built! 💪');
+              // Show app tutorial for the first time right after onboarding
+              setTimeout(() => setShowTutorial(true), 800);
             } catch (err) {
               console.error('Error building plan:', err);
               toast.error('Something went wrong. Please try again.');
@@ -539,6 +543,12 @@ const Dashboard = () => {
         </Tabs>
 
       </main>
+
+      {/* App Tutorial — shown once after first-time onboarding */}
+      <AppTutorial
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
 
       {/* Mini Player - hidden when on music tab */}
       <MiniPlayer hidden={activeTab === 'music'} />
