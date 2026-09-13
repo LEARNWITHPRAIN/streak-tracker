@@ -1,7 +1,7 @@
 {
   "name": "Yodha Mode",
   "short_name": "Yodha Mode",
-  "description": "Gamified workout tracker with Winter Arc challenges, streaks, music & more.",
+  "description": "Gamified workout tracker with multi-set logs, calendar history, rest timer, music & more.",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",

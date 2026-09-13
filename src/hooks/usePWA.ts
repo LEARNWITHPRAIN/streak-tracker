@@ -4,12 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 type NotifPermission = 'default' | 'granted' | 'denied';
 
 export interface DualReminderSettings {
-  // Winter ARC Scorecard reminder
-  winterArc: {
-    enabled: boolean;
-    hour: number;   // 0-23
-    minute: number; // 0 or 30
-  };
   // Workout progress reminder
   workout: {
     enabled: boolean;
@@ -30,11 +24,6 @@ const REMINDER_KEY = 'yodha_dual_reminder_settings';
 const LEGACY_REMINDER_KEY = 'yodha_reminder_settings';
 
 const DEFAULT_SETTINGS: DualReminderSettings = {
-  winterArc: {
-    enabled: true,
-    hour: 23, // 11:00 PM
-    minute: 0,
-  },
   workout: {
     enabled: true,
     hour: 19, // 7:00 PM
@@ -49,7 +38,6 @@ function loadDualReminderSettings(): DualReminderSettings {
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        winterArc: { ...DEFAULT_SETTINGS.winterArc, ...parsed.winterArc },
         workout: { ...DEFAULT_SETTINGS.workout, ...parsed.workout },
         hasPromptedOnboarding: parsed.hasPromptedOnboarding ?? false,
       };
@@ -60,11 +48,6 @@ function loadDualReminderSettings(): DualReminderSettings {
     if (legacyRaw) {
       const legacy: LegacyReminderSettings = JSON.parse(legacyRaw);
       return {
-        winterArc: {
-          enabled: legacy.enabled,
-          hour: 23,
-          minute: 0,
-        },
         workout: {
           enabled: legacy.enabled,
           hour: legacy.hour ?? 19,
@@ -146,7 +129,6 @@ export const usePWA = () => {
   const [notifPermission, setNotifPermission] = useState<NotifPermission>('default');
   const [swReady, setSwReady] = useState(false);
   const [dualReminders, setDualReminders] = useState<DualReminderSettings>(loadDualReminderSettings);
-  const winterArcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const workoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Register service worker ────────────────────────────────────────────
@@ -189,29 +171,6 @@ export const usePWA = () => {
     }
   }, []);
 
-  // ── Schedule Winter ARC reminder ─────────────────────────────────────────
-  const scheduleWinterArc = useCallback((settings: DualReminderSettings) => {
-    if (winterArcTimerRef.current) clearTimeout(winterArcTimerRef.current);
-    if (!settings.winterArc.enabled || !swReady || notifPermission !== 'granted') return;
-
-    const delay = msUntilNextTime(settings.winterArc.hour, settings.winterArc.minute);
-    winterArcTimerRef.current = setTimeout(async () => {
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        reg.active?.postMessage({
-          type: 'SHOW_NOTIFICATION',
-          title: 'Winter ARC Scorecard ❄️',
-          body: "Don't let the day slip away! Update your scorecard and bank today's XP.",
-          tag: 'yodha-winter-arc',
-          url: '/winter-arc',
-        });
-      } catch (err) {
-        console.warn('Failed to dispatch Winter ARC notification:', err);
-      }
-      scheduleWinterArc(settings);
-    }, delay);
-  }, [swReady, notifPermission]);
-
   // ── Schedule Workout reminder ────────────────────────────────────────────
   const scheduleWorkout = useCallback((settings: DualReminderSettings) => {
     if (workoutTimerRef.current) clearTimeout(workoutTimerRef.current);
@@ -242,15 +201,13 @@ export const usePWA = () => {
     }, delay);
   }, [swReady, notifPermission]);
 
-  // Schedule both timers whenever settings or permissions change
+  // Schedule timer whenever settings or permissions change
   useEffect(() => {
-    scheduleWinterArc(dualReminders);
     scheduleWorkout(dualReminders);
     return () => {
-      if (winterArcTimerRef.current) clearTimeout(winterArcTimerRef.current);
       if (workoutTimerRef.current) clearTimeout(workoutTimerRef.current);
     };
-  }, [dualReminders, scheduleWinterArc, scheduleWorkout]);
+  }, [dualReminders, scheduleWorkout]);
 
   // ── Public API: trigger install ────────────────────────────────────────
   const promptInstall = useCallback(async (): Promise<'accepted' | 'dismissed' | 'unavailable'> => {
@@ -283,7 +240,7 @@ export const usePWA = () => {
     });
   }, [notifPermission, swReady]);
 
-  // ── Public API: update dual reminder settings ─────────────────────────
+  // ── Public API: update reminder settings ─────────────────────────
   const updateDualReminders = useCallback((patch: Partial<DualReminderSettings> | ((prev: DualReminderSettings) => DualReminderSettings)) => {
     setDualReminders((prev) => {
       const next = typeof patch === 'function' ? patch(prev) : { ...prev, ...patch };
@@ -294,7 +251,7 @@ export const usePWA = () => {
 
   // Legacy helper mapping for backwards compatibility
   const reminder = {
-    enabled: dualReminders.workout.enabled || dualReminders.winterArc.enabled,
+    enabled: dualReminders.workout.enabled,
     hour: dualReminders.workout.hour,
     minute: dualReminders.workout.minute,
   };
@@ -326,7 +283,7 @@ export const usePWA = () => {
     swReady,
     requestNotificationPermission,
     sendTestNotification,
-    // Dual Reminder Preferences
+    // Reminder Preferences
     dualReminders,
     updateDualReminders,
     // Legacy fallback

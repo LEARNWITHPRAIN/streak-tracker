@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Snowflake, Dumbbell, Clock, CheckCircle2, ShieldCheck, X } from 'lucide-react';
+import { Bell, Dumbbell, Clock, CheckCircle2, ShieldCheck, X } from 'lucide-react';
 import { usePWA } from '@/hooks/usePWA';
 import { Button } from '@/components/ui/button';
 
@@ -32,10 +32,6 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
     sendTestNotification,
   } = usePWA();
 
-  const [winterArcEnabled, setWinterArcEnabled] = useState(dualReminders.winterArc.enabled);
-  const [winterArcHour, setWinterArcHour] = useState(dualReminders.winterArc.hour); // default 23 (11 PM)
-  const [winterArcMinute, setWinterArcMinute] = useState(dualReminders.winterArc.minute);
-
   const [workoutEnabled, setWorkoutEnabled] = useState(dualReminders.workout.enabled);
   const [workoutHour, setWorkoutHour] = useState(dualReminders.workout.hour); // default 19 (7 PM)
   const [workoutMinute, setWorkoutMinute] = useState(dualReminders.workout.minute);
@@ -50,11 +46,6 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
 
     // Save preferences
     updateDualReminders({
-      winterArc: {
-        enabled: winterArcEnabled,
-        hour: winterArcHour,
-        minute: winterArcMinute,
-      },
       workout: {
         enabled: workoutEnabled,
         hour: workoutHour,
@@ -72,16 +63,14 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
 
     if (permission === 'granted') {
       setStepSuccess(true);
-      // Optional friendly welcome notification
       sendTestNotification(
         'Reminders Configured! 🚀',
-        `Winter ARC at ${formatTime(winterArcHour, winterArcMinute)} • Workout at ${formatTime(workoutHour, workoutMinute)}`
+        `Daily workout reminder active for ${formatTime(workoutHour, workoutMinute)}`
       );
       setTimeout(() => {
         onClose();
       }, 1200);
     } else {
-      // Permission was denied or dismissed
       onClose();
     }
   };
@@ -99,7 +88,7 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
       >
         {/* Decorative background glow */}
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-500/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close Button */}
         <button
@@ -112,7 +101,7 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
 
         {/* Modal Header */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/30 to-purple-500/30 border border-primary/40 flex items-center justify-center shrink-0 shadow-inner">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/30 to-orange-500/30 border border-primary/40 flex items-center justify-center shrink-0 shadow-inner">
             <Bell className="w-6 h-6 text-primary" />
           </div>
           <div>
@@ -120,7 +109,7 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
               Stay On Track & Streak Ready 🔥
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Choose your notification times so you never break your streak.
+              Choose your notification time so you never break your streak.
             </p>
           </div>
         </div>
@@ -132,75 +121,12 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
             </div>
             <h3 className="text-lg font-bold text-foreground">Notifications Active!</h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              We will notify you at your selected times. You're set up for greatness!
+              We will notify you at your selected time. You're set up for greatness!
             </p>
           </div>
         ) : (
           <>
-            {/* Reminder Item 1: Winter ARC Scorecard */}
-            <div className="rounded-2xl bg-muted/30 border border-border/60 p-4 space-y-3 transition-all hover:border-primary/40">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
-                    <Snowflake className="w-4.5 h-4.5 text-cyan-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">1. Winter ARC Scorecard</h4>
-                    <p className="text-xs text-muted-foreground">Daily reminder to update your scorecard & claim XP</p>
-                  </div>
-                </div>
-
-                {/* Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setWinterArcEnabled(!winterArcEnabled)}
-                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 mt-1 ${
-                    winterArcEnabled ? 'bg-primary' : 'bg-muted border border-border'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-                      winterArcEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {winterArcEnabled && (
-                <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 animate-fade-in">
-                  <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                    Notify me at:
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={winterArcHour}
-                      onChange={(e) => setWinterArcHour(parseInt(e.target.value))}
-                      className="px-2.5 py-1.5 rounded-lg bg-background border border-border/70 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      {HOUR_OPTIONS.map((h) => (
-                        <option key={h} value={h}>
-                          {h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={winterArcMinute}
-                      onChange={(e) => setWinterArcMinute(parseInt(e.target.value))}
-                      className="px-2.5 py-1.5 rounded-lg bg-background border border-border/70 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      {MINUTE_OPTIONS.map((m) => (
-                        <option key={m} value={m}>
-                          {m === 0 ? ':00' : ':30'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Reminder Item 2: Workout Progress */}
+            {/* Reminder Item: Workout Progress */}
             <div className="rounded-2xl bg-muted/30 border border-border/60 p-4 space-y-3 transition-all hover:border-primary/40">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -208,7 +134,7 @@ export const NotificationOnboardingModal: React.FC<NotificationOnboardingModalPr
                     <Dumbbell className="w-4.5 h-4.5 text-orange-400" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-foreground">2. Complete Today's Workout</h4>
+                    <h4 className="text-sm font-bold text-foreground">Daily Workout Reminder</h4>
                     <p className="text-xs text-muted-foreground">
                       Notifies you with your live progress % ({todayProgress}% done today)
                     </p>

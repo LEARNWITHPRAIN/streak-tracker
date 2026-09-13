@@ -2,7 +2,7 @@
 // Handles: PWA install, background sync, local push notifications
 
 const CACHE_NAME = 'yodha-mode-v1';
-const STATIC_ASSETS = ['/', '/dashboard', '/winter-arc', '/manifest.json'];
+const STATIC_ASSETS = ['/', '/dashboard', '/manifest.json'];
 
 // ── Install: cache static assets ───────────────────────────────────────────
 self.addEventListener('install', (event) => {
