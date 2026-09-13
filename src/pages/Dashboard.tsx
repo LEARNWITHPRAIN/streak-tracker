@@ -110,9 +110,9 @@ const Dashboard = () => {
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month + 1, 0).getDate();
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const history = await fetchCalendarHistory(startDate, endDate);
+    const history = await fetchCalendarHistory(startDate, endDate, schedule, customRoutine, useSameDaily);
     setCalendarHistory(history);
-  }, [currentMonth, fetchCalendarHistory]);
+  }, [currentMonth, fetchCalendarHistory, schedule, customRoutine, useSameDaily]);
 
   // Scheduled split for the selected calendar day
   const selectedDaySchedule = useMemo(() => {

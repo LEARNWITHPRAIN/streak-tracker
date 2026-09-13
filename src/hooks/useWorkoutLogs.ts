@@ -296,7 +296,13 @@ export const useWorkoutLogs = () => {
   };
 
   // Fetch calendar history summary for a date range (for month grid)
-  const fetchCalendarHistory = useCallback(async (startDate: string, endDate: string) => {
+  const fetchCalendarHistory = useCallback(async (
+    startDate: string,
+    endDate: string,
+    schedule?: DaySchedule[] | null,
+    customRoutine?: DaySchedule | null,
+    useSameDaily?: boolean
+  ) => {
     if (!user) return {};
 
     try {
@@ -313,6 +319,28 @@ export const useWorkoutLogs = () => {
       
       if (data) {
         data.forEach(log => {
+          // If schedule is available, only count exercises that belong to that day's weekly split
+          if (schedule) {
+            const parts = log.date.split('-');
+            if (parts.length === 3) {
+              const [y, m, d] = parts.map(Number);
+              const dateObj = new Date(y, m - 1, d);
+              const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+              const scheduledDay = useSameDaily && customRoutine
+                ? customRoutine
+                : schedule.find(s => s.day.toLowerCase() === dayOfWeek);
+
+              if (scheduledDay) {
+                const belongsToSchedule = scheduledDay.exercises.some(
+                  ex => ex.id === log.exercise_id || ex.name.toLowerCase() === log.exercise_name?.toLowerCase()
+                );
+                if (!belongsToSchedule) {
+                  return; // Skip deleted or non-routine exercise
+                }
+              }
+            }
+          }
+
           if (!history[log.date]) {
             history[log.date] = { totalExercises: 0, completedExercises: 0 };
           }
@@ -400,15 +428,7 @@ export const useWorkoutLogs = () => {
       }
     }
 
-    const scheduledExercises = scheduledDay ? scheduledDay.exercises : [];
-
-    // If no logs, no cached sets, and no scheduled exercises (e.g. true rest day or no schedule), return empty
-    if (rawLogs.length === 0 && Object.keys(cached).length === 0 && scheduledExercises.length === 0) {
-      return [];
-    }
-
     const results: DetailedExerciseLog[] = [];
-    const processedExIds = new Set<string>();
 
     const buildLogItem = (row: any): DetailedExerciseLog => {
       const exId = row.exercise_id;
@@ -452,82 +472,95 @@ export const useWorkoutLogs = () => {
       };
     };
 
-    // 1. Process scheduled exercises first (preserves user's weekly split ordering)
-    scheduledExercises.forEach(schedEx => {
-      const rawLog = rawLogs.find(
-        r => r.exercise_id === schedEx.id || r.exercise_name?.toLowerCase() === schedEx.name.toLowerCase()
-      );
-      const cachedSets = cached[schedEx.id];
+    if (scheduledDay) {
+      // Strictly use the exercises that belong to this day's scheduled weekly split
+      const scheduledExercises = scheduledDay.exercises;
 
-      if (rawLog) {
-        results.push(buildLogItem(rawLog));
-        processedExIds.add(rawLog.exercise_id);
-        if (schedEx.id) processedExIds.add(schedEx.id);
-      } else if (cachedSets && cachedSets.length > 0) {
-        const completedCount = cachedSets.filter(s => s.completed).length;
-        const weights = cachedSets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
-        results.push({
-          exercise_id: schedEx.id,
-          exercise_name: schedEx.name,
-          sets_completed: completedCount,
-          total_sets: cachedSets.length,
-          weight_kg: weights.length > 0 ? Math.max(...weights) : (schedEx.weight ?? null),
-          sets: cachedSets,
-        });
-        processedExIds.add(schedEx.id);
-      } else {
-        // Exercise from weekly split not yet logged on this date (0% completed)
-        const configuredSets = getExerciseSets(schedEx);
-        const sets: DailyExerciseSetLog[] = configuredSets.map((s, idx) => ({
-          setNumber: s.setNumber || idx + 1,
-          weight: s.weight !== undefined ? s.weight : (schedEx.weight ?? null),
-          reps: s.reps || '10',
-          completed: false,
-        }));
-        const weights = sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
-        const maxWeight = weights.length > 0 ? Math.max(...weights) : (schedEx.weight ?? null);
-
-        results.push({
-          exercise_id: schedEx.id,
-          exercise_name: schedEx.name,
-          sets_completed: 0,
-          total_sets: sets.length,
-          weight_kg: maxWeight,
-          sets,
-        });
-        processedExIds.add(schedEx.id);
+      // Clean up any orphan rows in workout_logs for this day in the background
+      const orphanLogIds = rawLogs
+        .filter(r => !scheduledExercises.some(s => s.id === r.exercise_id || s.name.toLowerCase() === r.exercise_name?.toLowerCase()))
+        .map(r => r.exercise_id);
+      if (orphanLogIds.length > 0 && user) {
+        supabase
+          .from('workout_logs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('date', dateKey)
+          .in('exercise_id', orphanLogIds)
+          .then(({ error }) => {
+            if (error) console.warn('Cleaned orphan workout log error:', error);
+          });
       }
-    });
 
-    // 2. Process any remaining raw logs not in the weekly schedule
+      // Also clean up local cache for deleted exercises
+      let cacheModified = false;
+      Object.keys(cached).forEach(exId => {
+        if (!scheduledExercises.some(s => s.id === exId)) {
+          delete cached[exId];
+          cacheModified = true;
+        }
+      });
+      if (cacheModified) {
+        saveCachedSetsForDate(dateKey, cached);
+      }
+
+      if (scheduledExercises.length === 0) {
+        // Scheduled Rest Day
+        return [];
+      }
+
+      scheduledExercises.forEach(schedEx => {
+        const rawLog = rawLogs.find(
+          r => r.exercise_id === schedEx.id || r.exercise_name?.toLowerCase() === schedEx.name.toLowerCase()
+        );
+        const cachedSets = cached[schedEx.id];
+
+        if (rawLog) {
+          results.push(buildLogItem(rawLog));
+        } else if (cachedSets && cachedSets.length > 0) {
+          const completedCount = cachedSets.filter(s => s.completed).length;
+          const weights = cachedSets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
+          results.push({
+            exercise_id: schedEx.id,
+            exercise_name: schedEx.name,
+            sets_completed: completedCount,
+            total_sets: cachedSets.length,
+            weight_kg: weights.length > 0 ? Math.max(...weights) : (schedEx.weight ?? null),
+            sets: cachedSets,
+          });
+        } else {
+          // Exercise from weekly split not yet logged on this date (0% completed)
+          const configuredSets = getExerciseSets(schedEx);
+          const sets: DailyExerciseSetLog[] = configuredSets.map((s, idx) => ({
+            setNumber: s.setNumber || idx + 1,
+            weight: s.weight !== undefined ? s.weight : (schedEx.weight ?? null),
+            reps: s.reps || '10',
+            completed: false,
+          }));
+          const weights = sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
+          const maxWeight = weights.length > 0 ? Math.max(...weights) : (schedEx.weight ?? null);
+
+          results.push({
+            exercise_id: schedEx.id,
+            exercise_name: schedEx.name,
+            sets_completed: 0,
+            total_sets: sets.length,
+            weight_kg: maxWeight,
+            sets,
+          });
+        }
+      });
+
+      return results;
+    }
+
+    // Fallback only if no schedule is defined at all
     rawLogs.forEach(row => {
-      if (!processedExIds.has(row.exercise_id) && !results.some(r => r.exercise_id === row.exercise_id || r.exercise_name?.toLowerCase() === row.exercise_name?.toLowerCase())) {
-        results.push(buildLogItem(row));
-        processedExIds.add(row.exercise_id);
-      }
-    });
-
-    // 3. Process any remaining cached sets not yet in results
-    Object.keys(cached).forEach(exId => {
-      if (!processedExIds.has(exId) && !results.some(r => r.exercise_id === exId)) {
-        const sets = cached[exId];
-        const routineEx = routineExercisesMap[exId];
-        const completedCount = sets.filter(s => s.completed).length;
-        const weights = sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
-        results.push({
-          exercise_id: exId,
-          exercise_name: routineEx?.name || 'Exercise',
-          sets_completed: completedCount,
-          total_sets: sets.length,
-          weight_kg: weights.length > 0 ? Math.max(...weights) : null,
-          sets,
-        });
-        processedExIds.add(exId);
-      }
+      results.push(buildLogItem(row));
     });
 
     return results;
-  }, [user, getCachedSetsForDate]);
+  }, [user, getCachedSetsForDate, saveCachedSetsForDate]);
 
   /**
    * Fetch all historical exercise logs formatted as SpreadsheetWorkoutRow[]
