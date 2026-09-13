@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, 
-  RotateCcw, Plus, Trash2, ChevronDown, ChevronUp, Scale 
+  RotateCcw, ChevronDown, ChevronUp, Scale, LayoutGrid, ArrowRight 
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { useUserWorkouts, parseSets, parseReps, getExerciseSets, Exercise } from '@/hooks/useUserWorkouts';
+import { useUserWorkouts, parseReps, getExerciseSets, Exercise } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useAnimatedProgress } from '@/hooks/useAnimatedProgress';
 import { DailyExerciseSetLog } from '@/types/exercise';
@@ -37,12 +36,14 @@ interface TodayWorkoutProps {
   onSetComplete?: () => void;
   autoStart?: boolean;
   onToggleAutoStart?: () => void;
+  onNavigateToWeekly?: () => void;
 }
 
 export const TodayWorkout: React.FC<TodayWorkoutProps> = ({ 
   onSetComplete,
   autoStart = true,
   onToggleAutoStart,
+  onNavigateToWeekly,
 }) => {
   const { getTodaySchedule, getTodayName, loading: scheduleLoading } = useUserWorkouts();
   const { 
@@ -57,20 +58,25 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
   const todaySchedule = getTodaySchedule();
   const todayName = getTodayName();
 
-  // Helper to get structured sets for an exercise
+  // Helper to get structured sets for an exercise from routine configuration
   const getSetsForExercise = (exercise: Exercise): DailyExerciseSetLog[] => {
-    const existing = todaySets[exercise.id];
-    if (existing && existing.length > 0) {
-      return existing;
-    }
     const configured = getExerciseSets(exercise);
+    const existing = todaySets[exercise.id];
     const completedCount = todayProgress[exercise.id] || 0;
-    return configured.map((s, idx) => ({
-      setNumber: s.setNumber || idx + 1,
-      weight: s.weight !== undefined ? s.weight : (exercise.weight ?? null),
-      reps: s.reps || parseReps(exercise.setsReps) || '10',
-      completed: idx < completedCount,
-    }));
+
+    return configured.map((s, idx) => {
+      // Check if existing log recorded completion status for this set
+      const isCompleted = existing && existing[idx] !== undefined 
+        ? existing[idx].completed 
+        : idx < completedCount;
+
+      return {
+        setNumber: s.setNumber || idx + 1,
+        weight: s.weight !== undefined ? s.weight : (exercise.weight ?? null),
+        reps: s.reps || parseReps(exercise.setsReps) || '10',
+        completed: isCompleted,
+      };
+    });
   };
 
   // Helper to build all exercises metadata for database synchronization
@@ -131,72 +137,6 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     }
   };
 
-  // Update a set's weight
-  const handleUpdateWeight = async (exercise: Exercise, setIndex: number, newWeight: number | null) => {
-    const currentSets = [...getSetsForExercise(exercise)];
-    if (!currentSets[setIndex]) return;
-
-    currentSets[setIndex] = {
-      ...currentSets[setIndex],
-      weight: newWeight,
-    };
-
-    const allMeta = getAllExercisesMeta();
-    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
-  };
-
-  // Update a set's reps
-  const handleUpdateReps = async (exercise: Exercise, setIndex: number, newReps: string) => {
-    const currentSets = [...getSetsForExercise(exercise)];
-    if (!currentSets[setIndex]) return;
-
-    currentSets[setIndex] = {
-      ...currentSets[setIndex],
-      reps: newReps,
-    };
-
-    const allMeta = getAllExercisesMeta();
-    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
-  };
-
-  // Add a new set to an exercise
-  const handleAddSet = async (exercise: Exercise) => {
-    const currentSets = [...getSetsForExercise(exercise)];
-    const lastSet = currentSets[currentSets.length - 1];
-    const newSetNumber = currentSets.length + 1;
-    const inheritedWeight = lastSet ? lastSet.weight : (exercise.weight ?? null);
-    const inheritedReps = lastSet ? lastSet.reps : (parseReps(exercise.setsReps) || '10');
-
-    currentSets.push({
-      setNumber: newSetNumber,
-      weight: inheritedWeight,
-      reps: inheritedReps,
-      completed: false,
-    });
-
-    const allMeta = getAllExercisesMeta().map(m => 
-      m.id === exercise.id ? { ...m, totalSets: currentSets.length } : m
-    );
-
-    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
-  };
-
-  // Remove a set from an exercise
-  const handleRemoveSet = async (exercise: Exercise, setIndex: number) => {
-    const currentSets = [...getSetsForExercise(exercise)];
-    if (currentSets.length <= 1) return;
-
-    currentSets.splice(setIndex, 1);
-    // Re-number remaining sets
-    const renumbered = currentSets.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
-
-    const allMeta = getAllExercisesMeta().map(m => 
-      m.id === exercise.id ? { ...m, totalSets: renumbered.length } : m
-    );
-
-    await saveExerciseSets(exercise.id, exercise.name, renumbered, allMeta);
-  };
-
   const { percentage: totalProgress } = calculateTotalProgress(todaySchedule);
   const animatedTotalProgress = useAnimatedProgress(totalProgress);
 
@@ -230,7 +170,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className={`text-xl font-bold tracking-tight ${dayColors[dayKey]}`}>{todaySchedule.title}</h3>
-              <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-background/50 border-primary/30">
+              <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-background/50 border-primary/30 font-semibold">
                 {todayName}
               </Badge>
             </div>
@@ -268,6 +208,23 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
         </div>
       </div>
 
+      {/* Routine Edit Redirect Notification Banner */}
+      {onNavigateToWeekly && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-3 px-4 rounded-xl bg-primary/10 border border-primary/30 text-xs shadow-sm">
+          <div className="flex items-center gap-2 text-foreground/90">
+            <LayoutGrid className="w-4 h-4 text-primary shrink-0" />
+            <span>To customize exercises, weights, sets, or reps, edit your program in <strong>Weekly Schedule</strong>.</span>
+          </div>
+          <button
+            type="button"
+            onClick={onNavigateToWeekly}
+            className="inline-flex items-center gap-1 font-bold text-primary hover:underline hover:text-primary/90 shrink-0 self-end sm:self-auto"
+          >
+            Edit in Weekly Split <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Overall Progress Status */}
       <div className="space-y-2 bg-card/40 border border-border/40 p-4 rounded-2xl">
         <div className="flex justify-between items-center text-sm">
@@ -300,10 +257,6 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
                 progressPercent={progressPercent}
                 onQuickAdvance={() => handleQuickAdvance(exercise)}
                 onToggleSet={(idx) => handleToggleSet(exercise, idx)}
-                onUpdateWeight={(idx, weight) => handleUpdateWeight(exercise, idx, weight)}
-                onUpdateReps={(idx, reps) => handleUpdateReps(exercise, idx, reps)}
-                onAddSet={() => handleAddSet(exercise)}
-                onRemoveSet={(idx) => handleRemoveSet(exercise, idx)}
               />
             );
           })}
@@ -318,20 +271,29 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
         </Card>
       )}
 
-      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
+      {/* Helpful Footer Note */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-muted-foreground pt-2 text-center">
         <span className="flex items-center gap-1.5">
-          💡 Click <strong>✓</strong> to complete a set & start rest timer
+          💡 Click <strong>✓ Set</strong> or <strong>Card</strong> to complete sets & start rest timer
         </span>
-        <span className="hidden sm:inline opacity-40">•</span>
-        <span className="hidden sm:flex items-center gap-1.5">
-          Edit any set's weight or add more sets on the fly
-        </span>
+        {onNavigateToWeekly && (
+          <>
+            <span className="hidden sm:inline opacity-40">•</span>
+            <button
+              type="button"
+              onClick={onNavigateToWeekly}
+              className="text-primary font-semibold hover:underline flex items-center gap-1"
+            >
+              Need to change sets, reps or weights? Edit in Weekly tab →
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-// ── Exercise Workout Card with Multi-Set Custom Weight Support ─────────────────────────
+// ── Exercise Workout Card (Pure Completion Flow) ─────────────────────────
 interface ExerciseWorkoutCardProps {
   exercise: Exercise;
   sets: DailyExerciseSetLog[];
@@ -343,10 +305,6 @@ interface ExerciseWorkoutCardProps {
   progressPercent: number;
   onQuickAdvance: () => void;
   onToggleSet: (setIndex: number) => void;
-  onUpdateWeight: (setIndex: number, weight: number | null) => void;
-  onUpdateReps: (setIndex: number, reps: string) => void;
-  onAddSet: () => void;
-  onRemoveSet: (setIndex: number) => void;
 }
 
 const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
@@ -360,16 +318,8 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
   progressPercent,
   onQuickAdvance,
   onToggleSet,
-  onUpdateWeight,
-  onUpdateReps,
-  onAddSet,
-  onRemoveSet,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [editingWeightIdx, setEditingWeightIdx] = useState<number | null>(null);
-  const [customWeightVal, setCustomWeightVal] = useState<string>('');
-  const [editingRepsIdx, setEditingRepsIdx] = useState<number | null>(null);
-  const [customRepsVal, setCustomRepsVal] = useState<string>('');
 
   const maxWeight = useMemo(() => {
     const weights = sets
@@ -377,32 +327,6 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
       .filter((w): w is number => w !== null && w > 0);
     return weights.length > 0 ? Math.max(...weights) : null;
   }, [sets]);
-
-  const startEditWeight = (idx: number, currentWeight: number | null) => {
-    setEditingWeightIdx(idx);
-    setCustomWeightVal(currentWeight !== null ? String(currentWeight) : '');
-  };
-
-  const saveEditWeight = (idx: number) => {
-    if (customWeightVal.trim() === '' || isNaN(Number(customWeightVal))) {
-      onUpdateWeight(idx, null); // Bodyweight
-    } else {
-      onUpdateWeight(idx, Math.max(0, Number(customWeightVal)));
-    }
-    setEditingWeightIdx(null);
-  };
-
-  const startEditReps = (idx: number, currentReps: string | number | undefined) => {
-    setEditingRepsIdx(idx);
-    const cleaned = String(currentReps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
-    setCustomRepsVal(cleaned);
-  };
-
-  const saveEditReps = (idx: number) => {
-    const finalReps = customRepsVal.trim() || '10';
-    onUpdateReps(idx, finalReps);
-    setEditingRepsIdx(null);
-  };
 
   return (
     <Card
@@ -418,7 +342,7 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
           <div 
             onClick={onQuickAdvance}
             className={`w-11 h-11 rounded-xl bg-background/70 border border-border/50 flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${dayColors[dayKey]}`}
-            title="Click to quick-advance next set"
+            title="Click to complete next set"
           >
             <Dumbbell className="w-5 h-5" />
           </div>
@@ -472,179 +396,67 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
               <span>Set & Weight</span>
               <span>Reps</span>
-              <span className="text-right">Done</span>
+              <span className="text-right">Action</span>
             </div>
 
             <div className="space-y-1.5">
-              {sets.map((set, idx) => {
-                const isEditingThis = editingWeightIdx === idx;
+              {sets.map((set, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all ${
+                    set.completed
+                      ? 'bg-primary/10 border-primary/30 text-foreground'
+                      : 'bg-background/40 hover:bg-background/70 border-border/40'
+                  }`}
+                >
+                  {/* Set Number & Weight Badge */}
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="w-8 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
+                      S{set.setNumber}
+                    </span>
 
-                return (
-                  <div
-                    key={idx}
-                    className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all ${
-                      set.completed
-                        ? 'bg-primary/10 border-primary/30 text-foreground'
-                        : 'bg-background/40 hover:bg-background/70 border-border/40'
-                    }`}
-                  >
-                    {/* Set Number & Weight */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="w-8 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
-                        S{set.setNumber}
+                    <span className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-xl bg-muted/30 border border-border/50 text-foreground">
+                      <Scale className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="font-semibold">
+                        {set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}
                       </span>
-
-                      {isEditingThis ? (
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0 animate-scale-in">
-                          <div className="flex items-center rounded-xl bg-card border border-primary/50 p-0.5 shadow-inner gap-1 flex-1 min-w-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCustomWeightVal('');
-                                onUpdateWeight(idx, null);
-                                setEditingWeightIdx(null);
-                              }}
-                              className={`h-6 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 shrink-0 ${
-                                customWeightVal === ''
-                                  ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
-                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                              }`}
-                              title="Set to Bodyweight"
-                            >
-                              <Scale className="w-3 h-3" />
-                              BW
-                            </button>
-
-                            <div className="flex items-center flex-1 min-w-0 pr-1">
-                              <input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                autoFocus
-                                placeholder="0"
-                                value={customWeightVal}
-                                onChange={(e) => setCustomWeightVal(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveEditWeight(idx);
-                                  if (e.key === 'Escape') setEditingWeightIdx(null);
-                                }}
-                                className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-right outline-none pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                              <span className="text-[10px] font-bold text-primary select-none shrink-0">kg</span>
-                            </div>
-                          </div>
-
-                          <Button 
-                            size="sm" 
-                            onClick={() => saveEditWeight(idx)}
-                            className="h-7 px-2.5 text-xs bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm shadow-primary/20"
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => startEditWeight(idx, set.weight)}
-                          className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-xl bg-muted/30 hover:bg-muted/70 border border-border/50 hover:border-primary/40 transition-all group"
-                          title="Click to edit set weight"
-                        >
-                          <Scale className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform shrink-0" />
-                          <span className="font-semibold text-foreground">
-                            {set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Reps */}
-                    <div className="shrink-0 text-center">
-                      {editingRepsIdx === idx ? (
-                        <div className="flex items-center gap-1 animate-scale-in">
-                          <div className="flex items-center rounded-xl bg-card border border-primary/50 p-0.5 shadow-inner w-20">
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              autoFocus
-                              placeholder="10"
-                              value={customRepsVal}
-                              onChange={(e) => setCustomRepsVal(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveEditReps(idx);
-                                if (e.key === 'Escape') setEditingRepsIdx(null);
-                              }}
-                              className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-center outline-none px-1"
-                            />
-                            <span className="text-[10px] font-semibold text-muted-foreground pr-1 select-none">r</span>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            onClick={() => saveEditReps(idx)}
-                            className="h-7 px-2 text-xs bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm shadow-primary/20"
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => startEditReps(idx, set.reps)}
-                          className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-xl bg-muted/30 hover:bg-muted/70 border border-border/50 hover:border-primary/40 transition-all"
-                          title="Click to edit reps"
-                        >
-                          {String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '')} reps
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Actions: Delete & Complete */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {sets.length > 1 && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => onRemoveSet(idx)}
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-lg"
-                          title="Remove set"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => onToggleSet(idx)}
-                        className={`h-7 px-3 rounded-lg flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm ${
-                          set.completed
-                            ? 'bg-primary text-primary-foreground shadow-primary/25 hover:brightness-110'
-                            : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
-                        }`}
-                        title={set.completed ? 'Set completed (click to undo)' : 'Click to mark set complete'}
-                      >
-                        <Check className={`w-3.5 h-3.5 ${set.completed ? 'stroke-[3]' : 'opacity-40'}`} />
-                        <span>{set.completed ? 'Done' : 'Set'}</span>
-                      </button>
-                    </div>
+                    </span>
                   </div>
-                );
-              })}
+
+                  {/* Target Reps Badge */}
+                  <div className="shrink-0 text-center">
+                    <span className="text-xs font-mono font-semibold text-muted-foreground px-2.5 py-1.5 rounded-xl bg-muted/30 border border-border/50 inline-block">
+                      {String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '')} reps
+                    </span>
+                  </div>
+
+                  {/* Single Action: Complete Set */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onToggleSet(idx)}
+                      className={`h-8 px-3.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm ${
+                        set.completed
+                          ? 'bg-primary text-primary-foreground shadow-primary/25 hover:brightness-110'
+                          : 'bg-muted/70 text-muted-foreground hover:bg-primary/20 hover:text-primary border border-border/50 hover:border-primary/40'
+                      }`}
+                      title={set.completed ? 'Set completed (click to undo)' : 'Click to complete set & start rest timer'}
+                    >
+                      <Check className={`w-3.5 h-3.5 ${set.completed ? 'stroke-[3]' : 'opacity-40'}`} />
+                      <span>{set.completed ? 'Done' : 'Set'}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Bottom Actions: + Add Set */}
-            <div className="flex items-center justify-between pt-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onAddSet}
-                className="h-7 text-xs rounded-xl border-dashed border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add Set
-              </Button>
-
+            {/* Set Status Summary */}
+            <div className="flex items-center justify-between pt-1 px-1">
               <span className="text-[11px] text-muted-foreground font-medium">
-                {completedSets} of {totalSets} completed
+                {completedSets} of {totalSets} sets completed
+              </span>
+              <span className="text-[11px] font-semibold text-primary">
+                {progressPercent}% Done
               </span>
             </div>
           </div>
@@ -655,4 +467,3 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
 };
 
 export default TodayWorkout;
-

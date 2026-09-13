@@ -414,6 +414,7 @@ const Dashboard = () => {
               onSetComplete={handleSetComplete}
               autoStart={timer.settings.autoStart}
               onToggleAutoStart={() => timer.updateSettings({ autoStart: !timer.settings.autoStart })}
+              onNavigateToWeekly={() => setActiveTab('weekly')}
             />
           </TabsContent>
 
