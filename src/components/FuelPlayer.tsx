@@ -485,7 +485,7 @@ export const FuelPlayer: React.FC = () => {
                         key={`ig-frame-${item.id}-${reloadKey}`}
                         src={`https://www.instagram.com/reel/${instaId || ''}/embed/`}
                         className="w-full h-[calc(100%+60px)] -mt-[58px] border-0 bg-black"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                         allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
                         allowFullScreen
                         scrolling="no"
