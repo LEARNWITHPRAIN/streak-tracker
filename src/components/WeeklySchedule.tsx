@@ -237,8 +237,9 @@ export const WeeklySchedule: React.FC = () => {
     );
   }
 
-  // ── Show empty state / onboarding prompt for users who haven't completed onboarding ──
-  if (!onboardingComplete && !showOnboarding) {
+  // ── Show empty state / onboarding prompt for users who haven't completed onboarding and have no plan ──
+  const isPlanReady = onboardingComplete || hasExistingData;
+  if (!isPlanReady && !showOnboarding) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 space-y-6 text-center">
         <div className="w-20 h-20 rounded-3xl bg-primary/15 border border-primary/25 flex items-center justify-center shadow-xl shadow-primary/10">

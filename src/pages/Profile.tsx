@@ -274,7 +274,7 @@ const Profile = () => {
             </div>
 
             <Button
-              onClick={() => { resetTutorial(); setShowTutorial(true); }}
+              onClick={() => { resetTutorial(); navigate('/dashboard?tutorial=true'); }}
               variant="outline"
               size="sm"
               className="bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border-primary/30 rounded-xl font-semibold flex items-center gap-1 h-9"
