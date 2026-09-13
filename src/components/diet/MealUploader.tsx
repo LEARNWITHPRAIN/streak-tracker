@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, Sparkles, Lock, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Camera, Sparkles, Lock, Loader2, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PaywallModal } from '@/components/paywall/PaywallModal';
@@ -28,6 +28,7 @@ export const MealUploader: React.FC<MealUploaderProps> = ({ onMealDetected }) =>
   const [isScanning, setIsScanning] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTriggerUpload = () => {
@@ -35,10 +36,11 @@ export const MealUploader: React.FC<MealUploaderProps> = ({ onMealDetected }) =>
       setShowPaywall(true);
       return;
     }
+    setScanError(null);
     fileInputRef.current?.click();
   };
 
-  const compressImage = (file: File): Promise<string> => {
+  const compressImage = (file: File): Promise<{ dataUrl: string; base64Only: string }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -58,7 +60,10 @@ export const MealUploader: React.FC<MealUploaderProps> = ({ onMealDetected }) =>
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          // Strip the "data:image/jpeg;base64," prefix — NVIDIA API needs ONLY the raw base64
+          const base64Only = dataUrl.split(',')[1];
+          resolve({ dataUrl, base64Only });
         };
         img.onerror = reject;
         img.src = e.target?.result as string;
@@ -75,24 +80,27 @@ export const MealUploader: React.FC<MealUploaderProps> = ({ onMealDetected }) =>
     try {
       setIsScanning(true);
       setScanResult(null);
-      const base64Data = await compressImage(file);
-      setPreviewImage(base64Data);
+      setScanError(null);
 
-      // Call NVIDIA Vision API
-      const result = await analyzeMealWithNvidia(base64Data);
+      const { dataUrl, base64Only } = await compressImage(file);
+      setPreviewImage(dataUrl);
+
+      const result = await analyzeMealWithNvidia(base64Only);
       setScanResult(result);
     } catch (err: any) {
       console.error('Vision analysis error:', err);
-      toast.error('Could not analyze photo. Please enter manually or try another angle.');
+      const msg = err?.message || 'Could not analyze photo';
+      setScanError(msg);
+      toast.error(`AI Scan failed: ${msg}. Enter manually below.`);
     } finally {
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const analyzeMealWithNvidia = async (base64Image: string): Promise<ScanResult> => {
+  const analyzeMealWithNvidia = async (base64Only: string): Promise<ScanResult> => {
     if (!NVIDIA_KEY) {
-      throw new Error('NVIDIA API Key is missing');
+      throw new Error('NVIDIA API key is not configured (VITE_NVIDIA_API_KEY missing)');
     }
 
     const prompt = `You are a certified sports nutritionist and food recognition AI for Yodha Mode.
@@ -109,6 +117,7 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
   "notes": "Short 1-sentence breakdown of identified items"
 }`;
 
+    // NVIDIA NIM vision API requires base64 WITHOUT the data URL prefix
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -122,28 +131,37 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
             role: 'user',
             content: [
               { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: base64Image } },
+              {
+                type: 'image_url',
+                image_url: {
+                  // ✅ Correct format: raw base64 only, prefixed with data URI scheme
+                  url: `data:image/jpeg;base64,${base64Only}`,
+                },
+              },
             ],
           },
         ],
         temperature: 0.2,
         max_tokens: 500,
+        stream: false,
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.warn('NVIDIA API error response:', errText);
-      throw new Error(`API error: ${response.status}`);
+      console.error('NVIDIA API error response:', response.status, errText);
+      throw new Error(`NVIDIA API error ${response.status}: ${errText.slice(0, 200)}`);
     }
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || '';
+    console.log('NVIDIA vision raw response:', rawContent);
 
-    // Extract JSON block
-    const cleaned = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Extract JSON block — handle markdown code fences or raw JSON
+    const cleaned = rawContent.replace(/```json/gi, '').replace(/```/g, '').trim();
     const jsonStart = cleaned.indexOf('{');
     const jsonEnd = cleaned.lastIndexOf('}');
+
     if (jsonStart !== -1 && jsonEnd !== -1) {
       const jsonStr = cleaned.slice(jsonStart, jsonEnd + 1);
       const parsed = JSON.parse(jsonStr);
@@ -158,7 +176,8 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
       };
     }
 
-    throw new Error('Could not parse meal macros from AI response');
+    console.error('Could not find JSON in AI response:', rawContent);
+    throw new Error('AI returned unrecognized format. Try another photo angle.');
   };
 
   const handleConfirmAdd = async () => {
@@ -177,6 +196,7 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
     if (ok) {
       setScanResult(null);
       setPreviewImage(null);
+      setScanError(null);
     }
   };
 
@@ -202,7 +222,7 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
                   )}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Snap a photo of your plate — our AI calculates calories, protein, carbs & fats automatically
+                  Snap a photo of your plate — our AI calculates calories, protein, carbs &amp; fats automatically
                 </p>
               </div>
             </div>
@@ -243,8 +263,25 @@ Respond STRICTLY with valid JSON in this exact structure without markdown or bac
           </div>
         </div>
 
+        {/* Error State */}
+        {scanError && !isScanning && (
+          <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-red-400">AI Scan Failed</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 break-words">{scanError}</p>
+            </div>
+            <button
+              onClick={() => { setScanError(null); setPreviewImage(null); }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Scanning Preview / Result Display */}
-        {previewImage && (
+        {previewImage && !scanError && (
           <div className="mt-4 pt-4 border-t border-border/60">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
               <div className="relative rounded-xl overflow-hidden border border-border/80 aspect-video md:aspect-square bg-muted/30">

@@ -136,9 +136,47 @@ export const YodhaAI: React.FC = () => {
     }
   };
 
+  const callNvidiaChat = async (
+    model: string,
+    systemPrompt: string,
+    msgs: Message[]
+  ): Promise<string> => {
+    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${NVIDIA_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...msgs.slice(-6),
+        ],
+        temperature: 0.6,
+        max_tokens: 250,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`NVIDIA API error [${model}] ${response.status}:`, errText);
+      throw new Error(`NVIDIA ${response.status}: ${errText.slice(0, 120)}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  };
+
   const sendMessage = async (textToSend?: string) => {
     const messageContent = (textToSend || inputText).trim();
     if (!messageContent || loadingResponse) return;
+
+    if (!NVIDIA_KEY) {
+      toast.error('NVIDIA API key not configured. Contact the app admin.');
+      return;
+    }
 
     setInputText('');
     const userMsg: Message = { role: 'user', content: messageContent };
@@ -151,35 +189,28 @@ export const YodhaAI: React.FC = () => {
 Your tone is inspiring, scientific, sharp, and warrior-like ("Jai Hind Warrior!", "Let's conquer this set!").
 Help the user track exercise reps, sets, diet macros, posture tips, and recovery. Keep responses concise (2 to 4 sentences maximum) so it sounds natural when spoken aloud.`;
 
-      const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${NVIDIA_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'meta/llama-3.1-70b-instruct',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...updatedMessages.slice(-6),
-          ],
-          temperature: 0.6,
-          max_tokens: 250,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`AI error: ${response.status}`);
+      let assistantReply = '';
+      try {
+        // Try primary model first
+        assistantReply = await callNvidiaChat('meta/llama-3.1-70b-instruct', systemPrompt, updatedMessages);
+      } catch (primaryErr) {
+        console.warn('Primary model failed, trying fallback model:', primaryErr);
+        toast.info('Switching to backup AI model...');
+        // Fallback to smaller model
+        assistantReply = await callNvidiaChat('meta/llama-3.1-8b-instruct', systemPrompt, updatedMessages);
       }
 
-      const data = await response.json();
-      const assistantReply = data.choices?.[0]?.message?.content || 'Keep pushing hard, Warrior!';
+      if (!assistantReply) {
+        assistantReply = 'Keep pushing hard, Warrior! Stay consistent with your training and nutrition!';
+      }
 
       setMessages([...updatedMessages, { role: 'assistant', content: assistantReply }]);
       speakText(assistantReply);
-    } catch (err) {
-      console.error('Yodha AI error:', err);
-      const fallback = 'Outstanding discipline, Warrior! Log every rep and prioritize your protein intake to dominate today!';
+    } catch (err: any) {
+      console.error('Yodha AI error (all models failed):', err);
+      toast.error(`AI unavailable: ${err?.message?.slice(0, 80) || 'Check your NVIDIA API key'}`);
+      // Still add a motivational fallback so chat doesn't break
+      const fallback = 'The AI is temporarily offline, Warrior. Stay disciplined — log your macros and crush your workout!';
       setMessages([...updatedMessages, { role: 'assistant', content: fallback }]);
       speakText(fallback);
     } finally {
