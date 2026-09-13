@@ -121,6 +121,51 @@ export type Database = {
           },
         ]
       }
+      user_onboarding: {
+        Row: {
+          id: string
+          user_id: string
+          goal: string
+          experience: string
+          equipment: string
+          training_days: number
+          session_duration: string
+          limitations: string | null
+          selected_template: string | null
+          onboarding_complete: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          goal?: string
+          experience?: string
+          equipment?: string
+          training_days?: number
+          session_duration?: string
+          limitations?: string | null
+          selected_template?: string | null
+          onboarding_complete?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          goal?: string
+          experience?: string
+          equipment?: string
+          training_days?: number
+          session_duration?: string
+          limitations?: string | null
+          selected_template?: string | null
+          onboarding_complete?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_workouts: {
         Row: {
           created_at: string

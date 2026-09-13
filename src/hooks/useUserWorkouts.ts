@@ -301,6 +301,40 @@ export const useUserWorkouts = () => {
     }
   };
 
+  /**
+   * Upsert a generated plan (from onboarding) into user_workouts.
+   * Replaces any existing rows for this user.
+   */
+  const initializePlanSchedule = async (generatedSchedule: DaySchedule[]) => {
+    if (!user) return;
+
+    try {
+      const upserts = generatedSchedule.map(day => ({
+        user_id: user.id,
+        day: day.day,
+        short_day: day.shortDay,
+        title: day.title,
+        subtitle: day.subtitle,
+        exercises: day.exercises as unknown as Json,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from('user_workouts')
+        .upsert(upserts, { onConflict: 'user_id,day' });
+
+      if (error) throw error;
+
+      setSchedule(generatedSchedule);
+      window.dispatchEvent(new Event('workout-schedule-updated'));
+      window.dispatchEvent(new Event('workout-progress-updated'));
+    } catch (error) {
+      console.error('Error initializing plan schedule:', error);
+      throw error;
+    }
+  };
+
+
   // Update a day's workout
   const updateDayWorkout = async (dayName: string, updates: Partial<DaySchedule>) => {
     if (!user) return;
@@ -375,6 +409,7 @@ export const useUserWorkouts = () => {
     getTodaySchedule,
     getTodayName,
     toggleUseSameDaily,
+    initializePlanSchedule,
     refetch: fetchSchedule,
   };
 };

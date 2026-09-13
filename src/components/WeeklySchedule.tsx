@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, Pencil, 
-  Trash2, Plus, X, Scale, ChevronDown, ChevronUp 
+  Trash2, Plus, X, Scale, ChevronDown, ChevronUp, Settings, Sparkles
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserWorkouts, Exercise, DaySchedule, ExerciseSet, getExerciseSets, parseReps, formatExerciseSetsReps } from '@/hooks/useUserWorkouts';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { generateWorkoutPlan, TemplateName, OnboardingPreferences } from '@/lib/workoutPlanGenerator';
+import { WorkoutOnboarding } from '@/components/onboarding/WorkoutOnboarding';
 import { toast } from 'sonner';
 
 const dayIcons: Record<string, React.ReactNode> = {
@@ -37,9 +40,11 @@ interface ExerciseFormState {
 }
 
 export const WeeklySchedule: React.FC = () => {
-  const { schedule, loading, updateDayWorkout } = useUserWorkouts();
+  const { schedule, loading: scheduleLoading, updateDayWorkout, initializePlanSchedule } = useUserWorkouts();
+  const { onboardingComplete, loading: onboardingLoading, markComplete, resetOnboarding, preferences } = useOnboarding();
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editDayForm, setEditDayForm] = useState({ title: '', subtitle: '' });
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Multi-set Exercise Editor State
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
@@ -54,6 +59,30 @@ export const WeeklySchedule: React.FC = () => {
   });
   
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+  // Determine if any workout data exists already
+  const hasExistingData = schedule.some(d => d.exercises.length > 0);
+
+  // Handler: called by onboarding wizard on final confirm
+  const handleOnboardingComplete = async (prefs: OnboardingPreferences, template: TemplateName) => {
+    try {
+      const generated = generateWorkoutPlan({ ...prefs, selected_template: template });
+      await initializePlanSchedule(generated);
+      await markComplete(template);
+      setShowOnboarding(false);
+      toast.success('Your personalized plan has been built! 💪');
+    } catch (err) {
+      console.error('Error building plan:', err);
+      toast.error('Something went wrong. Please try again.');
+      throw err;
+    }
+  };
+
+  // Handler: Customize My Plan — reset onboarding and re-open wizard
+  const handleCustomize = async () => {
+    await resetOnboarding();
+    setShowOnboarding(true);
+  };
 
   // Day header edit
   const startEditDay = (day: DaySchedule) => {
@@ -200,7 +229,7 @@ export const WeeklySchedule: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (scheduleLoading || onboardingLoading) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground animate-pulse">Loading schedule...</p>
@@ -208,15 +237,72 @@ export const WeeklySchedule: React.FC = () => {
     );
   }
 
+  // ── Show empty state / onboarding prompt for users who haven't completed onboarding ──
+  if (!onboardingComplete && !showOnboarding) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4 space-y-6 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-primary/15 border border-primary/25 flex items-center justify-center shadow-xl shadow-primary/10">
+          <Sparkles className="w-9 h-9 text-primary" />
+        </div>
+        <div className="space-y-2 max-w-sm">
+          <h2 className="text-2xl font-black text-foreground leading-tight">
+            Your personalized training plan is waiting.
+          </h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Answer a few questions and Yodha Mode will build a workout plan around your schedule, goal and equipment.
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowOnboarding(true)}
+          size="lg"
+          className="px-8 h-12 text-base font-bold bg-primary text-primary-foreground rounded-2xl shadow-xl shadow-primary/25 hover:bg-primary/90 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 gap-2"
+        >
+          <Dumbbell className="w-5 h-5" />
+          Build My Plan →
+        </Button>
+        <p className="text-xs text-muted-foreground">Takes about 1 minute · You can edit everything after</p>
+
+        <WorkoutOnboarding
+          isOpen={showOnboarding}
+          existingData={hasExistingData}
+          onComplete={handleOnboardingComplete}
+          onClose={() => setShowOnboarding(false)}
+        />
+      </div>
+    );
+  }
+
   return (
+    <>
+      {/* Onboarding wizard modal (for Customize My Plan flow) */}
+      <WorkoutOnboarding
+        isOpen={showOnboarding}
+        existingData={hasExistingData}
+        onComplete={handleOnboardingComplete}
+        onClose={() => setShowOnboarding(false)}
+      />
+
     <div className="space-y-4">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-foreground">Weekly Workout Split</h2>
-        <p className="text-xs text-muted-foreground">Your structured training program with custom sets and weights</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Weekly Workout Split</h2>
+          <p className="text-xs text-muted-foreground">Your structured training program with custom sets and weights</p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleCustomize}
+          className="rounded-xl text-xs gap-1.5 border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40"
+          title="Redo onboarding to regenerate your plan"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Customize My Plan
+        </Button>
       </div>
 
       <Tabs defaultValue={today} className="w-full">
         <TabsList className="w-full grid grid-cols-7 gap-1.5 bg-card/60 p-1.5 rounded-2xl border border-border/50 h-auto">
+
           {schedule.map((day) => (
             <TabsTrigger
               key={day.day}
@@ -360,6 +446,7 @@ export const WeeklySchedule: React.FC = () => {
         ))}
       </Tabs>
     </div>
+    </>
   );
 };
 
