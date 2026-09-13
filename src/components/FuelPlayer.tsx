@@ -726,7 +726,7 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-2 pt-1">
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
               <input
                 type="url"
                 placeholder="https://youtube.com/shorts/... or watch?v=..."
@@ -738,12 +738,12 @@ const AddFuelModal: React.FC<AddFuelModalProps> = ({
                     handleAddYouTube();
                   }
                 }}
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/50 min-w-0"
               />
               <Button
                 onClick={() => handleAddYouTube()}
                 disabled={!ytUrl.trim() || addingVideo}
-                className="shrink-0 bg-red-600 hover:bg-red-500 text-white font-semibold px-4 rounded-xl shadow-md shadow-red-600/30 flex items-center gap-1.5"
+                className="w-full sm:w-auto shrink-0 bg-red-600 hover:bg-red-500 text-white font-semibold px-4 rounded-xl shadow-md shadow-red-600/30 flex items-center justify-center gap-1.5"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
                 <span>Play on Website</span>
