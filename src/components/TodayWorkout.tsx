@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, 
-  RotateCcw, Repeat, Plus, Trash2, ChevronDown, ChevronUp, Scale 
+  RotateCcw, Plus, Trash2, ChevronDown, ChevronUp, Scale 
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useUserWorkouts, parseSets, parseReps, getExerciseSets, Exercise } from '@/hooks/useUserWorkouts';
@@ -46,7 +44,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
   autoStart = true,
   onToggleAutoStart,
 }) => {
-  const { getTodaySchedule, getTodayName, useSameDaily, toggleUseSameDaily, loading: scheduleLoading } = useUserWorkouts();
+  const { getTodaySchedule, getTodayName, loading: scheduleLoading } = useUserWorkouts();
   const { 
     todayProgress, 
     todaySets, 
@@ -233,7 +231,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
             <div className="flex items-center gap-2">
               <h3 className={`text-xl font-bold tracking-tight ${dayColors[dayKey]}`}>{todaySchedule.title}</h3>
               <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-background/50 border-primary/30">
-                {useSameDaily ? 'Daily Routine' : todayName}
+                {todayName}
               </Badge>
             </div>
             <p className="text-xs md:text-sm text-muted-foreground mt-0.5">{todaySchedule.subtitle}</p>
@@ -257,18 +255,6 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
               <span>Auto Timer: {autoStart ? 'ON' : 'OFF'}</span>
             </button>
           )}
-
-          <div className="flex items-center gap-2.5 bg-muted/40 px-3 py-1.5 rounded-xl border border-border/30">
-            <Repeat className="w-4 h-4 text-primary" />
-            <Label htmlFor="same-daily" className="text-xs md:text-sm cursor-pointer font-medium">
-              Same routine daily
-            </Label>
-            <Switch
-              id="same-daily"
-              checked={useSameDaily}
-              onCheckedChange={toggleUseSameDaily}
-            />
-          </div>
 
           <Button 
             size="sm" 

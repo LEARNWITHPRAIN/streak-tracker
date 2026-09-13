@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, Repeat, LayoutGrid, User, MessageSquareHeart, Snowflake } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, Snowflake } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWinterArc } from '@/hooks/useWinterArc';
@@ -14,7 +14,6 @@ import { RestTimer } from '@/components/RestTimer';
 import { CalendarView } from '@/components/CalendarView';
 import { WeeklySchedule } from '@/components/WeeklySchedule';
 import { TodayWorkout } from '@/components/TodayWorkout';
-import { CustomRoutine } from '@/components/CustomRoutine';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
@@ -385,14 +384,10 @@ const Dashboard = () => {
         {/* Tabs - Responsive grid on PC, scrollable on mobile */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="w-full overflow-x-auto pb-1 md:pb-0">
-            <TabsList className="w-full flex md:grid md:grid-cols-7 bg-muted/40 p-1.5 gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
+            <TabsList className="w-full flex md:grid md:grid-cols-6 bg-muted/40 p-1.5 gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
               <TabsTrigger value="today" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
                 <Dumbbell className="w-4 h-4 mr-1.5" />
                 Today
-              </TabsTrigger>
-              <TabsTrigger value="custom" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
-                <Repeat className="w-4 h-4 mr-1.5" />
-                Custom
               </TabsTrigger>
               <TabsTrigger value="weekly" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
                 <LayoutGrid className="w-4 h-4 mr-1.5" />
@@ -423,10 +418,6 @@ const Dashboard = () => {
               autoStart={timer.settings.autoStart}
               onToggleAutoStart={() => timer.updateSettings({ autoStart: !timer.settings.autoStart })}
             />
-          </TabsContent>
-
-          <TabsContent value="custom" className="mt-6">
-            <CustomRoutine />
           </TabsContent>
 
           <TabsContent value="weekly" className="mt-6">
