@@ -5,10 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles, BookOpen } from 'lucide-react';
+import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles } from 'lucide-react';
 import { z } from 'zod';
 import { NotificationSettings } from '@/components/NotificationSettings';
-import { AppTutorial, resetTutorial } from '@/components/onboarding/AppTutorial';
 
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
@@ -25,7 +24,6 @@ const Profile = () => {
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -256,35 +254,6 @@ const Profile = () => {
           <NotificationSettings />
         </div>
 
-        {/* Replay Tutorial Card */}
-        <div className="glass rounded-2xl p-6 mt-6 border-primary/20 hover:border-primary/40 transition-all group">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center text-primary">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
-                  App Tutorial
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Replay the quick-start guide for Yodha Mode
-                </p>
-              </div>
-            </div>
-
-            <Button
-              onClick={() => { resetTutorial(); navigate('/dashboard?tutorial=true'); }}
-              variant="outline"
-              size="sm"
-              className="bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border-primary/30 rounded-xl font-semibold flex items-center gap-1 h-9"
-            >
-              <span>Replay</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        </div>
-
         {/* Feedback Card */}
         <div className="glass rounded-2xl p-6 mt-6 border-primary/20 hover:border-primary/40 transition-all group">
           <div className="flex items-center justify-between">
@@ -314,7 +283,6 @@ const Profile = () => {
           </div>
         </div>
       </div>
-      <AppTutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 };

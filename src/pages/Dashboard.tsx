@@ -19,13 +19,9 @@ import { FuelPlayer } from '@/components/FuelPlayer';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
 import { DisplayNameModal } from '@/components/DisplayNameModal';
-import { WorkoutOnboarding } from '@/components/onboarding/WorkoutOnboarding';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { generateWorkoutPlan, OnboardingPreferences, TemplateName } from '@/lib/workoutPlanGenerator';
 import { toast } from 'sonner';
 import DayDetailModal, { ExerciseLog } from '@/components/DayDetailModal';
 import { usePWA } from '@/hooks/usePWA';
-import { AppTutorial, shouldShowTutorial } from '@/components/onboarding/AppTutorial';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -38,15 +34,6 @@ const Dashboard = () => {
   const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
   const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, initializePlanSchedule, refetch } = useUserWorkouts();
-  const { onboardingComplete, loading: onboardingLoading, markComplete } = useOnboarding();
-  const hasExistingPlan = schedule.some((d) => d.exercises && d.exercises.length > 0);
-  const localOnboardingDone =
-    Boolean(user && typeof window !== 'undefined' && localStorage.getItem(`yodha_onboarding_completed_${user.id}`) === 'true') ||
-    Boolean(typeof window !== 'undefined' && localStorage.getItem('yodha_onboarding_completed') === 'true');
-  const isPlanReady = onboardingComplete || hasExistingPlan || localOnboardingDone;
-
-  const [showWorkoutOnboarding, setShowWorkoutOnboarding] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
   const { calculateTotalProgress, fetchCalendarHistory, fetchDayDetailedLogs, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -170,47 +157,14 @@ const Dashboard = () => {
         // If user has not configured their display name yet, prompt them first
         if (!fetchedName) {
           setShowNameModal(true);
-        } else if (!isPlanReady && !onboardingLoading) {
-          // Name present but workout onboarding not done — must complete before dashboard access
-          setShowWorkoutOnboarding(true);
         } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-          // Onboarding done — prompt notifications if not yet configured
+          // Display name present — prompt notifications if not yet configured
           setShowNotifModal(true);
         }
       };
       fetchDisplayName();
     }
-  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission, isPlanReady, onboardingLoading]);
-
-  // Ensure workout onboarding triggers once onboardingLoading finishes for users without a plan
-  useEffect(() => {
-    if (!user || loading || onboardingLoading || showNameModal) return;
-    if (displayName === null) return;
-    if (!isPlanReady) {
-      setShowWorkoutOnboarding(true);
-    }
-  }, [user, loading, onboardingLoading, isPlanReady, showNameModal, displayName]);
-
-  // Check for tutorial query param (e.g. from Profile page "Replay Tutorial")
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('tutorial') === 'true') {
-        setShowTutorial(true);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  }, []);
-
-  // Show tutorial once plan is ready if not previously completed
-  useEffect(() => {
-    if (user && !onboardingLoading && isPlanReady && !showNameModal && !showWorkoutOnboarding && !showNotifModal) {
-      if (shouldShowTutorial()) {
-        const t = setTimeout(() => setShowTutorial(true), 900);
-        return () => clearTimeout(t);
-      }
-    }
-  }, [user, onboardingLoading, isPlanReady, showNameModal, showWorkoutOnboarding, showNotifModal]);
+  }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission]);
 
   // Listen for progress updates to refresh calendar
   useEffect(() => {
@@ -256,7 +210,7 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  if (loading || scheduleLoading || progressLoading || onboardingLoading) {
+  if (loading || scheduleLoading || progressLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -266,52 +220,6 @@ const Dashboard = () => {
 
   if (!user) {
     return null;
-  }
-
-  // ── Onboarding Gate ────────────────────────────────────────────────────────
-  // If display name modal is done but workout onboarding is not complete and user has no plan,
-  // block the entire dashboard behind a full-screen gate.
-  // Users CANNOT dismiss or skip — they must finish the form to proceed.
-  if (!isPlanReady && !showNameModal && displayName !== null) {
-    return (
-      <div className="min-h-screen bg-background w-full">
-        {/* Show display name modal on top if still needed */}
-        {user && (
-          <DisplayNameModal
-            isOpen={showNameModal}
-            userId={user.id}
-            onSuccess={(savedName) => {
-              setDisplayName(savedName);
-              setShowNameModal(false);
-              setShowWorkoutOnboarding(true);
-            }}
-          />
-        )}
-        {/* Full-screen mandatory onboarding — no close button */}
-        <WorkoutOnboarding
-          isOpen={true}
-          existingData={false}
-          onComplete={async (prefs, template) => {
-            try {
-              const generated = generateWorkoutPlan({ ...prefs, selected_template: template });
-              await initializePlanSchedule(generated);
-              await markComplete(template);
-              setShowWorkoutOnboarding(false);
-              refetch();
-              toast.success('Your personalized plan has been built! 💪');
-              // Show app tutorial for the first time right after onboarding
-              setTimeout(() => setShowTutorial(true), 800);
-            } catch (err) {
-              console.error('Error building plan:', err);
-              toast.error('Something went wrong. Please try again.');
-              throw err;
-            }
-          }}
-          onClose={() => {/* intentionally blocked — onboarding is mandatory */}}
-          isMandatory={true}
-        />
-      </div>
-    );
   }
 
   return (
@@ -571,14 +479,6 @@ const Dashboard = () => {
 
       </main>
 
-      {/* App Tutorial — floating interactive guide showing live practical website */}
-      <AppTutorial
-        isOpen={showTutorial}
-        onClose={() => setShowTutorial(false)}
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab)}
-      />
-
       {/* Mini Player - hidden when on music tab */}
       <MiniPlayer hidden={activeTab === 'music'} />
 
@@ -598,12 +498,7 @@ const Dashboard = () => {
           onSuccess={(savedName) => {
             setDisplayName(savedName);
             setShowNameModal(false);
-            // After name is configured, if workout onboarding isn't complete, prompt it
-            if (!isPlanReady) {
-              setTimeout(() => {
-                setShowWorkoutOnboarding(true);
-              }, 400);
-            } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+            if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
               setTimeout(() => {
                 setShowNotifModal(true);
               }, 400);
@@ -612,43 +507,9 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Workout Plan Onboarding — only shown from dashboard when re-triggering (e.g. plan rebuild).
-           First-time mandatory gate is handled above before the dashboard renders. */}
-      <WorkoutOnboarding
-        isOpen={showWorkoutOnboarding && !showNameModal && isPlanReady}
-        existingData={schedule.some(d => d.exercises.length > 0)}
-        onComplete={async (prefs, template) => {
-          try {
-            const generated = generateWorkoutPlan({ ...prefs, selected_template: template });
-            await initializePlanSchedule(generated);
-            await markComplete(template);
-            setShowWorkoutOnboarding(false);
-            refetch();
-            toast.success('Your personalized plan has been rebuilt! 💪');
-            if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-              setTimeout(() => {
-                setShowNotifModal(true);
-              }, 500);
-            }
-          } catch (err) {
-            console.error('Error building plan:', err);
-            toast.error('Something went wrong. Please try again.');
-            throw err;
-          }
-        }}
-        onClose={() => {
-          setShowWorkoutOnboarding(false);
-          if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-            setTimeout(() => {
-              setShowNotifModal(true);
-            }, 500);
-          }
-        }}
-      />
-
       {/* Notification Onboarding Prompt Modal on sign in / sign up */}
       <NotificationOnboardingModal
-        isOpen={showNotifModal && !showNameModal && !showWorkoutOnboarding}
+        isOpen={showNotifModal && !showNameModal}
         onClose={() => setShowNotifModal(false)}
         todayProgress={todayProgressPercent}
       />
