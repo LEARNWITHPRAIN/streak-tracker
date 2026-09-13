@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, Utensils, ShieldCheck } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubscription } from '@/hooks/useSubscription';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useMusicContext } from '@/contexts/MusicContext';
@@ -17,8 +16,6 @@ import { TodayWorkout } from '@/components/TodayWorkout';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
-import { DietTab } from '@/components/diet/DietTab';
-import { YodhaAI } from '@/components/ai/YodhaAI';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
 import { DisplayNameModal } from '@/components/DisplayNameModal';
@@ -35,7 +32,6 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
-  const { isAdmin } = useSubscription();
   const { notifPermission, dualReminders } = usePWA();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -316,17 +312,7 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {isAdmin && (
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="w-8 h-8 sm:w-auto sm:px-3 sm:py-1.5 rounded-xl bg-primary/15 hover:bg-primary/25 text-primary border border-primary/40 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm shadow-primary/20 shrink-0"
-                  title="Admin Command Dashboard"
-                >
-                  <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                  <span className="hidden sm:inline">Admin</span>
-                </button>
-              )}
-              
+
               <button
                 onClick={() => navigate('/feedback')}
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-primary/20 hover:text-primary transition-colors border border-border/40 text-muted-foreground group shrink-0"
@@ -474,7 +460,7 @@ const Dashboard = () => {
         {/* Tabs - Responsive grid on PC, scrollable on mobile */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full overflow-hidden">
           <div className="w-full max-w-full overflow-x-auto pb-1.5 md:pb-0 scrollbar-none touch-pan-x overscroll-x-contain">
-            <TabsList className="inline-flex md:grid md:grid-cols-7 bg-muted/40 p-1 sm:p-1.5 gap-1 sm:gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
+            <TabsList className="inline-flex md:grid md:grid-cols-6 bg-muted/40 p-1 sm:p-1.5 gap-1 sm:gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
               <TabsTrigger value="today" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
                 <Dumbbell className="w-4 h-4 mr-1.5" />
                 Today
@@ -499,10 +485,7 @@ const Dashboard = () => {
                 <Zap className="w-4 h-4 mr-1.5" />
                 Fuel
               </TabsTrigger>
-              <TabsTrigger value="diet" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
-                <Utensils className="w-4 h-4 mr-1.5" />
-                Diet
-              </TabsTrigger>
+
             </TabsList>
           </div>
 
@@ -552,14 +535,9 @@ const Dashboard = () => {
             <FuelPlayer />
           </TabsContent>
 
-          <TabsContent value="diet" className="mt-6">
-            <DietTab />
-          </TabsContent>
 
         </Tabs>
 
-        {/* Floating Yodha AI Assistant */}
-        <YodhaAI />
       </main>
 
       {/* Mini Player - hidden when on music tab */}
