@@ -177,10 +177,7 @@ const Welcome = () => {
               </Button>
             </div>
 
-            <p className="text-xs text-white/50 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              Free forever · No credit card required
-            </p>
+
           </div>
         </div>
 
@@ -311,7 +308,7 @@ const Welcome = () => {
       <section className="w-full py-16 px-6 text-center bg-background border-t border-border/40">
         <div className="max-w-lg mx-auto space-y-5">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground">Ready to become a Yodha?</h2>
-          <p className="text-muted-foreground text-sm">Join and start tracking your workouts today. Free, no credit card needed.</p>
+          <p className="text-muted-foreground text-sm">Join and start tracking your workouts today.</p>
           <Button
             onClick={() => navigate('/auth?mode=signup')}
             size="lg"
