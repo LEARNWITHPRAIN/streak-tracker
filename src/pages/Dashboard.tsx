@@ -34,8 +34,8 @@ const Dashboard = () => {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
-  const { getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
-  const { calculateTotalProgress, fetchCalendarHistory, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
+  const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, refetch } = useUserWorkouts();
+  const { calculateTotalProgress, fetchCalendarHistory, fetchDayDetailedLogs, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
   
@@ -114,26 +114,12 @@ const Dashboard = () => {
     setSelectedDay(dateKey);
     setDayLogs([]);
     try {
-      const { data, error } = await supabase
-        .from('workout_logs')
-        .select('exercise_id, exercise_name, sets_completed, total_sets')
-        .eq('user_id', user!.id)
-        .eq('date', dateKey);
-      if (!error && data) {
-        setDayLogs(
-          data.map((row: any) => ({
-            exercise_id: row.exercise_id,
-            exercise_name: row.exercise_name,
-            sets_completed: row.sets_completed,
-            total_sets: row.total_sets,
-            weight_kg: null, // weight stored on schedule, not logs currently
-          }))
-        );
-      }
+      const detailed = await fetchDayDetailedLogs(dateKey, schedule, customRoutine);
+      setDayLogs(detailed);
     } catch (err) {
       console.error('Error fetching day logs:', err);
     }
-  }, [user]);
+  }, [fetchDayDetailedLogs, schedule, customRoutine]);
 
   useEffect(() => {
     if (!loading && !user) {

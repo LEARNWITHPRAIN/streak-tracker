@@ -1,14 +1,19 @@
-import React from 'react';
-import { Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, RotateCcw, Repeat } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, 
+  RotateCcw, Repeat, Plus, Trash2, ChevronDown, ChevronUp, Scale 
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { useUserWorkouts, parseSets } from '@/hooks/useUserWorkouts';
+import { useUserWorkouts, parseSets, parseReps, getExerciseSets, Exercise } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useAnimatedProgress } from '@/hooks/useAnimatedProgress';
+import { DailyExerciseSetLog } from '@/types/exercise';
 
 const dayIcons: Record<string, React.ReactNode> = {
   monday: <Dumbbell className="w-5 h-5" />,
@@ -42,33 +47,156 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
   onToggleAutoStart,
 }) => {
   const { getTodaySchedule, getTodayName, useSameDaily, toggleUseSameDaily, loading: scheduleLoading } = useUserWorkouts();
-  const { todayProgress, updateSetProgress, resetTodayProgress, calculateTotalProgress, loading: progressLoading } = useWorkoutLogs();
+  const { 
+    todayProgress, 
+    todaySets, 
+    saveExerciseSets, 
+    resetTodayProgress, 
+    calculateTotalProgress, 
+    loading: progressLoading 
+  } = useWorkoutLogs();
   
   const todaySchedule = getTodaySchedule();
   const todayName = getTodayName();
 
-  const handleSetClick = async (exerciseId: string, exerciseName: string, totalSets: number) => {
-    const currentSets = todayProgress[exerciseId] || 0;
-    const newSets = currentSets >= totalSets ? 0 : currentSets + 1;
-    
-    // Build all exercises list to sync all to database for accurate calendar display
-    const allExercises = todaySchedule?.exercises.map(ex => ({
-      id: ex.id,
-      name: ex.name,
-      totalSets: parseSets(ex.setsReps) || 1
-    })) || [];
-    
-    await updateSetProgress(exerciseId, exerciseName, newSets, totalSets, allExercises);
-    
-    // Auto-start timer when completing ANY set (not when resetting to 0)
-    if (newSets > 0 && newSets > currentSets && onSetComplete) {
+  // Helper to get structured sets for an exercise
+  const getSetsForExercise = (exercise: Exercise): DailyExerciseSetLog[] => {
+    const existing = todaySets[exercise.id];
+    if (existing && existing.length > 0) {
+      return existing;
+    }
+    const configured = getExerciseSets(exercise);
+    const completedCount = todayProgress[exercise.id] || 0;
+    return configured.map((s, idx) => ({
+      setNumber: s.setNumber || idx + 1,
+      weight: s.weight !== undefined ? s.weight : (exercise.weight ?? null),
+      reps: s.reps || parseReps(exercise.setsReps) || '10',
+      completed: idx < completedCount,
+    }));
+  };
+
+  // Helper to build all exercises metadata for database synchronization
+  const getAllExercisesMeta = () => {
+    if (!todaySchedule) return [];
+    return todaySchedule.exercises.map(ex => {
+      const sets = getSetsForExercise(ex);
+      return {
+        id: ex.id,
+        name: ex.name,
+        totalSets: sets.length,
+      };
+    });
+  };
+
+  // Toggle completion of a specific set
+  const handleToggleSet = async (exercise: Exercise, setIndex: number) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    if (!currentSets[setIndex]) return;
+
+    const wasCompleted = currentSets[setIndex].completed;
+    currentSets[setIndex] = {
+      ...currentSets[setIndex],
+      completed: !wasCompleted,
+    };
+
+    const allMeta = getAllExercisesMeta().map(m => 
+      m.id === exercise.id ? { ...m, totalSets: currentSets.length } : m
+    );
+
+    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+
+    // Auto-start rest timer only when completing a set (not when un-checking)
+    if (!wasCompleted && onSetComplete) {
       onSetComplete();
     }
   };
 
-  const getExerciseProgress = (exerciseId: string, totalSets: number): number => {
-    const completed = todayProgress[exerciseId] || 0;
-    return Math.round((completed / totalSets) * 100);
+  // Quick card click: completes next pending set, or resets all sets if already 100%
+  const handleQuickAdvance = async (exercise: Exercise) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    const nextPendingIdx = currentSets.findIndex(s => !s.completed);
+
+    if (nextPendingIdx !== -1) {
+      // Mark next set complete
+      currentSets[nextPendingIdx] = {
+        ...currentSets[nextPendingIdx],
+        completed: true,
+      };
+      const allMeta = getAllExercisesMeta();
+      await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+      if (onSetComplete) onSetComplete();
+    } else {
+      // All done, reset this exercise to 0
+      const resetSets = currentSets.map(s => ({ ...s, completed: false }));
+      const allMeta = getAllExercisesMeta();
+      await saveExerciseSets(exercise.id, exercise.name, resetSets, allMeta);
+    }
+  };
+
+  // Update a set's weight
+  const handleUpdateWeight = async (exercise: Exercise, setIndex: number, newWeight: number | null) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    if (!currentSets[setIndex]) return;
+
+    currentSets[setIndex] = {
+      ...currentSets[setIndex],
+      weight: newWeight,
+    };
+
+    const allMeta = getAllExercisesMeta();
+    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+  };
+
+  // Update a set's reps
+  const handleUpdateReps = async (exercise: Exercise, setIndex: number, newReps: string) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    if (!currentSets[setIndex]) return;
+
+    currentSets[setIndex] = {
+      ...currentSets[setIndex],
+      reps: newReps,
+    };
+
+    const allMeta = getAllExercisesMeta();
+    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+  };
+
+  // Add a new set to an exercise
+  const handleAddSet = async (exercise: Exercise) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    const lastSet = currentSets[currentSets.length - 1];
+    const newSetNumber = currentSets.length + 1;
+    const inheritedWeight = lastSet ? lastSet.weight : (exercise.weight ?? null);
+    const inheritedReps = lastSet ? lastSet.reps : (parseReps(exercise.setsReps) || '10');
+
+    currentSets.push({
+      setNumber: newSetNumber,
+      weight: inheritedWeight,
+      reps: inheritedReps,
+      completed: false,
+    });
+
+    const allMeta = getAllExercisesMeta().map(m => 
+      m.id === exercise.id ? { ...m, totalSets: currentSets.length } : m
+    );
+
+    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+  };
+
+  // Remove a set from an exercise
+  const handleRemoveSet = async (exercise: Exercise, setIndex: number) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    if (currentSets.length <= 1) return;
+
+    currentSets.splice(setIndex, 1);
+    // Re-number remaining sets
+    const renumbered = currentSets.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
+
+    const allMeta = getAllExercisesMeta().map(m => 
+      m.id === exercise.id ? { ...m, totalSets: renumbered.length } : m
+    );
+
+    await saveExerciseSets(exercise.id, exercise.name, renumbered, allMeta);
   };
 
   const { percentage: totalProgress } = calculateTotalProgress(todaySchedule);
@@ -163,80 +291,34 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
         <Progress value={animatedTotalProgress} className="h-2.5 rounded-full" activeOnProgress />
       </div>
 
-      {/* Exercises Grid - Responsive for PC (1 col mobile, 2 col tablet, 3 col desktop) */}
+      {/* Exercises Grid */}
       {todaySchedule.exercises.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {todaySchedule.exercises.map((exercise) => {
-            const totalSets = parseSets(exercise.setsReps);
-            const completedSets = todayProgress[exercise.id] || 0;
-            const isCompleted = totalSets ? completedSets >= totalSets : completedSets >= 1;
-            const progressPercent = totalSets 
-              ? getExerciseProgress(exercise.id, totalSets)
-              : (completedSets >= 1 ? 100 : 0);
-            
+            const sets = getSetsForExercise(exercise);
+            const totalSets = sets.length;
+            const completedSets = sets.filter(s => s.completed).length;
+            const isCompleted = totalSets > 0 && completedSets >= totalSets;
+            const progressPercent = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+
             return (
-              <Card
+              <ExerciseWorkoutCard
                 key={exercise.id}
-                className={`transition-all duration-300 border rounded-2xl cursor-pointer hover:shadow-lg ${
-                  isCompleted 
-                    ? 'bg-primary/10 border-primary/40 shadow-primary/5' 
-                    : 'bg-card/70 hover:bg-card hover:border-primary/30 border-border/60'
-                }`}
-                onClick={() => handleSetClick(exercise.id, exercise.name, totalSets || 1)}
-              >
-                <CardContent className="p-4 space-y-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-11 h-11 rounded-xl bg-background/70 border border-border/50 flex items-center justify-center shrink-0 ${dayColors[dayKey]}`}>
-                      <Dumbbell className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-bold text-base truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                        {exercise.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs bg-background/60 font-mono">
-                          {exercise.setsReps}
-                        </Badge>
-                        {totalSets && (
-                          <span className="text-xs font-semibold text-muted-foreground">
-                            {completedSets}/{totalSets} sets
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {isCompleted && (
-                      <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                        <Check className="w-4 h-4 text-primary font-bold" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Set Progress Bar & Set Bubbles */}
-                  {totalSets && totalSets > 1 && (
-                    <div className="space-y-2 pt-1">
-                      <Progress 
-                        value={progressPercent} 
-                        className="h-1.5 rounded-full"
-                        activeOnProgress
-                      />
-                      <div className="flex justify-between gap-1">
-                        {Array.from({ length: totalSets }).map((_, idx) => (
-                          <div
-                            key={idx}
-                            className={`flex-1 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-200 ${
-                              idx < completedSets 
-                                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30' 
-                                : 'bg-muted/70 text-muted-foreground hover:bg-muted'
-                            }`}
-                          >
-                            {idx + 1}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                exercise={exercise}
+                sets={sets}
+                dayKey={dayKey}
+                dayColors={dayColors}
+                isCompleted={isCompleted}
+                completedSets={completedSets}
+                totalSets={totalSets}
+                progressPercent={progressPercent}
+                onQuickAdvance={() => handleQuickAdvance(exercise)}
+                onToggleSet={(idx) => handleToggleSet(exercise, idx)}
+                onUpdateWeight={(idx, weight) => handleUpdateWeight(exercise, idx, weight)}
+                onUpdateReps={(idx, reps) => handleUpdateReps(exercise, idx, reps)}
+                onAddSet={() => handleAddSet(exercise)}
+                onRemoveSet={(idx) => handleRemoveSet(exercise, idx)}
+              />
             );
           })}
         </div>
@@ -250,11 +332,280 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
         </Card>
       )}
 
-      <p className="text-center text-xs text-muted-foreground pt-2">
-        💡 Click on an exercise card or set button to mark a set complete
-      </p>
+      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
+        <span className="flex items-center gap-1.5">
+          💡 Click <strong>✓</strong> to complete a set & start rest timer
+        </span>
+        <span className="hidden sm:inline opacity-40">•</span>
+        <span className="hidden sm:flex items-center gap-1.5">
+          Edit any set's weight or add more sets on the fly
+        </span>
+      </div>
     </div>
   );
 };
 
+// ── Exercise Workout Card with Multi-Set Custom Weight Support ─────────────────────────
+interface ExerciseWorkoutCardProps {
+  exercise: Exercise;
+  sets: DailyExerciseSetLog[];
+  dayKey: string;
+  dayColors: Record<string, string>;
+  isCompleted: boolean;
+  completedSets: number;
+  totalSets: number;
+  progressPercent: number;
+  onQuickAdvance: () => void;
+  onToggleSet: (setIndex: number) => void;
+  onUpdateWeight: (setIndex: number, weight: number | null) => void;
+  onUpdateReps: (setIndex: number, reps: string) => void;
+  onAddSet: () => void;
+  onRemoveSet: (setIndex: number) => void;
+}
+
+const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
+  exercise,
+  sets,
+  dayKey,
+  dayColors,
+  isCompleted,
+  completedSets,
+  totalSets,
+  progressPercent,
+  onQuickAdvance,
+  onToggleSet,
+  onUpdateWeight,
+  onUpdateReps,
+  onAddSet,
+  onRemoveSet,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [editingWeightIdx, setEditingWeightIdx] = useState<number | null>(null);
+  const [customWeightVal, setCustomWeightVal] = useState<string>('');
+
+  const maxWeight = useMemo(() => {
+    const weights = sets
+      .map(s => s.weight)
+      .filter((w): w is number => w !== null && w > 0);
+    return weights.length > 0 ? Math.max(...weights) : null;
+  }, [sets]);
+
+  const startEditWeight = (idx: number, currentWeight: number | null) => {
+    setEditingWeightIdx(idx);
+    setCustomWeightVal(currentWeight !== null ? String(currentWeight) : '');
+  };
+
+  const saveEditWeight = (idx: number) => {
+    if (customWeightVal.trim() === '' || isNaN(Number(customWeightVal))) {
+      onUpdateWeight(idx, null); // Bodyweight
+    } else {
+      onUpdateWeight(idx, Math.max(0, Number(customWeightVal)));
+    }
+    setEditingWeightIdx(null);
+  };
+
+  return (
+    <Card
+      className={`transition-all duration-300 border rounded-2xl overflow-hidden shadow-sm ${
+        isCompleted 
+          ? 'bg-primary/10 border-primary/40 shadow-primary/5' 
+          : 'bg-card/75 hover:bg-card border-border/60 hover:border-primary/30'
+      }`}
+    >
+      <CardContent className="p-4 space-y-3.5">
+        {/* Card Header */}
+        <div className="flex items-center gap-3">
+          <div 
+            onClick={onQuickAdvance}
+            className={`w-11 h-11 rounded-xl bg-background/70 border border-border/50 flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${dayColors[dayKey]}`}
+            title="Click to quick-advance next set"
+          >
+            <Dumbbell className="w-5 h-5" />
+          </div>
+
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={onQuickAdvance}>
+            <div className="flex items-center gap-2">
+              <p className={`font-bold text-base truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                {exercise.name}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs bg-background/60 font-mono font-medium">
+                {completedSets}/{totalSets} sets
+              </Badge>
+              {maxWeight !== null ? (
+                <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0 bg-primary/15 text-primary border border-primary/30">
+                  Top: {maxWeight} kg
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] font-medium px-2 py-0 text-muted-foreground">
+                  Bodyweight (BW)
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {isCompleted && (
+              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                <Check className="w-4 h-4 font-bold" />
+              </div>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
+              onClick={() => setIsExpanded(!isExpanded)}
+              title={isExpanded ? 'Collapse sets' : 'Expand sets'}
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <Progress value={progressPercent} className="h-1.5 rounded-full" activeOnProgress />
+
+        {/* Multi-Set Detailed Breakdown */}
+        {isExpanded && (
+          <div className="pt-1 space-y-2 border-t border-border/40">
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+              <span>Set & Weight</span>
+              <span>Reps</span>
+              <span className="text-right">Done</span>
+            </div>
+
+            <div className="space-y-1.5">
+              {sets.map((set, idx) => {
+                const isEditingThis = editingWeightIdx === idx;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all ${
+                      set.completed
+                        ? 'bg-primary/10 border-primary/30 text-foreground'
+                        : 'bg-background/40 hover:bg-background/70 border-border/40'
+                    }`}
+                  >
+                    {/* Set Number & Weight */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground shrink-0">
+                        S{set.setNumber}
+                      </span>
+
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            step="0.5"
+                            autoFocus
+                            placeholder="BW"
+                            value={customWeightVal}
+                            onChange={(e) => setCustomWeightVal(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEditWeight(idx);
+                              if (e.key === 'Escape') setEditingWeightIdx(null);
+                            }}
+                            className="h-7 w-20 text-xs px-1.5 py-0 bg-background font-mono"
+                          />
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => {
+                              setCustomWeightVal('');
+                              onUpdateWeight(idx, null);
+                              setEditingWeightIdx(null);
+                            }}
+                            className="h-7 px-1.5 text-[10px]"
+                            title="Set to Bodyweight"
+                          >
+                            BW
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => saveEditWeight(idx)}
+                            className="h-7 px-2 text-xs bg-primary text-primary-foreground"
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditWeight(idx, set.weight)}
+                          className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted/80 border border-border/40 transition-colors"
+                          title="Click to edit set weight"
+                        >
+                          <Scale className="w-3 h-3 text-primary shrink-0" />
+                          <span>{set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Reps */}
+                    <div className="shrink-0 text-center">
+                      <span className="text-xs font-mono font-semibold text-muted-foreground px-1.5">
+                        {set.reps || '10'}r
+                      </span>
+                    </div>
+
+                    {/* Actions: Delete & Complete */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {sets.length > 1 && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onRemoveSet(idx)}
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-lg"
+                          title="Remove set"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => onToggleSet(idx)}
+                        className={`h-7 px-3 rounded-lg flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm ${
+                          set.completed
+                            ? 'bg-primary text-primary-foreground shadow-primary/25 hover:brightness-110'
+                            : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
+                        }`}
+                        title={set.completed ? 'Set completed (click to undo)' : 'Click to mark set complete'}
+                      >
+                        <Check className={`w-3.5 h-3.5 ${set.completed ? 'stroke-[3]' : 'opacity-40'}`} />
+                        <span>{set.completed ? 'Done' : 'Set'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Actions: + Add Set */}
+            <div className="flex items-center justify-between pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onAddSet}
+                className="h-7 text-xs rounded-xl border-dashed border-primary/40 text-primary hover:bg-primary/10 hover:border-primary"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add Set
+              </Button>
+
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {completedSets} of {totalSets} completed
+              </span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 export default TodayWorkout;
+

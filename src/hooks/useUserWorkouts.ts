@@ -3,6 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Json } from '@/integrations/supabase/types';
 
+import { ExerciseSet } from '@/types/exercise';
+export type { ExerciseSet };
+
 export interface Exercise {
   id: string;
   name: string;
@@ -11,6 +14,10 @@ export interface Exercise {
    * Weight in kilograms. Null indicates body weight.
    */
   weight: number | null;
+  /**
+   * Individual sets with custom weights
+   */
+  sets?: ExerciseSet[];
 }
 
 export interface DaySchedule {
@@ -107,6 +114,49 @@ export const parseSets = (setsReps: string): number | null => {
     return parseInt(match[1], 10);
   }
   return null;
+};
+
+export const parseReps = (setsReps: string): string => {
+  const match = setsReps.match(/^\d+\s*[×xX]\s*(.+)/);
+  if (match) {
+    return match[1].trim();
+  }
+  return setsReps;
+};
+
+/**
+ * Returns structured sets for an exercise.
+ * If exercise.sets is defined and non-empty, returns it.
+ * Otherwise, generates sets from setsReps and base weight.
+ */
+export const getExerciseSets = (exercise: Exercise): ExerciseSet[] => {
+  if (exercise.sets && exercise.sets.length > 0) {
+    return exercise.sets.map((s, idx) => ({
+      setNumber: s.setNumber || idx + 1,
+      weight: s.weight !== undefined ? s.weight : (exercise.weight ?? null),
+      reps: s.reps || parseReps(exercise.setsReps) || '10',
+      completed: !!s.completed,
+    }));
+  }
+
+  const count = parseSets(exercise.setsReps) || 3;
+  const reps = parseReps(exercise.setsReps) || '10';
+  const generated: ExerciseSet[] = [];
+  for (let i = 1; i <= count; i++) {
+    generated.push({
+      setNumber: i,
+      weight: exercise.weight ?? null,
+      reps,
+      completed: false,
+    });
+  }
+  return generated;
+};
+
+export const formatExerciseSetsReps = (sets: ExerciseSet[]): string => {
+  if (!sets || sets.length === 0) return '0 sets';
+  const reps = sets[0]?.reps || '10';
+  return `${sets.length}×${reps}`;
 };
 
 const SAME_DAILY_KEY = 'yodha-same-daily';

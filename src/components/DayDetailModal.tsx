@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Dumbbell, TrendingUp, BarChart2 } from 'lucide-react';
+import { X, Dumbbell, TrendingUp, BarChart2, Check, Scale, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DailyExerciseSetLog } from '@/types/exercise';
 
 export interface ExerciseLog {
   exercise_id: string;
@@ -9,6 +10,7 @@ export interface ExerciseLog {
   sets_completed: number;
   total_sets: number;
   weight_kg?: number | null;
+  sets?: DailyExerciseSetLog[];
 }
 
 interface DayDetailModalProps {
@@ -27,9 +29,37 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
     day: 'numeric',
   });
 
-  const totalSets = logs.reduce((acc, l) => acc + l.total_sets, 0);
-  const completedSets = logs.reduce((acc, l) => acc + Math.min(l.sets_completed, l.total_sets), 0);
+  const totalSets = logs.reduce((acc, l) => acc + (l.sets ? l.sets.length : l.total_sets), 0);
+  const completedSets = logs.reduce((acc, l) => {
+    if (l.sets && l.sets.length > 0) {
+      return acc + l.sets.filter(s => s.completed).length;
+    }
+    return acc + Math.min(l.sets_completed, l.total_sets);
+  }, 0);
   const overallPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+
+  // Calculate day totals: volume and max weight
+  let maxWeightLifted: number | null = null;
+  let totalVolume = 0;
+
+  logs.forEach(log => {
+    if (log.sets && log.sets.length > 0) {
+      log.sets.forEach(s => {
+        if (s.completed && s.weight !== null && s.weight > 0) {
+          if (maxWeightLifted === null || s.weight > maxWeightLifted) {
+            maxWeightLifted = s.weight;
+          }
+          const reps = typeof s.reps === 'number' ? s.reps : parseInt(String(s.reps || '10'), 10) || 10;
+          totalVolume += s.weight * reps;
+        }
+      });
+    } else if (log.weight_kg) {
+      if (maxWeightLifted === null || log.weight_kg > maxWeightLifted) {
+        maxWeightLifted = log.weight_kg;
+      }
+      totalVolume += log.weight_kg * 10 * log.sets_completed;
+    }
+  });
 
   return (
     <div
@@ -77,9 +107,14 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
               }}
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-1.5">
-            {completedSets} of {totalSets} sets completed
-          </p>
+          <div className="flex items-center justify-between text-xs text-muted-foreground mt-1.5">
+            <span>{completedSets} of {totalSets} sets completed</span>
+            {totalVolume > 0 && (
+              <span className="font-mono text-primary font-semibold">
+                Vol: {totalVolume.toLocaleString()} kg
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Exercise table */}
@@ -89,66 +124,133 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
               No workout data logged for this day.
             </div>
           ) : (
-            <div className="space-y-2 mt-3">
+            <div className="space-y-3 mt-3">
               {/* Table header */}
               <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 pb-1 border-b border-border/40">
                 <span>Exercise</span>
                 <span className="text-center">Sets</span>
-                <span className="text-center">Weight</span>
+                <span className="text-center">Top Weight</span>
                 <span className="text-center">Done</span>
               </div>
 
               {logs.map((log) => {
-                const pct = log.total_sets > 0
-                  ? Math.round((Math.min(log.sets_completed, log.total_sets) / log.total_sets) * 100)
+                const effectiveTotal = log.sets ? log.sets.length : log.total_sets;
+                const effectiveDone = log.sets 
+                  ? log.sets.filter(s => s.completed).length 
+                  : log.sets_completed;
+                const pct = effectiveTotal > 0
+                  ? Math.round((Math.min(effectiveDone, effectiveTotal) / effectiveTotal) * 100)
                   : 0;
                 const isComplete = pct >= 100;
+
+                // Determine display weight
+                let displayWeight: number | null = log.weight_kg ?? null;
+                if (log.sets && log.sets.length > 0) {
+                  const setWeights = log.sets
+                    .map(s => s.weight)
+                    .filter((w): w is number => w !== null && w > 0);
+                  if (setWeights.length > 0) {
+                    displayWeight = Math.max(...setWeights);
+                  }
+                }
 
                 return (
                   <div
                     key={log.exercise_id}
-                    className={`grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center rounded-xl px-3 py-2.5 border transition-colors
+                    className={`rounded-xl p-3 border transition-colors space-y-2
                       ${isComplete
                         ? 'bg-primary/5 border-primary/20'
                         : 'bg-muted/30 border-border/40'
                       }`}
                   >
-                    {/* Name */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Dumbbell className={`w-3.5 h-3.5 shrink-0 ${isComplete ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <span className="text-sm font-semibold truncate text-foreground">{log.exercise_name}</span>
+                    {/* Main Row */}
+                    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+                      {/* Name */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Dumbbell className={`w-3.5 h-3.5 shrink-0 ${isComplete ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <span className="text-sm font-semibold truncate text-foreground">{log.exercise_name}</span>
+                      </div>
+
+                      {/* Sets done / total */}
+                      <span className="text-xs font-mono text-center whitespace-nowrap text-muted-foreground px-1">
+                        {effectiveDone}/{effectiveTotal}
+                      </span>
+
+                      {/* Weight */}
+                      <span className="text-center">
+                        {displayWeight !== null ? (
+                          <Badge variant="outline" className="text-[10px] font-mono bg-background/60 px-1.5 text-primary border-primary/30">
+                            {displayWeight} kg
+                          </Badge>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-medium px-1">BW</span>
+                        )}
+                      </span>
+
+                      {/* % completion */}
+                      <span
+                        className={`text-xs font-bold text-center tabular-nums ${
+                          isComplete ? 'text-primary' : pct > 0 ? 'text-amber-500' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {pct}%
+                      </span>
                     </div>
 
-                    {/* Sets done / total */}
-                    <span className="text-xs font-mono text-center whitespace-nowrap text-muted-foreground">
-                      {log.sets_completed}/{log.total_sets}
-                    </span>
+                    {/* Detailed Set-by-Set Breakdown Chips */}
+                    {log.sets && log.sets.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-border/30">
+                        {log.sets.map((s, idx) => {
+                          const weightLabel = s.weight !== null && s.weight > 0 ? `${s.weight}kg` : 'BW';
+                          const repsLabel = s.reps ? `${s.reps}r` : '';
 
-                    {/* Weight */}
-                    <span className="text-center">
-                      {log.weight_kg != null ? (
-                        <Badge variant="outline" className="text-[10px] font-mono bg-background/60 px-1.5">
-                          {log.weight_kg} kg
-                        </Badge>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground font-medium">BW</span>
-                      )}
-                    </span>
-
-                    {/* % completion */}
-                    <span
-                      className={`text-xs font-bold text-center tabular-nums ${
-                        isComplete ? 'text-primary' : pct > 0 ? 'text-amber-500' : 'text-muted-foreground'
-                      }`}
-                    >
-                      {pct}%
-                    </span>
+                          return (
+                            <div
+                              key={idx}
+                              className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md border transition-all ${
+                                s.completed
+                                  ? 'bg-primary/15 text-primary border-primary/35 font-semibold shadow-xs'
+                                  : 'bg-background/50 text-muted-foreground border-border/40'
+                              }`}
+                            >
+                              <span className="opacity-60">S{s.setNumber}:</span>
+                              <span className="font-bold">{weightLabel}</span>
+                              {repsLabel && <span className="opacity-70 text-[9px]">({repsLabel})</span>}
+                              {s.completed ? (
+                                <Check className="w-2.5 h-2.5 stroke-[3] text-primary" />
+                              ) : (
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </div>
+
+        {/* Modal Footer Summary */}
+        {logs.length > 0 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border/50 bg-muted/20 text-xs">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Scale className="w-3.5 h-3.5 text-primary" />
+              <span>Top: <strong className="text-foreground">{maxWeightLifted ? `${maxWeightLifted} kg` : 'Bodyweight'}</strong></span>
+            </div>
+            {totalVolume > 0 && (
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Flame className="w-3.5 h-3.5 text-orange-500" />
+                <span>Volume: <strong className="text-primary font-mono">{totalVolume.toLocaleString()} kg</strong></span>
+              </div>
+            )}
+            <span className="text-[11px] text-muted-foreground">
+              {completedSets >= totalSets ? '🔥 100% Completed' : `${totalSets - completedSets} sets left`}
+            </span>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -160,3 +262,4 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
 };
 
 export default DayDetailModal;
+
