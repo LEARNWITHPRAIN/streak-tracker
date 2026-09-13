@@ -109,7 +109,8 @@ const defaultSchedule: DaySchedule[] = [
 ];
 
 export const parseSets = (setsReps: string): number | null => {
-  const match = setsReps.match(/^(\d+)\s*[×xX]\s*\d+/);
+  if (!setsReps) return null;
+  const match = setsReps.match(/^(\d+)\s*[×xX*]\s*\d+/);
   if (match) {
     return parseInt(match[1], 10);
   }
@@ -117,7 +118,8 @@ export const parseSets = (setsReps: string): number | null => {
 };
 
 export const parseReps = (setsReps: string): string => {
-  const match = setsReps.match(/^\d+\s*[×xX]\s*(.+)/);
+  if (!setsReps) return '10';
+  const match = setsReps.match(/^\d+\s*[×xX*]\s*(.+)/);
   if (match) {
     return match[1].trim();
   }

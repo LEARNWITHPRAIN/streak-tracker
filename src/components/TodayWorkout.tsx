@@ -368,6 +368,8 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(true);
   const [editingWeightIdx, setEditingWeightIdx] = useState<number | null>(null);
   const [customWeightVal, setCustomWeightVal] = useState<string>('');
+  const [editingRepsIdx, setEditingRepsIdx] = useState<number | null>(null);
+  const [customRepsVal, setCustomRepsVal] = useState<string>('');
 
   const maxWeight = useMemo(() => {
     const weights = sets
@@ -388,6 +390,18 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
       onUpdateWeight(idx, Math.max(0, Number(customWeightVal)));
     }
     setEditingWeightIdx(null);
+  };
+
+  const startEditReps = (idx: number, currentReps: string | number | undefined) => {
+    setEditingRepsIdx(idx);
+    const cleaned = String(currentReps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
+    setCustomRepsVal(cleaned);
+  };
+
+  const saveEditReps = (idx: number) => {
+    const finalReps = customRepsVal.trim() || '10';
+    onUpdateReps(idx, finalReps);
+    setEditingRepsIdx(null);
   };
 
   return (
@@ -531,9 +545,38 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
 
                     {/* Reps */}
                     <div className="shrink-0 text-center">
-                      <span className="text-xs font-mono font-semibold text-muted-foreground px-1.5">
-                        {set.reps || '10'}r
-                      </span>
+                      {editingRepsIdx === idx ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="text"
+                            autoFocus
+                            placeholder="10"
+                            value={customRepsVal}
+                            onChange={(e) => setCustomRepsVal(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEditReps(idx);
+                              if (e.key === 'Escape') setEditingRepsIdx(null);
+                            }}
+                            className="h-7 w-16 text-xs px-1.5 py-0 bg-background font-mono text-center"
+                          />
+                          <Button 
+                            size="sm" 
+                            onClick={() => saveEditReps(idx)}
+                            className="h-7 px-1.5 text-xs bg-primary text-primary-foreground"
+                          >
+                            OK
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditReps(idx, set.reps)}
+                          className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted/80 border border-border/40 transition-colors"
+                          title="Click to edit reps"
+                        >
+                          {String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '')} reps
+                        </button>
+                      )}
                     </div>
 
                     {/* Actions: Delete & Complete */}

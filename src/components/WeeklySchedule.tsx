@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, Pencil, Trash2, Plus, X } from 'lucide-react';
+import { 
+  Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, Pencil, 
+  Trash2, Plus, X, Scale, ChevronDown, ChevronUp 
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useUserWorkouts, Exercise, DaySchedule } from '@/hooks/useUserWorkouts';
+import { useUserWorkouts, Exercise, DaySchedule, ExerciseSet, getExerciseSets, parseReps, formatExerciseSetsReps } from '@/hooks/useUserWorkouts';
+import { toast } from 'sonner';
 
 const dayIcons: Record<string, React.ReactNode> = {
   monday: <Dumbbell className="w-5 h-5" />,
@@ -19,85 +23,181 @@ const dayIcons: Record<string, React.ReactNode> = {
 
 const dayColors: Record<string, string> = {
   monday: 'text-primary',
-  tuesday: 'text-secondary',
-  wednesday: 'text-accent',
+  tuesday: 'text-primary',
+  wednesday: 'text-primary',
   thursday: 'text-primary',
-  friday: 'text-secondary',
-  saturday: 'text-accent',
+  friday: 'text-primary',
+  saturday: 'text-primary',
   sunday: 'text-muted-foreground',
 };
+
+interface ExerciseFormState {
+  name: string;
+  sets: ExerciseSet[];
+}
 
 export const WeeklySchedule: React.FC = () => {
   const { schedule, loading, updateDayWorkout } = useUserWorkouts();
   const [editingDay, setEditingDay] = useState<string | null>(null);
-  const [editingExercise, setEditingExercise] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ title: '', subtitle: '' });
-  const [exerciseForm, setExerciseForm] = useState({ name: '', setsReps: '', weightOption: 'body' as 'body' | 'custom', weightKg: '' });
-  const [addingExercise, setAddingExercise] = useState<string | null>(null);
-  const [newExercise, setNewExercise] = useState({ name: '', setsReps: '', weightOption: 'body' as 'body' | 'custom', weightKg: '' });
+  const [editDayForm, setEditDayForm] = useState({ title: '', subtitle: '' });
+
+  // Multi-set Exercise Editor State
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [addingToDay, setAddingToDay] = useState<string | null>(null);
+  const [exerciseForm, setExerciseForm] = useState<ExerciseFormState>({
+    name: '',
+    sets: [
+      { setNumber: 1, weight: null, reps: '10' },
+      { setNumber: 2, weight: null, reps: '10' },
+      { setNumber: 3, weight: null, reps: '10' },
+    ],
+  });
   
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
+  // Day header edit
   const startEditDay = (day: DaySchedule) => {
-    setEditForm({ title: day.title, subtitle: day.subtitle });
+    setEditDayForm({ title: day.title, subtitle: day.subtitle });
     setEditingDay(day.day);
   };
 
   const saveEditDay = async (dayName: string) => {
     const day = schedule.find(d => d.day === dayName);
     if (day) {
-      await updateDayWorkout(dayName, { ...day, title: editForm.title, subtitle: editForm.subtitle });
+      await updateDayWorkout(dayName, { ...day, title: editDayForm.title, subtitle: editDayForm.subtitle });
     }
     setEditingDay(null);
   };
 
+  // Start adding a new exercise
+  const startAddExercise = (dayName: string) => {
+    setAddingToDay(dayName);
+    setEditingExerciseId(null);
+    setExerciseForm({
+      name: '',
+      sets: [
+        { setNumber: 1, weight: null, reps: '10' },
+        { setNumber: 2, weight: null, reps: '10' },
+        { setNumber: 3, weight: null, reps: '10' },
+      ],
+    });
+  };
+
+  // Start editing an existing exercise
   const startEditExercise = (exercise: Exercise) => {
-    const hasWeight = exercise.weight !== null && exercise.weight !== undefined;
+    setEditingExerciseId(exercise.id);
+    setAddingToDay(null);
+    const existingSets = getExerciseSets(exercise);
     setExerciseForm({
       name: exercise.name,
-      setsReps: exercise.setsReps,
-      weightOption: hasWeight ? 'custom' : 'body',
-      weightKg: hasWeight ? String(exercise.weight) : '',
+      sets: existingSets.map((s, idx) => ({
+        setNumber: idx + 1,
+        weight: s.weight,
+        reps: String(s.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, ''),
+      })),
     });
-    setEditingExercise(exercise.id);
   };
 
-  const saveEditExercise = async (dayName: string, exerciseId: string) => {
-    const day = schedule.find(d => d.day === dayName);
-    if (day) {
-      const weight = exerciseForm.weightOption === 'custom' && exerciseForm.weightKg !== '' ? Number(exerciseForm.weightKg) : null;
-      const updatedExercises = day.exercises.map(e =>
-        e.id === exerciseId ? { ...e, name: exerciseForm.name, setsReps: exerciseForm.setsReps, weight } : e
-      );
-      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+  // Helper to add a set to the form
+  const handleAddSetToForm = () => {
+    const current = [...exerciseForm.sets];
+    const last = current[current.length - 1];
+    current.push({
+      setNumber: current.length + 1,
+      weight: last ? last.weight : null,
+      reps: last ? last.reps : '10',
+    });
+    setExerciseForm({ ...exerciseForm, sets: current });
+  };
+
+  // Helper to remove a set from the form
+  const handleRemoveSetFromForm = (index: number) => {
+    if (exerciseForm.sets.length <= 1) return;
+    const current = exerciseForm.sets.filter((_, idx) => idx !== index);
+    const renumbered = current.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
+    setExerciseForm({ ...exerciseForm, sets: renumbered });
+  };
+
+  // Helper to update set weight in form
+  const handleUpdateSetWeightInForm = (index: number, weight: number | null) => {
+    const current = [...exerciseForm.sets];
+    if (current[index]) {
+      current[index] = { ...current[index], weight };
+      setExerciseForm({ ...exerciseForm, sets: current });
     }
-    setEditingExercise(null);
   };
 
+  // Helper to update set reps in form
+  const handleUpdateSetRepsInForm = (index: number, reps: string) => {
+    const current = [...exerciseForm.sets];
+    if (current[index]) {
+      current[index] = { ...current[index], reps };
+      setExerciseForm({ ...exerciseForm, sets: current });
+    }
+  };
+
+  // Save the exercise (either create new or update existing)
+  const handleSaveExercise = async (dayName: string) => {
+    const name = exerciseForm.name.trim();
+    if (!name) {
+      toast.error('Please enter an exercise name');
+      return;
+    }
+    if (exerciseForm.sets.length === 0) {
+      toast.error('Please add at least 1 set');
+      return;
+    }
+
+    const day = schedule.find(d => d.day === dayName);
+    if (!day) return;
+
+    // Calculate base weight and setsReps string
+    const weights = exerciseForm.sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
+    const topWeight = weights.length > 0 ? Math.max(...weights) : null;
+    const setsRepsFormatted = formatExerciseSetsReps(exerciseForm.sets);
+
+    if (editingExerciseId) {
+      // Update existing
+      const updatedExercises = day.exercises.map(e => {
+        if (e.id === editingExerciseId) {
+          return {
+            ...e,
+            name,
+            setsReps: setsRepsFormatted,
+            weight: topWeight,
+            sets: exerciseForm.sets,
+          };
+        }
+        return e;
+      });
+      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+      toast.success('Exercise updated');
+    } else {
+      // Add new
+      const newEx: Exercise = {
+        id: `${dayName}-${Date.now()}`,
+        name,
+        setsReps: setsRepsFormatted,
+        weight: topWeight,
+        sets: exerciseForm.sets,
+      };
+      const updatedExercises = [...day.exercises, newEx];
+      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+      toast.success('Exercise added');
+    }
+
+    setEditingExerciseId(null);
+    setAddingToDay(null);
+  };
+
+  // Delete exercise
   const deleteExercise = async (dayName: string, exerciseId: string) => {
     const day = schedule.find(d => d.day === dayName);
     if (day) {
       const updatedExercises = day.exercises.filter(e => e.id !== exerciseId);
       await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+      toast.success('Exercise removed');
     }
-  };
-
-  const addExercise = async (dayName: string) => {
-    if (!newExercise.name.trim()) return;
-    const day = schedule.find(d => d.day === dayName);
-    if (day) {
-      const weight = newExercise.weightOption === 'custom' && newExercise.weightKg !== '' ? Number(newExercise.weightKg) : null;
-      const newEx: Exercise = {
-        id: `${dayName}-${Date.now()}`,
-        name: newExercise.name,
-        setsReps: newExercise.setsReps || '3×10',
-        weight,
-      };
-      const updatedExercises = [...day.exercises, newEx];
-      await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
-    }
-    setNewExercise({ name: '', setsReps: '', weightOption: 'body', weightKg: '' });
-    setAddingExercise(null);
   };
 
   if (loading) {
@@ -112,9 +212,10 @@ export const WeeklySchedule: React.FC = () => {
     <div className="space-y-4">
       <div className="text-center mb-4">
         <h2 className="text-lg font-bold text-foreground">Weekly Workout Split</h2>
-        <p className="text-xs text-muted-foreground">Your structured training program</p>
+        <p className="text-xs text-muted-foreground">Your structured training program with custom sets and weights</p>
       </div>
-      <Tabs defaultValue={today} className="w-full">
+
+      <Tabs defaultValue={today} className="w-full">
         <TabsList className="w-full grid grid-cols-7 gap-1.5 bg-card/60 p-1.5 rounded-2xl border border-border/50 h-auto">
           {schedule.map((day) => (
             <TabsTrigger
@@ -137,14 +238,14 @@ export const WeeklySchedule: React.FC = () => {
                 </div>
                 <div className="flex-1 space-y-2">
                   <Input
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    value={editDayForm.title}
+                    onChange={(e) => setEditDayForm({ ...editDayForm, title: e.target.value })}
                     className="h-9 font-bold bg-background/70 rounded-xl"
                     placeholder="Day title"
                   />
                   <Input
-                    value={editForm.subtitle}
-                    onChange={(e) => setEditForm({ ...editForm, subtitle: e.target.value })}
+                    value={editDayForm.subtitle}
+                    onChange={(e) => setEditDayForm({ ...editDayForm, subtitle: e.target.value })}
                     className="h-8 text-xs bg-background/70 rounded-xl"
                     placeholder="Subtitle"
                   />
@@ -179,147 +280,58 @@ export const WeeklySchedule: React.FC = () => {
               </div>
             )}
 
-            {/* Exercises List - Responsive Grid */}
-            {day.exercises.length > 0 || addingExercise === day.day ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Exercises Grid */}
+            {day.exercises.length > 0 || addingToDay === day.day ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {day.exercises.map((exercise) => {
-                  const isEditing = editingExercise === exercise.id;
+                  const isEditingThis = editingExerciseId === exercise.id;
                   
-                  if (isEditing) {
+                  if (isEditingThis) {
                     return (
-                      <Card key={exercise.id} className="bg-card/70 border-primary/40 rounded-2xl">
-                        <CardContent className="p-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={exerciseForm.name}
-                              onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
-                              className="flex-1 h-9 bg-background/70 rounded-xl"
-                              placeholder="Exercise name"
-                            />
-                            <Input
-                              value={exerciseForm.setsReps}
-                              onChange={(e) => setExerciseForm({ ...exerciseForm, setsReps: e.target.value })}
-                              className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
-                              placeholder="3×10"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={exerciseForm.weightOption}
-                              onChange={(e) => setExerciseForm({ ...exerciseForm, weightOption: e.target.value as 'body' | 'custom' })}
-                              className="flex-1 h-8 rounded-lg border border-border bg-background/70 text-xs px-2"
-                            >
-                              <option value="body">Body weight</option>
-                              <option value="custom">Weight (kg)</option>
-                            </select>
-                            {exerciseForm.weightOption === 'custom' && (
-                              <Input
-                                type="number"
-                                min="0"
-                                value={exerciseForm.weightKg}
-                                onChange={(e) => setExerciseForm({ ...exerciseForm, weightKg: e.target.value })}
-                                className="w-20 h-8 bg-background/70 text-center rounded-lg font-mono text-xs"
-                                placeholder="kg"
-                              />
-                            )}
-                            <Button size="icon" variant="ghost" onClick={() => saveEditExercise(day.day, exercise.id)} className="h-8 w-8 rounded-lg">
-                              <Check className="w-4 h-4 text-primary" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => setEditingExercise(null)} className="h-8 w-8 rounded-lg">
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <WeeklyExerciseEditorCard
+                        key={exercise.id}
+                        form={exerciseForm}
+                        onNameChange={(name) => setExerciseForm({ ...exerciseForm, name })}
+                        onAddSet={handleAddSetToForm}
+                        onRemoveSet={handleRemoveSetFromForm}
+                        onUpdateWeight={handleUpdateSetWeightInForm}
+                        onUpdateReps={handleUpdateSetRepsInForm}
+                        onSave={() => handleSaveExercise(day.day)}
+                        onCancel={() => setEditingExerciseId(null)}
+                      />
                     );
                   }
-                  
+
+                  const sets = getExerciseSets(exercise);
+                  const weights = sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
+                  const topWeight = weights.length > 0 ? Math.max(...weights) : (exercise.weight ?? null);
+
                   return (
-                    <Card
+                    <WeeklyExerciseViewCard
                       key={exercise.id}
-                      className="transition-all duration-200 group bg-card/60 hover:bg-card hover:border-primary/30 border-border/60 rounded-2xl"
-                    >
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-background/70 border border-border/50 flex items-center justify-center shrink-0 ${dayColors[day.day]}`}>
-                          <Dumbbell className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-foreground truncate">
-  {exercise.name}
-  {exercise.weight !== null && (
-    <Badge variant="outline" className="ml-2 text-xs bg-background/60 font-mono">
-      {exercise.weight}kg
-    </Badge>
-  )}
-</p>
-<div className="mt-1">
-  <Badge variant="outline" className="text-xs bg-background/60 font-mono">
-    {exercise.setsReps}
-  </Badge>
-</div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" onClick={() => startEditExercise(exercise)} className="h-8 w-8 rounded-lg hover:bg-muted">
-                            <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => deleteExercise(day.day, exercise.id)} className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      exercise={exercise}
+                      sets={sets}
+                      topWeight={topWeight}
+                      dayColor={dayColors[day.day]}
+                      onEdit={() => startEditExercise(exercise)}
+                      onDelete={() => deleteExercise(day.day, exercise.id)}
+                    />
                   );
                 })}
 
-                {/* Add Exercise Form */}
-                {addingExercise === day.day && (
-                  <Card className="bg-card/60 border-dashed border-primary/50 rounded-2xl">
-                    <CardContent className="p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={newExercise.name}
-                          onChange={(e) => setNewExercise({ ...newExercise, name: e.target.value })}
-                          className="flex-1 h-9 bg-background/70 rounded-xl"
-                          placeholder="Exercise name"
-                          autoFocus
-                          onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
-                        />
-                        <Input
-                          value={newExercise.setsReps}
-                          onChange={(e) => setNewExercise({ ...newExercise, setsReps: e.target.value })}
-                          className="w-20 h-9 bg-background/70 text-center rounded-xl font-mono text-xs"
-                          placeholder="3×10"
-                          onKeyDown={(e) => e.key === 'Enter' && addExercise(day.day)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={newExercise.weightOption}
-                          onChange={(e) => setNewExercise({ ...newExercise, weightOption: e.target.value as 'body' | 'custom' })}
-                          className="flex-1 h-8 rounded-lg border border-border bg-background/70 text-xs px-2"
-                        >
-                          <option value="body">Body weight</option>
-                          <option value="custom">Weight (kg)</option>
-                        </select>
-                        {newExercise.weightOption === 'custom' && (
-                          <Input
-                            type="number"
-                            min="0"
-                            value={newExercise.weightKg}
-                            onChange={(e) => setNewExercise({ ...newExercise, weightKg: e.target.value })}
-                            className="w-20 h-8 bg-background/70 text-center rounded-lg font-mono text-xs"
-                            placeholder="kg"
-                          />
-                        )}
-                        <Button size="icon" variant="ghost" onClick={() => addExercise(day.day)} className="h-8 w-8 rounded-lg">
-                          <Check className="w-4 h-4 text-primary" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => setAddingExercise(null)} className="h-8 w-8 rounded-lg">
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Add Exercise Multi-Set Editor */}
+                {addingToDay === day.day && (
+                  <WeeklyExerciseEditorCard
+                    form={exerciseForm}
+                    isNew
+                    onNameChange={(name) => setExerciseForm({ ...exerciseForm, name })}
+                    onAddSet={handleAddSetToForm}
+                    onRemoveSet={handleRemoveSetFromForm}
+                    onUpdateWeight={handleUpdateSetWeightInForm}
+                    onUpdateReps={handleUpdateSetRepsInForm}
+                    onSave={() => handleSaveExercise(day.day)}
+                    onCancel={() => setAddingToDay(null)}
+                  />
                 )}
               </div>
             ) : day.day === 'sunday' ? (
@@ -333,11 +345,11 @@ export const WeeklySchedule: React.FC = () => {
             ) : null}
 
             {/* Add Exercise Button */}
-            {addingExercise !== day.day && (
+            {addingToDay !== day.day && !editingExerciseId && (
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => setAddingExercise(day.day)}
+                onClick={() => startAddExercise(day.day)}
                 className="w-full border-dashed rounded-2xl py-5 border-border hover:border-primary/50 text-sm font-semibold"
               >
                 <Plus className="w-4 h-4 mr-2 text-primary" />
@@ -350,3 +362,265 @@ export const WeeklySchedule: React.FC = () => {
     </div>
   );
 };
+
+// ── Exercise View Card in Weekly Schedule ───────────────────────────────────────
+interface WeeklyExerciseViewCardProps {
+  exercise: Exercise;
+  sets: ExerciseSet[];
+  topWeight: number | null;
+  dayColor: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const WeeklyExerciseViewCard: React.FC<WeeklyExerciseViewCardProps> = ({
+  exercise,
+  sets,
+  topWeight,
+  dayColor,
+  onEdit,
+  onDelete,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <Card className="transition-all duration-200 bg-card/75 hover:bg-card border-border/60 hover:border-primary/30 rounded-2xl overflow-hidden shadow-sm">
+      <CardContent className="p-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl bg-background/80 border border-border/50 flex items-center justify-center shrink-0 ${dayColor}`}>
+            <Dumbbell className="w-5 h-5" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-base text-foreground truncate">{exercise.name}</h4>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs bg-background/60 font-mono">
+                {sets.length} sets
+              </Badge>
+              {topWeight !== null ? (
+                <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0 bg-primary/15 text-primary border border-primary/30">
+                  Top: {topWeight} kg
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] font-medium px-2 py-0 text-muted-foreground">
+                  Bodyweight (BW)
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <Button size="icon" variant="ghost" onClick={onEdit} className="h-8 w-8 rounded-lg hover:bg-muted" title="Edit exercise">
+              <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={onDelete} className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10" title="Delete exercise">
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={() => setIsExpanded(!isExpanded)} className="h-8 w-8 rounded-lg text-muted-foreground">
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Set Breakdown List */}
+        {isExpanded && (
+          <div className="pt-2 border-t border-border/40 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+              <span>Set & Weight</span>
+              <span>Reps</span>
+            </div>
+
+            {sets.map((s, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between gap-2 p-2 rounded-xl bg-background/40 border border-border/40 text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-bold font-mono px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground text-[11px]">
+                    S{s.setNumber || idx + 1}
+                  </span>
+                  <span className="flex items-center gap-1 font-mono font-medium text-foreground">
+                    <Scale className="w-3 h-3 text-primary shrink-0" />
+                    {s.weight !== null ? `${s.weight} kg` : 'Bodyweight'}
+                  </span>
+                </div>
+
+                <span className="font-mono font-semibold text-muted-foreground px-1.5">
+                  {String(s.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '')} reps
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ── Exercise Multi-Set Editor Card (For Add & Edit) ─────────────────────────────
+interface WeeklyExerciseEditorCardProps {
+  form: ExerciseFormState;
+  isNew?: boolean;
+  onNameChange: (name: string) => void;
+  onAddSet: () => void;
+  onRemoveSet: (index: number) => void;
+  onUpdateWeight: (index: number, weight: number | null) => void;
+  onUpdateReps: (index: number, reps: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+const WeeklyExerciseEditorCard: React.FC<WeeklyExerciseEditorCardProps> = ({
+  form,
+  isNew = false,
+  onNameChange,
+  onAddSet,
+  onRemoveSet,
+  onUpdateWeight,
+  onUpdateReps,
+  onSave,
+  onCancel,
+}) => {
+  return (
+    <Card className="bg-card/90 border-primary/50 rounded-2xl shadow-xl overflow-hidden animate-scale-in">
+      <CardContent className="p-4 space-y-3.5">
+        {/* Title Input */}
+        <div>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+            Exercise Name
+          </label>
+          <Input
+            value={form.name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="e.g. Incline Dumbbell Press"
+            className="h-10 bg-background font-semibold rounded-xl"
+            autoFocus={isNew}
+          />
+        </div>
+
+        {/* Sets Config List */}
+        <div className="space-y-2 pt-1 border-t border-border/50">
+          <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+            <span>Set & Weight (kg)</span>
+            <span>Target Reps</span>
+            <span></span>
+          </div>
+
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5">
+            {form.sets.map((set, idx) => {
+              const isBW = set.weight === null;
+
+              return (
+                <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-background/70 border border-border/50">
+                  <span className="text-xs font-bold font-mono px-2 py-1 rounded-md bg-muted text-muted-foreground shrink-0">
+                    S{idx + 1}
+                  </span>
+
+                  {/* Weight Toggle / Input */}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    {isBW ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onUpdateWeight(idx, 20)}
+                        className="h-8 text-xs font-medium px-2.5 bg-muted/40 hover:bg-muted rounded-lg flex-1"
+                      >
+                        Bodyweight (BW)
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1 flex-1">
+                        <Input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          placeholder="kg"
+                          value={set.weight !== null ? set.weight : ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            onUpdateWeight(idx, val === '' ? null : Number(val));
+                          }}
+                          className="h-8 text-xs bg-background font-mono px-2 rounded-lg flex-1"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onUpdateWeight(idx, null)}
+                          className="h-8 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                          title="Switch to Bodyweight"
+                        >
+                          BW
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reps Input */}
+                  <div className="w-18 shrink-0">
+                    <Input
+                      type="text"
+                      placeholder="10"
+                      value={set.reps || ''}
+                      onChange={(e) => onUpdateReps(idx, e.target.value)}
+                      className="h-8 text-xs font-mono text-center bg-background px-1.5 rounded-lg"
+                    />
+                  </div>
+
+                  {/* Delete Set */}
+                  {form.sets.length > 1 && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onRemoveSet(idx)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onAddSet}
+            className="w-full h-8 text-xs border-dashed border-primary/40 text-primary hover:bg-primary/10 rounded-xl"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Add Set
+          </Button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={onCancel}
+            className="rounded-xl text-xs h-9 px-4 text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onSave}
+            className="rounded-xl text-xs h-9 px-5 bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+          >
+            <Check className="w-3.5 h-3.5 mr-1.5" />
+            {isNew ? 'Add Exercise' : 'Save Changes'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default WeeklySchedule;
