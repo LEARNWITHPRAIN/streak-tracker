@@ -210,10 +210,23 @@ export const WeeklySchedule: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h2 className="text-lg font-bold text-foreground">Weekly Workout Split</h2>
           <p className="text-xs text-muted-foreground">Your structured training program with custom sets and weights</p>
+        </div>
+      </div>
+
+      {/* Push Pull Legs Default Routine Banner with Edit Notice */}
+      <div className="flex items-start sm:items-center gap-3 p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-xs text-foreground/90">
+        <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+          <Dumbbell className="w-4 h-4" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="font-bold text-primary text-xs sm:text-sm">Push-Pull-Legs Program Loaded 💪</p>
+          <p className="text-muted-foreground text-[11px] sm:text-xs leading-relaxed">
+            Here is your Push-Pull-Legs split. You can edit any exercise, change target weights (kg), add sets, or reorder movements anytime according to your goals!
+          </p>
         </div>
       </div>
 

@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import { Bell, Dumbbell, Clock, CheckCircle2, ShieldCheck, X } from 'lucide-react';
-import { usePWA } from '@/hooks/usePWA';
+import { usePWA, HOUR_OPTIONS, MINUTE_OPTIONS, formatTime } from '@/hooks/usePWA';
 import { Button } from '@/components/ui/button';
-
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTE_OPTIONS = [0, 30];
-
-function formatTime(hour: number, minute: number): string {
-  const h = hour % 12 === 0 ? 12 : hour % 12;
-  const m = minute === 0 ? '00' : '30';
-  const ampm = hour < 12 ? 'AM' : 'PM';
-  return `${h}:${m} ${ampm}`;
-}
 
 interface NotificationOnboardingModalProps {
   isOpen: boolean;

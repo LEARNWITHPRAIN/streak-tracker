@@ -1,16 +1,6 @@
 import React from 'react';
 import { Bell, Clock, CheckCircle2, AlertCircle, Download, Smartphone, Dumbbell, Send } from 'lucide-react';
-import { usePWA, getStoredTodayWorkoutProgress } from '@/hooks/usePWA';
-
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTE_OPTIONS = [0, 30];
-
-function formatTime(hour: number, minute: number): string {
-  const h = hour % 12 === 0 ? 12 : hour % 12;
-  const m = minute === 0 ? '00' : '30';
-  const ampm = hour < 12 ? 'AM' : 'PM';
-  return `${h}:${m} ${ampm}`;
-}
+import { usePWA, HOUR_OPTIONS, MINUTE_OPTIONS, formatTime } from '@/hooks/usePWA';
 
 export const NotificationSettings: React.FC = () => {
   const {
@@ -197,7 +187,7 @@ export const NotificationSettings: React.FC = () => {
                   >
                     {MINUTE_OPTIONS.map((m) => (
                       <option key={m} value={m}>
-                        {m === 0 ? ':00' : ':30'}
+                        {m < 10 ? `:0${m}` : `:${m}`}
                       </option>
                     ))}
                   </select>
@@ -208,13 +198,7 @@ export const NotificationSettings: React.FC = () => {
                   Fires at: <strong className="text-foreground">{formatTime(dualReminders.workout.hour, dualReminders.workout.minute)}</strong> daily
                 </span>
                 <button
-                  onClick={() =>
-                    sendTestNotification(
-                      "Complete Today's Workout 💪",
-                      `You have completed ${currentWorkoutPct}% of today's workout! Step in and finish strong 🔥`,
-                      '/dashboard'
-                    )
-                  }
+                  onClick={() => sendTestNotification()}
                   className="px-2.5 py-1 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[11px] font-medium flex items-center gap-1 hover:bg-orange-500/25 transition-colors"
                 >
                   <Send className="w-3 h-3" /> Test
