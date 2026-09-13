@@ -587,80 +587,92 @@ const WeeklyExerciseEditorCard: React.FC<WeeklyExerciseEditorCardProps> = ({
         </div>
 
         {/* Sets Config List */}
-        <div className="space-y-2.5 pt-2 border-t border-border/50">
-          <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+        <div className="space-y-2 pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
             <div className="flex items-center gap-2">
-              <span className="w-8 text-center">Set</span>
-              <span>Weight</span>
+              <span className="w-7 text-center">Set</span>
+              <span className="pl-0.5">Weight (kg)</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-24 text-center">Target Reps</span>
-              {form.sets.length > 1 && <span className="w-8"></span>}
+            <div className="flex items-center gap-1.5">
+              <span className="w-[84px] text-center">Target Reps</span>
+              {form.sets.length > 1 && <span className="w-7"></span>}
             </div>
           </div>
 
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-0.5">
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
             {form.sets.map((set, idx) => {
               const isBW = set.weight === null;
 
               return (
-                <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-background/80 border border-border/60 hover:border-border/80 transition-colors">
+                <div key={idx} className="flex items-center gap-1.5 p-1.5 sm:p-2 rounded-xl bg-background/80 border border-border/60 hover:border-border/80 transition-colors">
                   {/* Set Badge */}
-                  <span className="w-8 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
+                  <span className="w-7 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
                     S{idx + 1}
                   </span>
 
-                  {/* Weight Control: BW Button + kg Input */}
-                  <div className="flex items-center flex-1 min-w-0 rounded-xl bg-card border border-border/80 p-1 shadow-inner gap-1">
+                  {/* Weight Control: BW Button + Dedicated kg Input */}
+                  <div className={`flex items-center flex-1 min-w-0 h-8 rounded-xl border p-0.5 transition-all shadow-inner ${
+                    !isBW
+                      ? 'bg-background border-primary/50 shadow-sm ring-1 ring-primary/20'
+                      : 'bg-card border-border/80'
+                  }`}>
+                    {/* Compact BW Toggle Pill */}
                     <button
                       type="button"
-                      onClick={() => onUpdateWeight(idx, null)}
-                      className={`h-7 px-2.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shrink-0 ${
+                      onClick={() => {
+                        if (isBW) {
+                          onUpdateWeight(idx, 20);
+                        } else {
+                          onUpdateWeight(idx, null);
+                        }
+                      }}
+                      className={`h-7 px-2 rounded-lg text-[11px] font-extrabold uppercase transition-all shrink-0 flex items-center gap-1 ${
                         isBW
-                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 font-bold'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/70'
                       }`}
-                      title="Set as Bodyweight (no added weight)"
+                      title={isBW ? "Currently Bodyweight. Click to set weight in kg" : "Click to switch to Bodyweight"}
                     >
                       <Scale className="w-3 h-3" />
                       <span>BW</span>
                     </button>
 
-                    <div className={`flex items-center flex-1 min-w-0 px-2 py-0.5 rounded-lg transition-colors border ${
-                      !isBW ? 'bg-background border-primary/40' : 'bg-transparent border-transparent'
-                    }`}>
+                    {/* Numeric Weight Input */}
+                    <div className="flex items-center flex-1 min-w-0 px-1.5">
                       <input
                         type="number"
+                        inputMode="decimal"
                         step="0.5"
                         min="0"
-                        placeholder="0"
+                        placeholder={isBW ? "—" : "0"}
                         value={set.weight !== null ? set.weight : ''}
-                        onFocus={() => {
-                          if (isBW) onUpdateWeight(idx, 20);
-                        }}
                         onChange={(e) => {
                           const val = e.target.value;
-                          onUpdateWeight(idx, val === '' ? null : Math.max(0, Number(val)));
+                          if (val === '') {
+                            onUpdateWeight(idx, null);
+                          } else {
+                            onUpdateWeight(idx, Math.max(0, parseFloat(val) || 0));
+                          }
                         }}
-                        className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-right outline-none pr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-full min-w-0 bg-transparent text-xs font-mono font-bold text-foreground text-center outline-none pr-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <span className={`text-[11px] font-bold select-none shrink-0 ${!isBW ? 'text-primary' : 'text-muted-foreground/60'}`}>
+                      <span className={`text-[11px] font-bold select-none shrink-0 ${!isBW ? 'text-primary' : 'text-muted-foreground/40'}`}>
                         kg
                       </span>
                     </div>
                   </div>
 
                   {/* Target Reps Input */}
-                  <div className="flex items-center rounded-xl bg-card border border-border/80 p-1 shadow-inner w-24 shrink-0">
+                  <div className="flex items-center h-8 rounded-xl bg-card border border-border/80 p-0.5 shadow-inner w-[84px] shrink-0">
                     <input
                       type="text"
                       inputMode="numeric"
                       placeholder="10"
                       value={String(set.reps || '').replace(/^[0-9]+\s*[*xX×]\s*/, '')}
                       onChange={(e) => onUpdateReps(idx, e.target.value)}
-                      className="w-full bg-transparent text-xs font-mono font-bold text-foreground text-center outline-none px-1"
+                      className="w-full min-w-0 bg-transparent text-xs font-mono font-bold text-foreground text-center outline-none px-1"
                     />
-                    <span className="text-[11px] font-semibold text-muted-foreground pr-1.5 select-none">
+                    <span className="text-[11px] font-semibold text-muted-foreground pr-1.5 select-none shrink-0">
                       reps
                     </span>
                   </div>
@@ -672,7 +684,7 @@ const WeeklyExerciseEditorCard: React.FC<WeeklyExerciseEditorCardProps> = ({
                       size="icon"
                       variant="ghost"
                       onClick={() => onRemoveSet(idx)}
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 transition-colors"
+                      className="h-8 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 transition-colors p-0"
                       title="Remove this set"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
