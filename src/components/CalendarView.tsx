@@ -295,9 +295,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 return (
                   <div
                     key={index}
-                    className={`${getDayClass(day)} relative ${hasHistory ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all' : ''}`}
+                    className={`${getDayClass(day)} relative ${day !== null ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all' : ''}`}
                     onClick={() => {
-                      if (day !== null && dateKey && hasHistory && onDayClick) {
+                      if (day !== null && dateKey && onDayClick) {
                         onDayClick(dateKey);
                       }
                     }}

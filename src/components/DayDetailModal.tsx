@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, Dumbbell, TrendingUp, BarChart2, Check, Scale, Flame } from 'lucide-react';
+import { X, Dumbbell, TrendingUp, BarChart2, Check, Scale, Flame, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DailyExerciseSetLog } from '@/types/exercise';
+import { DaySchedule } from '@/hooks/useUserWorkouts';
 
 export interface ExerciseLog {
   exercise_id: string;
@@ -16,10 +17,11 @@ export interface ExerciseLog {
 interface DayDetailModalProps {
   date: string; // YYYY-MM-DD
   logs: ExerciseLog[];
+  daySchedule?: DaySchedule | null;
   onClose: () => void;
 }
 
-const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) => {
+const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule, onClose }) => {
   if (!date) return null;
 
   const displayDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -61,6 +63,8 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
     }
   });
 
+  const isRestDay = daySchedule?.title?.toLowerCase().includes('rest') || (daySchedule && daySchedule.exercises.length === 0);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
@@ -76,11 +80,24 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
         <div className="flex items-center justify-between p-5 border-b border-border/50 bg-gradient-to-r from-primary/10 to-transparent">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <BarChart2 className="w-5 h-5 text-primary" />
+              {isRestDay ? (
+                <Moon className="w-5 h-5 text-primary" />
+              ) : (
+                <BarChart2 className="w-5 h-5 text-primary" />
+              )}
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground">{displayDate}</h2>
-              <p className="text-xs text-muted-foreground">Progressive Overload Snapshot</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-foreground">{displayDate}</h2>
+                {daySchedule?.title && (
+                  <Badge variant="outline" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/30 uppercase tracking-wider">
+                    {daySchedule.title}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {daySchedule?.subtitle ? daySchedule.subtitle : 'Weekly Split Routine & Progress'}
+              </p>
             </div>
           </div>
           <Button size="icon" variant="ghost" onClick={onClose} className="rounded-xl h-8 w-8">
@@ -120,8 +137,21 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
         {/* Exercise table */}
         <div className="px-5 pb-5 max-h-[55vh] overflow-y-auto">
           {logs.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground text-sm">
-              No workout data logged for this day.
+            <div className="py-10 px-4 text-center space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Moon className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 max-w-xs mx-auto">
+                <h3 className="text-sm font-bold text-foreground">
+                  {daySchedule?.title || 'Rest Day'}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {daySchedule?.subtitle || 'Scheduled rest & recovery in your weekly split. Take time to relax and let your muscles rebuild.'}
+                </p>
+              </div>
+              <Badge variant="outline" className="text-xs font-semibold bg-primary/10 text-primary border-primary/25">
+                Active Recovery & Rebuilding
+              </Badge>
             </div>
           ) : (
             <div className="space-y-3 mt-3">
@@ -246,8 +276,12 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, onClose }) 
                 <span>Volume: <strong className="text-primary font-mono">{totalVolume.toLocaleString()} kg</strong></span>
               </div>
             )}
-            <span className="text-[11px] text-muted-foreground">
-              {completedSets >= totalSets ? '🔥 100% Completed' : `${totalSets - completedSets} sets left`}
+            <span className="text-[11px] text-muted-foreground font-medium">
+              {completedSets >= totalSets
+                ? '🔥 100% Completed'
+                : completedSets === 0
+                ? 'Weekly Split Planned (0%)'
+                : `${totalSets - completedSets} sets left`}
             </span>
           </div>
         )}

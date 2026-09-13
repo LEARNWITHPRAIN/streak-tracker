@@ -114,17 +114,31 @@ const Dashboard = () => {
     setCalendarHistory(history);
   }, [currentMonth, fetchCalendarHistory]);
 
+  // Scheduled split for the selected calendar day
+  const selectedDaySchedule = useMemo(() => {
+    if (!selectedDay) return null;
+    const parts = selectedDay.split('-');
+    if (parts.length !== 3) return null;
+    const [y, m, d] = parts.map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    if (useSameDaily && customRoutine) {
+      return customRoutine;
+    }
+    return schedule.find(s => s.day.toLowerCase() === dayOfWeek) || null;
+  }, [selectedDay, schedule, customRoutine, useSameDaily]);
+
   // Fetch detailed logs for a specific day (for modal)
   const handleDayClick = useCallback(async (dateKey: string) => {
     setSelectedDay(dateKey);
     setDayLogs([]);
     try {
-      const detailed = await fetchDayDetailedLogs(dateKey, schedule, customRoutine);
+      const detailed = await fetchDayDetailedLogs(dateKey, schedule, customRoutine, useSameDaily);
       setDayLogs(detailed);
     } catch (err) {
       console.error('Error fetching day logs:', err);
     }
-  }, [fetchDayDetailedLogs, schedule, customRoutine]);
+  }, [fetchDayDetailedLogs, schedule, customRoutine, useSameDaily]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -556,6 +570,7 @@ const Dashboard = () => {
         <DayDetailModal
           date={selectedDay}
           logs={dayLogs}
+          daySchedule={selectedDaySchedule}
           onClose={() => setSelectedDay(null)}
         />
       )}
