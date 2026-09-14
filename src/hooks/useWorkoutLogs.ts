@@ -660,7 +660,8 @@ export const useWorkoutLogs = () => {
             if (maxWeight === null || s.weight > maxWeight) {
               maxWeight = s.weight;
             }
-            const repsNum = typeof s.reps === 'number' ? s.reps : parseInt(String(s.reps || '10'), 10) || 10;
+            const repsVal = s.doneReps !== undefined && s.doneReps !== '' ? s.doneReps : s.reps;
+            const repsNum = typeof repsVal === 'number' ? repsVal : parseInt(String(repsVal || '10'), 10) || 10;
             volume += s.weight * repsNum;
           }
         });

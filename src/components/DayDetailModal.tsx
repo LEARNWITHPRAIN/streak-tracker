@@ -51,7 +51,8 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
           if (maxWeightLifted === null || s.weight > maxWeightLifted) {
             maxWeightLifted = s.weight;
           }
-          const reps = typeof s.reps === 'number' ? s.reps : parseInt(String(s.reps || '10'), 10) || 10;
+          const repsVal = s.doneReps !== undefined && s.doneReps !== '' ? s.doneReps : s.reps;
+          const reps = typeof repsVal === 'number' ? repsVal : parseInt(String(repsVal || '10'), 10) || 10;
           totalVolume += s.weight * reps;
         }
       });
@@ -231,8 +232,11 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
                     {log.sets && log.sets.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-border/30">
                         {log.sets.map((s, idx) => {
-                          const weightLabel = s.weight !== null && s.weight > 0 ? `${s.weight}kg` : 'BW';
-                          const repsLabel = s.reps ? `${s.reps}r` : '';
+                          const targetRepsClean = s.reps ? String(s.reps).replace(/^[0-9]+\s*[*xX×]\s*/, '') : '';
+                          const doneRepsClean = s.doneReps !== undefined && s.doneReps !== '' ? String(s.doneReps) : '';
+                          const repsLabel = doneRepsClean 
+                            ? (targetRepsClean && doneRepsClean !== targetRepsClean ? `${doneRepsClean}/${targetRepsClean}r` : `${doneRepsClean}r`)
+                            : (targetRepsClean ? `${targetRepsClean}r` : '');
 
                           return (
                             <div

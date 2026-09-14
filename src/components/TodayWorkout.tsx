@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, 
-  RotateCcw, ChevronDown, ChevronUp, Scale, LayoutGrid, ArrowRight 
+  RotateCcw, ChevronDown, ChevronUp, Scale, LayoutGrid, ArrowRight, Minus, Plus 
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -65,15 +65,20 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     const completedCount = todayProgress[exercise.id] || 0;
 
     return configured.map((s, idx) => {
-      // Check if existing log recorded completion status for this set
       const isCompleted = existing && existing[idx] !== undefined 
         ? existing[idx].completed 
         : idx < completedCount;
 
+      const targetReps = String(s.reps || parseReps(exercise.setsReps) || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
+      const doneReps = existing && existing[idx] !== undefined && existing[idx].doneReps !== undefined
+        ? String(existing[idx].doneReps)
+        : (isCompleted ? targetReps : '');
+
       return {
         setNumber: s.setNumber || idx + 1,
         weight: s.weight !== undefined ? s.weight : (exercise.weight ?? null),
-        reps: s.reps || parseReps(exercise.setsReps) || '10',
+        reps: targetReps,
+        doneReps: doneReps,
         completed: isCompleted,
       };
     });
@@ -92,15 +97,25 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     });
   };
 
-  // Toggle completion of a specific set
-  const handleToggleSet = async (exercise: Exercise, setIndex: number) => {
+  // Toggle completion of a specific set, optionally saving user-specified done reps
+  const handleToggleSet = async (exercise: Exercise, setIndex: number, specificDoneReps?: string) => {
     const currentSets = [...getSetsForExercise(exercise)];
     if (!currentSets[setIndex]) return;
 
     const wasCompleted = currentSets[setIndex].completed;
+    const targetReps = String(currentSets[setIndex].reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
+    const currentDone = specificDoneReps !== undefined && specificDoneReps !== ''
+      ? specificDoneReps
+      : currentSets[setIndex].doneReps;
+
+    const nextDoneReps = !wasCompleted
+      ? (currentDone !== undefined && currentDone !== '' ? currentDone : targetReps)
+      : currentDone;
+
     currentSets[setIndex] = {
       ...currentSets[setIndex],
       completed: !wasCompleted,
+      doneReps: nextDoneReps,
     };
 
     const allMeta = getAllExercisesMeta().map(m => 
@@ -115,16 +130,35 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     }
   };
 
+  // Update done reps directly for a set
+  const handleUpdateDoneReps = async (exercise: Exercise, setIndex: number, doneReps: string) => {
+    const currentSets = [...getSetsForExercise(exercise)];
+    if (!currentSets[setIndex]) return;
+
+    currentSets[setIndex] = {
+      ...currentSets[setIndex],
+      doneReps,
+    };
+
+    const allMeta = getAllExercisesMeta().map(m => 
+      m.id === exercise.id ? { ...m, totalSets: currentSets.length } : m
+    );
+
+    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+  };
+
   // Quick card click: completes next pending set, or resets all sets if already 100%
   const handleQuickAdvance = async (exercise: Exercise) => {
     const currentSets = [...getSetsForExercise(exercise)];
     const nextPendingIdx = currentSets.findIndex(s => !s.completed);
 
     if (nextPendingIdx !== -1) {
-      // Mark next set complete
+      const targetReps = String(currentSets[nextPendingIdx].reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
+      const currentDone = currentSets[nextPendingIdx].doneReps;
       currentSets[nextPendingIdx] = {
         ...currentSets[nextPendingIdx],
         completed: true,
+        doneReps: currentDone !== undefined && currentDone !== '' ? currentDone : targetReps,
       };
       const allMeta = getAllExercisesMeta();
       await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
@@ -210,17 +244,32 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
 
       {/* Routine Edit Redirect Notification Banner */}
       {onNavigateToWeekly && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-3 px-4 rounded-xl bg-primary/10 border border-primary/30 text-xs shadow-sm">
-          <div className="flex items-center gap-2 text-foreground/90">
-            <LayoutGrid className="w-4 h-4 text-primary shrink-0" />
-            <span>To customize exercises, weights, sets, or reps, edit your program in <strong>Weekly Schedule</strong>.</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-primary/15 via-primary/10 to-transparent border border-primary/30 shadow-sm">
+          <div className="flex items-start sm:items-center gap-3 text-foreground/90">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 shadow-inner">
+              <LayoutGrid className="w-5 h-5 text-primary" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs sm:text-sm font-bold text-foreground">
+                  Today's Logging: <span className="text-primary underline decoration-primary/50 underline-offset-2">Done Reps Only</span>
+                </p>
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 font-semibold px-2 py-0">
+                  Target & weights are locked here
+                </Badge>
+              </div>
+              <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
+                Log your completed reps here. To customize exercise names, target weights, sets, or target reps, head over to the <strong>Weekly Split</strong> tab.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onNavigateToWeekly}
-            className="inline-flex items-center gap-1 font-bold text-primary hover:underline hover:text-primary/90 shrink-0 self-end sm:self-auto"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:brightness-110 transition-all shrink-0 self-stretch sm:self-auto shadow-sm shadow-primary/20 active:scale-95"
           >
-            Edit in Weekly Split <ArrowRight className="w-3.5 h-3.5" />
+            <span>Edit in Weekly Split</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -256,7 +305,9 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
                 totalSets={totalSets}
                 progressPercent={progressPercent}
                 onQuickAdvance={() => handleQuickAdvance(exercise)}
-                onToggleSet={(idx) => handleToggleSet(exercise, idx)}
+                onToggleSet={(idx, specificDoneReps) => handleToggleSet(exercise, idx, specificDoneReps)}
+                onUpdateDoneReps={(idx, doneReps) => handleUpdateDoneReps(exercise, idx, doneReps)}
+                onNavigateToWeekly={onNavigateToWeekly}
               />
             );
           })}
@@ -274,7 +325,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
       {/* Helpful Footer Note */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-muted-foreground pt-2 text-center">
         <span className="flex items-center gap-1.5">
-          💡 Click <strong>✓ Set</strong> or <strong>Card</strong> to complete sets & start rest timer
+          💡 Record your <strong>Done Reps</strong> for each set & click <strong>✓ Set</strong> to complete
         </span>
         {onNavigateToWeekly && (
           <>
@@ -284,7 +335,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
               onClick={onNavigateToWeekly}
               className="text-primary font-semibold hover:underline flex items-center gap-1"
             >
-              Need to change sets, reps or weights? Edit in Weekly tab →
+              Need to change sets, target reps or weights? Edit in Weekly tab →
             </button>
           </>
         )}
@@ -304,7 +355,9 @@ interface ExerciseWorkoutCardProps {
   totalSets: number;
   progressPercent: number;
   onQuickAdvance: () => void;
-  onToggleSet: (setIndex: number) => void;
+  onToggleSet: (setIndex: number, specificDoneReps?: string) => void;
+  onUpdateDoneReps: (setIndex: number, doneReps: string) => void;
+  onNavigateToWeekly?: () => void;
 }
 
 const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
@@ -318,6 +371,8 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
   progressPercent,
   onQuickAdvance,
   onToggleSet,
+  onUpdateDoneReps,
+  onNavigateToWeekly,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -353,7 +408,7 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
                 {exercise.name}
               </p>
             </div>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <Badge variant="outline" className="text-xs bg-background/60 font-mono font-medium">
                 {completedSets}/{totalSets} sets
               </Badge>
@@ -392,77 +447,206 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
 
         {/* Multi-Set Detailed Breakdown */}
         {isExpanded && (
-          <div className="pt-1 space-y-2 border-t border-border/40">
-            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-              <span>Set & Weight</span>
-              <span>Reps</span>
-              <span className="text-right">Action</span>
+          <div className="pt-2 space-y-2.5 border-t border-border/40">
+            {/* Legend / Helper Info */}
+            <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+              <span>Set & Target</span>
+              <span className="text-right text-primary">Your Done Reps</span>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {sets.map((set, idx) => (
-                <div
+                <TodaySetRow
                   key={idx}
-                  className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all ${
-                    set.completed
-                      ? 'bg-primary/10 border-primary/30 text-foreground'
-                      : 'bg-background/40 hover:bg-background/70 border-border/40'
-                  }`}
-                >
-                  {/* Set Number & Weight Badge */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="w-8 h-8 flex items-center justify-center text-xs font-black font-mono rounded-lg bg-primary/15 text-primary shrink-0 border border-primary/20">
-                      S{set.setNumber}
-                    </span>
-
-                    <span className="flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1.5 rounded-xl bg-muted/30 border border-border/50 text-foreground">
-                      <Scale className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="font-semibold">
-                        {set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}
-                      </span>
-                    </span>
-                  </div>
-
-                  {/* Target Reps Badge */}
-                  <div className="shrink-0 text-center">
-                    <span className="text-xs font-mono font-semibold text-muted-foreground px-2.5 py-1.5 rounded-xl bg-muted/30 border border-border/50 inline-block">
-                      {String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '')} reps
-                    </span>
-                  </div>
-
-                  {/* Single Action: Complete Set */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onToggleSet(idx)}
-                      className={`h-8 px-3.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm ${
-                        set.completed
-                          ? 'bg-primary text-primary-foreground shadow-primary/25 hover:brightness-110'
-                          : 'bg-muted/70 text-muted-foreground hover:bg-primary/20 hover:text-primary border border-border/50 hover:border-primary/40'
-                      }`}
-                      title={set.completed ? 'Set completed (click to undo)' : 'Click to complete set & start rest timer'}
-                    >
-                      <Check className={`w-3.5 h-3.5 ${set.completed ? 'stroke-[3]' : 'opacity-40'}`} />
-                      <span>{set.completed ? 'Done' : 'Set'}</span>
-                    </button>
-                  </div>
-                </div>
+                  set={set}
+                  setIndex={idx}
+                  onToggle={(doneReps) => onToggleSet(idx, doneReps)}
+                  onUpdateDoneReps={(doneReps) => onUpdateDoneReps(idx, doneReps)}
+                />
               ))}
             </div>
 
-            {/* Set Status Summary */}
-            <div className="flex items-center justify-between pt-1 px-1">
-              <span className="text-[11px] text-muted-foreground font-medium">
+            {/* Set Status Summary & Weekly Link */}
+            <div className="flex items-center justify-between pt-1 px-1 text-[11px]">
+              <span className="text-muted-foreground font-medium">
                 {completedSets} of {totalSets} sets completed
               </span>
-              <span className="text-[11px] font-semibold text-primary">
-                {progressPercent}% Done
-              </span>
+              {onNavigateToWeekly && (
+                <button
+                  type="button"
+                  onClick={onNavigateToWeekly}
+                  className="text-primary hover:underline font-semibold flex items-center gap-1 text-[11px]"
+                >
+                  Edit routine in Weekly <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
         )}
       </CardContent>
     </Card>
+  );
+};
+
+// ── Mobile-Friendly Clean Set Row Component ─────────────────────────────
+interface TodaySetRowProps {
+  set: DailyExerciseSetLog;
+  setIndex: number;
+  onToggle: (specificDoneReps?: string) => void;
+  onUpdateDoneReps: (doneReps: string) => void;
+}
+
+const TodaySetRow: React.FC<TodaySetRowProps> = ({
+  set,
+  setIndex,
+  onToggle,
+  onUpdateDoneReps,
+}) => {
+  const targetRepsClean = String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
+  const initialDone = set.doneReps !== undefined && set.doneReps !== '' 
+    ? String(set.doneReps) 
+    : (set.completed ? targetRepsClean : '');
+  
+  const [localDoneReps, setLocalDoneReps] = useState<string>(initialDone);
+
+  useEffect(() => {
+    if (set.doneReps !== undefined && set.doneReps !== '') {
+      setLocalDoneReps(String(set.doneReps));
+    } else if (set.completed) {
+      setLocalDoneReps(targetRepsClean);
+    } else {
+      setLocalDoneReps('');
+    }
+  }, [set.doneReps, set.completed, targetRepsClean]);
+
+  const handleStep = (delta: number) => {
+    const currentNum = parseInt(localDoneReps || targetRepsClean, 10) || 0;
+    const nextNum = Math.max(0, currentNum + delta);
+    const nextStr = String(nextNum);
+    setLocalDoneReps(nextStr);
+    onUpdateDoneReps(nextStr);
+  };
+
+  const handleInputChange = (val: string) => {
+    const sanitized = val.replace(/[^0-9]/g, '');
+    setLocalDoneReps(sanitized);
+    onUpdateDoneReps(sanitized);
+  };
+
+  const handleToggle = () => {
+    const repsToSave = localDoneReps.trim() !== '' ? localDoneReps.trim() : targetRepsClean;
+    if (!set.completed && localDoneReps.trim() === '') {
+      setLocalDoneReps(targetRepsClean);
+    }
+    onToggle(repsToSave);
+  };
+
+  return (
+    <div
+      className={`p-2.5 rounded-xl border transition-all duration-200 ${
+        set.completed
+          ? 'bg-primary/10 border-primary/40 shadow-xs'
+          : 'bg-background/50 hover:bg-background/80 border-border/50'
+      }`}
+    >
+      {/* Top Line: Set Number + Planned Weight + Target Reps (Read-Only) */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`w-7 h-7 flex items-center justify-center text-xs font-black font-mono rounded-lg shrink-0 border ${
+            set.completed 
+              ? 'bg-primary text-primary-foreground border-primary shadow-xs' 
+              : 'bg-primary/15 text-primary border-primary/20'
+          }`}>
+            S{set.setNumber || setIndex + 1}
+          </span>
+
+          <span 
+            className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-1 rounded-lg bg-muted/40 border border-border/40 text-foreground"
+            title="Planned weight from weekly routine (locked)"
+          >
+            <Scale className="w-3 h-3 text-primary shrink-0" />
+            <span className="font-semibold truncate">
+              {set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}
+            </span>
+          </span>
+        </div>
+
+        {/* Target Reps Badge (Routine Target - Read-Only in Today) */}
+        <div 
+          className="flex items-center gap-1.5 text-xs shrink-0"
+          title="Planned target reps from weekly routine (locked)"
+        >
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Target:</span>
+          <span className="font-mono font-bold text-foreground px-2 py-0.5 rounded-md bg-muted/50 border border-border/50 text-[11px]">
+            {targetRepsClean} reps
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom Line: Done Reps Stepper/Input (Editable) + Complete Action Button */}
+      <div className="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-border/35">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-xs font-bold text-primary shrink-0 flex items-center gap-1">
+            <span>Done:</span>
+          </span>
+
+          {/* Stepper + Direct Numeric Input for Done Reps */}
+          <div className={`flex items-center h-8 rounded-xl border p-0.5 shadow-inner transition-all ${
+            set.completed
+              ? 'bg-background border-primary/50 ring-1 ring-primary/20'
+              : 'bg-background/80 border-border/70 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30'
+          }`}>
+            <button
+              type="button"
+              onClick={() => handleStep(-1)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 active:scale-90 transition-all text-xs font-bold shrink-0"
+              title="Decrease reps"
+            >
+              <Minus className="w-3 h-3" />
+            </button>
+
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder={targetRepsClean}
+              value={localDoneReps}
+              onChange={(e) => handleInputChange(e.target.value)}
+              className="w-10 min-w-0 bg-transparent text-xs font-mono font-black text-foreground text-center outline-none px-0.5"
+              title="Enter completed reps"
+            />
+
+            <button
+              type="button"
+              onClick={() => handleStep(1)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 active:scale-90 transition-all text-xs font-bold shrink-0"
+              title="Increase reps"
+            >
+              <Plus className="w-3 h-3" />
+            </button>
+          </div>
+
+          <span className="text-[11px] font-semibold text-muted-foreground select-none shrink-0 hidden sm:inline">
+            reps
+          </span>
+        </div>
+
+        {/* Set Complete Action Toggle Button */}
+        <button
+          type="button"
+          onClick={handleToggle}
+          className={`h-8 px-3.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm shrink-0 active:scale-95 ${
+            set.completed
+              ? 'bg-primary text-primary-foreground shadow-primary/25 hover:brightness-110'
+              : 'bg-muted/70 text-muted-foreground hover:bg-primary/20 hover:text-primary border border-border/50 hover:border-primary/40'
+          }`}
+          title={set.completed ? 'Set completed (click to undo)' : 'Click to complete set with done reps'}
+        >
+          <Check className={`w-3.5 h-3.5 ${set.completed ? 'stroke-[3]' : 'opacity-40'}`} />
+          <span>{set.completed ? 'Done' : 'Set'}</span>
+        </button>
+      </div>
+    </div>
   );
 };
 

@@ -26,7 +26,8 @@ export interface Exercise {
 export interface DailyExerciseSetLog {
   setNumber: number;
   weight: number | null;
-  reps?: number | string;
+  reps?: number | string; // Target reps defined in routine
+  doneReps?: number | string; // Actual completed reps logged by user
   completed: boolean;
 }
 

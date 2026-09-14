@@ -443,8 +443,8 @@ const WeeklyExerciseViewCard: React.FC<WeeklyExerciseViewCardProps> = ({
         {isExpanded && (
           <div className="pt-2 border-t border-border/40 space-y-1.5">
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-              <span>Set & Weight</span>
-              <span>Reps</span>
+              <span>Set & Planned Weight</span>
+              <span>Target Reps</span>
             </div>
 
             {sets.map((s, idx) => (
