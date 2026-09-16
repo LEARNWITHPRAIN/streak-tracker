@@ -1,13 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Dumbbell, Heart, Zap, ZapOff, Target, Footprints, Flame, Moon, Check, 
-  RotateCcw, ChevronDown, ChevronUp, Scale, LayoutGrid, ArrowRight, Minus, Plus 
+  RotateCcw, ChevronDown, ChevronUp, Scale, LayoutGrid, ArrowRight, Minus, Plus,
+  Calendar
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useUserWorkouts, parseReps, getExerciseSets, Exercise } from '@/hooks/useUserWorkouts';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useUserWorkouts, parseReps, getExerciseSets, Exercise, DaySchedule } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useAnimatedProgress } from '@/hooks/useAnimatedProgress';
 import { DailyExerciseSetLog } from '@/types/exercise';
@@ -45,7 +54,14 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
   onToggleAutoStart,
   onNavigateToWeekly,
 }) => {
-  const { getTodaySchedule, getTodayName, loading: scheduleLoading } = useUserWorkouts();
+  const { 
+    schedule,
+    getTodaySchedule, 
+    getTodayName, 
+    selectedWorkoutDay,
+    setSelectedWorkoutDay,
+    loading: scheduleLoading 
+  } = useUserWorkouts();
   const { 
     todayProgress, 
     todaySets, 
@@ -55,8 +71,88 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     loading: progressLoading 
   } = useWorkoutLogs();
   
-  const todaySchedule = getTodaySchedule();
   const todayName = getTodayName();
+  const todayDayKey = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  }, []);
+
+  // Dynamically group workouts from the Weekly tab by trimmed, case-insensitive title
+  const workoutGroups = useMemo(() => {
+    if (!schedule || schedule.length === 0) return [];
+    const groupMap = new Map<string, { title: string; occurrences: DaySchedule[] }>();
+
+    schedule.forEach((daySchedule) => {
+      const rawTitle = (daySchedule.title || '').trim();
+      if (!rawTitle) return;
+      const key = rawTitle.toLowerCase();
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          title: rawTitle,
+          occurrences: [daySchedule],
+        });
+      } else {
+        groupMap.get(key)!.occurrences.push(daySchedule);
+      }
+    });
+
+    return Array.from(groupMap.values());
+  }, [schedule]);
+
+  // Determine the active scheduled occurrence based on session selection, today's day, or first schedule item
+  const activeSchedule: DaySchedule | null = useMemo(() => {
+    if (!schedule || schedule.length === 0) return null;
+
+    if (selectedWorkoutDay) {
+      const match = schedule.find(d => d.day.toLowerCase() === selectedWorkoutDay.toLowerCase());
+      if (match) return match;
+    }
+
+    const todayMatch = schedule.find(d => d.day.toLowerCase() === todayDayKey);
+    if (todayMatch) return todayMatch;
+
+    return schedule[0] || null;
+  }, [schedule, selectedWorkoutDay, todayDayKey]);
+
+  // The active workout group corresponding to the selected occurrence
+  const activeGroup = useMemo(() => {
+    if (!activeSchedule || workoutGroups.length === 0) return null;
+    return workoutGroups.find(g => 
+      g.occurrences.some(o => o.day.toLowerCase() === activeSchedule.day.toLowerCase())
+    ) || null;
+  }, [activeSchedule, workoutGroups]);
+
+  const handleSelectWorkoutGroup = (group: { title: string; occurrences: DaySchedule[] }) => {
+    if (!group || group.occurrences.length === 0) return;
+
+    // Single workout case: automatically select it without prompting
+    if (group.occurrences.length === 1) {
+      setSelectedWorkoutDay(group.occurrences[0].day);
+      return;
+    }
+
+    // Duplicate workout names case:
+    // If currently selected day is already in this group, keep it
+    if (activeSchedule && group.occurrences.some(o => o.day.toLowerCase() === activeSchedule.day.toLowerCase())) {
+      return;
+    }
+
+    // If today's day matches one of the occurrences, prefer today's occurrence
+    const todayOccurrence = group.occurrences.find(o => o.day.toLowerCase() === todayDayKey);
+    if (todayOccurrence) {
+      setSelectedWorkoutDay(todayOccurrence.day);
+      return;
+    }
+
+    // Otherwise default to the first occurrence
+    setSelectedWorkoutDay(group.occurrences[0].day);
+  };
+
+  const handleSelectOccurrence = (dayName: string) => {
+    setSelectedWorkoutDay(dayName);
+  };
+
+  const todaySchedule = activeSchedule;
 
   // Helper to get structured sets for an exercise from routine configuration
   const getSetsForExercise = (exercise: Exercise): DailyExerciseSetLog[] => {
@@ -182,64 +278,194 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     );
   }
 
-  if (!todaySchedule) {
+  if (!todaySchedule || workoutGroups.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No schedule found for today</p>
-      </div>
+      <Card className="bg-card/40 border-dashed border-border/80 rounded-2xl p-8 sm:p-12 text-center max-w-lg mx-auto my-8">
+        <CardContent className="space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center">
+            <Dumbbell className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-foreground">No Workouts Scheduled</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              You don't have any workouts scheduled in your Weekly Split yet. Head over to the Weekly tab to create or customize your workouts.
+            </p>
+          </div>
+          {onNavigateToWeekly && (
+            <Button 
+              onClick={onNavigateToWeekly}
+              className="rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-primary/20"
+            >
+              <LayoutGrid className="w-4 h-4 mr-2" />
+              Go to Weekly Split & Create Workout
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
-  const dayKey = todaySchedule.day;
+  const dayKey = todaySchedule.day.toLowerCase();
+  const currentGroupTitle = activeGroup?.title || todaySchedule.title;
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Settings */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-card/60 border border-border/50 backdrop-blur-sm">
-        {/* Day Header */}
-        <div className="flex items-center gap-3.5">
-          <div className={`w-12 h-12 rounded-2xl bg-background/80 border border-border/50 flex items-center justify-center shadow-inner ${dayColors[dayKey]}`}>
-            {dayIcons[dayKey]}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className={`text-xl font-bold tracking-tight ${dayColors[dayKey]}`}>{todaySchedule.title}</h3>
-              <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-background/50 border-primary/30 font-semibold">
-                {todayName}
+      {/* Dynamic Workout Selector Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-card/75 border border-border/60 shadow-lg shadow-black/20 backdrop-blur-md space-y-3.5">
+        {/* Top bar: Category label + Today Badge + Timer & Reset controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Dumbbell className="w-3.5 h-3.5 text-primary" />
+              Today's Workout
+            </span>
+            <Badge variant="outline" className="text-[10px] px-2 py-0 bg-background/50 border-primary/30 text-primary font-semibold">
+              Today: {todayName}
+            </Badge>
+            {todaySchedule.day.toLowerCase() !== todayDayKey && (
+              <Badge variant="secondary" className="text-[10px] px-2 py-0 font-medium text-muted-foreground">
+                Performing: <span className="capitalize ml-1 text-foreground font-semibold">{todaySchedule.day}</span>
               </Badge>
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground mt-0.5">{todaySchedule.subtitle}</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            {onToggleAutoStart && (
+              <button
+                type="button"
+                onClick={onToggleAutoStart}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                  autoStart
+                    ? 'bg-primary/15 text-primary border-primary/40 hover:bg-primary/25'
+                    : 'bg-muted/40 text-muted-foreground border-border/30 hover:bg-muted hover:text-foreground'
+                }`}
+                title={autoStart ? 'Auto-start Rest Timer is ON' : 'Auto-start Rest Timer is OFF'}
+              >
+                {autoStart ? <Zap className="w-3.5 h-3.5 text-primary" /> : <ZapOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                <span className="hidden sm:inline">Auto Timer:</span> {autoStart ? 'ON' : 'OFF'}
+              </button>
+            )}
+
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={resetTodayProgress}
+              className="text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-xl h-8 px-2.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+              Reset All
+            </Button>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
-          {onToggleAutoStart && (
+        {/* Workout Dropdown Selector Trigger */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button
               type="button"
-              onClick={onToggleAutoStart}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs md:text-sm font-medium border transition-all ${
-                autoStart
-                  ? 'bg-primary/15 text-primary border-primary/40 hover:bg-primary/25'
-                  : 'bg-muted/40 text-muted-foreground border-border/30 hover:bg-muted hover:text-foreground'
-              }`}
-              title={autoStart ? 'Auto-start Rest Timer is ON' : 'Auto-start Rest Timer is OFF'}
+              className="w-full flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl bg-background/70 hover:bg-background/95 border border-border/70 hover:border-primary/50 transition-all text-left shadow-sm group focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              {autoStart ? <Zap className="w-3.5 h-3.5 text-primary" /> : <ZapOff className="w-3.5 h-3.5 text-muted-foreground" />}
-              <span>Auto Timer: {autoStart ? 'ON' : 'OFF'}</span>
-            </button>
-          )}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-11 h-11 rounded-xl bg-card border border-border/50 flex items-center justify-center shrink-0 shadow-inner ${dayColors[dayKey] || 'text-primary'}`}>
+                  {dayIcons[dayKey] || <Dumbbell className="w-5 h-5" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-xl font-bold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
+                      {currentGroupTitle}
+                    </h3>
+                    <ChevronDown className="w-4 h-4 text-primary shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {todaySchedule.subtitle || `${todaySchedule.exercises.length} exercises`}
+                    {activeGroup && activeGroup.occurrences.length > 1 ? (
+                      <span className="ml-1 text-primary/90 font-medium">• {activeGroup.occurrences.length} days scheduled</span>
+                    ) : (
+                      <span className="ml-1 text-muted-foreground/80">• Scheduled for <span className="capitalize font-semibold text-foreground/90">{todaySchedule.day}</span></span>
+                    )}
+                  </p>
+                </div>
+              </div>
 
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            onClick={resetTodayProgress}
-            className="text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-xl"
-          >
-            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-            Reset All
-          </Button>
-        </div>
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/40 text-xs font-semibold text-muted-foreground group-hover:text-foreground group-hover:bg-muted/70 transition-colors shrink-0">
+                <span>Switch Workout</span>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="start" className="w-[310px] sm:w-[380px] p-2 bg-card/95 backdrop-blur-2xl border border-border/80 shadow-2xl rounded-2xl max-h-[380px] overflow-y-auto">
+            <DropdownMenuLabel className="text-[11px] font-bold text-muted-foreground px-2 py-1.5 uppercase tracking-wider flex items-center justify-between">
+              <span>Weekly Workouts</span>
+              <span className="text-[10px] font-normal text-primary">{workoutGroups.length} available</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="my-1 bg-border/40" />
+
+            {workoutGroups.map((group) => {
+              const isGroupActive = activeGroup && group.title.toLowerCase() === activeGroup.title.toLowerCase();
+              return (
+                <DropdownMenuItem
+                  key={group.title}
+                  onClick={() => handleSelectWorkoutGroup(group)}
+                  className={`flex items-start justify-between gap-2 p-2.5 rounded-xl cursor-pointer transition-all my-0.5 ${
+                    isGroupActive
+                      ? 'bg-primary/15 text-primary border border-primary/30 font-semibold'
+                      : 'hover:bg-muted/60 text-foreground'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold truncate">{group.title}</span>
+                      {group.occurrences.length > 1 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-background/60 border-primary/30 text-primary font-medium shrink-0">
+                          {group.occurrences.length}× / week
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                      {group.occurrences.map(o => o.shortDay).join(', ')} • {group.occurrences[0]?.exercises.length || 0} exercises
+                    </p>
+                  </div>
+                  {isGroupActive && (
+                    <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Duplicate Workout Resolution: Clean Segmented Toggle */}
+        {activeGroup && activeGroup.occurrences.length > 1 && (
+          <div className="pt-2 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in duration-200">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+              <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>Choose your <strong className="text-foreground">{activeGroup.title}</strong>:</span>
+            </div>
+            <div className="inline-flex items-center p-1 rounded-xl bg-background/80 border border-border/60 gap-1 self-start sm:self-auto w-full sm:w-auto overflow-x-auto">
+              {activeGroup.occurrences.map((occ) => {
+                const isSelected = occ.day.toLowerCase() === todaySchedule.day.toLowerCase();
+                return (
+                  <button
+                    key={occ.day}
+                    type="button"
+                    onClick={() => handleSelectOccurrence(occ.day)}
+                    className={`flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 scale-[1.02]'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    <span className="capitalize">{occ.day}</span>
+                    <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'text-muted-foreground/70'}`}>
+                      {occ.exercises.length} ex
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Routine Edit Redirect Notification Banner */}

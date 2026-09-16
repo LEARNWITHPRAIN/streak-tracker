@@ -701,6 +701,19 @@ export const useWorkoutLogs = () => {
     fetchTodayLogs();
   }, [fetchTodayLogs]);
 
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      const todayKey = getTodayKey();
+      const cached = getCachedSetsForDate(todayKey);
+      setTodaySets(cached);
+    };
+
+    window.addEventListener('workout-progress-updated', handleProgressUpdate);
+    return () => {
+      window.removeEventListener('workout-progress-updated', handleProgressUpdate);
+    };
+  }, [getCachedSetsForDate]);
+
   return {
     todayProgress,
     todaySets,

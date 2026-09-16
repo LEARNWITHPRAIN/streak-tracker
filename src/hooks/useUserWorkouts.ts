@@ -186,11 +186,57 @@ const defaultCustomRoutine: DaySchedule = {
   ],
 };
 
+const SELECTED_WORKOUT_DAY_KEY = 'yodha_today_selected_day';
+
+const getInitialSelectedDay = (): string => {
+  try {
+    const saved = sessionStorage.getItem(SELECTED_WORKOUT_DAY_KEY);
+    if (saved) return saved.toLowerCase();
+  } catch {
+    // ignore
+  }
+  return new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+};
+
 export const useUserWorkouts = () => {
   const { user } = useAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
   const [customRoutine, setCustomRoutine] = useState<DaySchedule>(defaultCustomRoutine);
   const [loading, setLoading] = useState(true);
+  const [selectedWorkoutDay, setSelectedWorkoutDayState] = useState<string>(getInitialSelectedDay);
+
+  const setSelectedWorkoutDay = useCallback((day: string) => {
+    const normalized = day.toLowerCase();
+    setSelectedWorkoutDayState(normalized);
+    try {
+      sessionStorage.setItem(SELECTED_WORKOUT_DAY_KEY, normalized);
+    } catch {
+      // ignore
+    }
+    window.dispatchEvent(new CustomEvent('today-workout-selected', { detail: normalized }));
+  }, []);
+
+  // Listen for workout selection changes across components
+  useEffect(() => {
+    const handleSelectedWorkoutUpdate = (e: Event) => {
+      const customEv = e as CustomEvent<string>;
+      if (customEv.detail) {
+        setSelectedWorkoutDayState(customEv.detail.toLowerCase());
+      } else {
+        try {
+          const saved = sessionStorage.getItem(SELECTED_WORKOUT_DAY_KEY);
+          if (saved) setSelectedWorkoutDayState(saved.toLowerCase());
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    window.addEventListener('today-workout-selected', handleSelectedWorkoutUpdate);
+    return () => {
+      window.removeEventListener('today-workout-selected', handleSelectedWorkoutUpdate);
+    };
+  }, []);
   
   // Initialize useSameDaily from localStorage
   const [useSameDaily, setUseSameDaily] = useState(() => {
@@ -379,14 +425,19 @@ export const useUserWorkouts = () => {
     }
   };
 
-  // Get today's schedule - returns custom routine if useSameDaily, otherwise day-specific
+  // Get today's schedule - returns custom routine if useSameDaily, otherwise currently selected/scheduled workout
   const getTodaySchedule = useCallback((): DaySchedule | null => {
     if (useSameDaily) {
       return customRoutine || defaultCustomRoutine;
     }
+    // If a specific workout day has been selected by the user for Today's session, return it
+    if (selectedWorkoutDay) {
+      const match = schedule.find(d => d.day.toLowerCase() === selectedWorkoutDay.toLowerCase());
+      if (match) return match;
+    }
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    return schedule.find(d => d.day === today) || null;
-  }, [useSameDaily, customRoutine, schedule]);
+    return schedule.find(d => d.day === today) || schedule[0] || null;
+  }, [useSameDaily, customRoutine, schedule, selectedWorkoutDay]);
 
   const getTodayName = (): string => {
     return new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -415,6 +466,8 @@ export const useUserWorkouts = () => {
     customRoutine,
     loading,
     useSameDaily,
+    selectedWorkoutDay,
+    setSelectedWorkoutDay,
     updateDayWorkout,
     getTodaySchedule,
     getTodayName,
