@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -16,6 +16,7 @@ import { TodayWorkout } from '@/components/TodayWorkout';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { FuelPlayer } from '@/components/FuelPlayer';
+import { ExerciseProgressSection } from '@/components/ExerciseProgressSection';
 import { ShareProgressCard } from '@/components/ShareProgressCard';
 import { NotificationOnboardingModal } from '@/components/NotificationOnboardingModal';
 import { DisplayNameModal } from '@/components/DisplayNameModal';
@@ -428,7 +429,7 @@ const Dashboard = () => {
         {/* Tabs - Responsive grid on PC, scrollable on mobile */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full overflow-hidden">
           <div className="w-full max-w-full overflow-x-auto pb-1.5 md:pb-0 scrollbar-none touch-pan-x overscroll-x-contain">
-            <TabsList className="inline-flex md:grid md:grid-cols-6 bg-muted/40 p-1 sm:p-1.5 gap-1 sm:gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
+            <TabsList className="inline-flex md:grid md:grid-cols-7 bg-muted/40 p-1 sm:p-1.5 gap-1 sm:gap-1.5 rounded-2xl border border-border/50 min-w-max md:min-w-0">
               <TabsTrigger value="today" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
                 <Dumbbell className="w-4 h-4 mr-1.5" />
                 Today
@@ -453,7 +454,10 @@ const Dashboard = () => {
                 <Zap className="w-4 h-4 mr-1.5" />
                 Fuel
               </TabsTrigger>
-
+              <TabsTrigger value="progress" className="px-4 py-2.5 text-xs md:text-sm font-medium rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <TrendingUp className="w-4 h-4 mr-1.5" />
+                Progress
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -502,6 +506,10 @@ const Dashboard = () => {
 
           <TabsContent value="fuel" className="mt-6">
             <FuelPlayer />
+          </TabsContent>
+
+          <TabsContent value="progress" className="mt-6">
+            <ExerciseProgressSection />
           </TabsContent>
 
 
