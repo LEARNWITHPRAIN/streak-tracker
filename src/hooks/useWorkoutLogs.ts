@@ -301,7 +301,8 @@ export const useWorkoutLogs = () => {
     endDate: string,
     schedule?: DaySchedule[] | null,
     customRoutine?: DaySchedule | null,
-    useSameDaily?: boolean
+    useSameDaily?: boolean,
+    targetTodaySchedule?: DaySchedule | null
   ) => {
     if (!user) return {};
 
@@ -316,27 +317,46 @@ export const useWorkoutLogs = () => {
       if (error) throw error;
 
       const history: Record<string, { totalExercises: number; completedExercises: number }> = {};
-      
+      const todayKey = getTodayKey();
+
+      let dateOverrides: Record<string, string> = {};
+      try {
+        const rawOverrides = localStorage.getItem('yodha_date_routine_overrides');
+        if (rawOverrides) dateOverrides = JSON.parse(rawOverrides);
+      } catch {
+        // ignore
+      }
+
       if (data) {
         data.forEach(log => {
-          // If schedule is available, only count exercises that belong to that day's weekly split
-          if (schedule) {
+          let scheduledDay: DaySchedule | undefined;
+
+          if (log.date === todayKey && targetTodaySchedule) {
+            scheduledDay = targetTodaySchedule;
+          } else if (dateOverrides[log.date] && schedule) {
+            scheduledDay = schedule.find(s => s.day.toLowerCase() === dateOverrides[log.date].toLowerCase());
+          } else if (useSameDaily && customRoutine) {
+            scheduledDay = customRoutine;
+          } else if (schedule) {
             const parts = log.date.split('-');
             if (parts.length === 3) {
               const [y, m, d] = parts.map(Number);
               const dateObj = new Date(y, m - 1, d);
               const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-              const scheduledDay = useSameDaily && customRoutine
-                ? customRoutine
-                : schedule.find(s => s.day.toLowerCase() === dayOfWeek);
+              scheduledDay = schedule.find(s => s.day.toLowerCase() === dayOfWeek);
+            }
+          }
 
-              if (scheduledDay) {
-                const belongsToSchedule = scheduledDay.exercises.some(
-                  ex => ex.id === log.exercise_id || ex.name.toLowerCase() === log.exercise_name?.toLowerCase()
-                );
-                if (!belongsToSchedule) {
-                  return; // Skip deleted or non-routine exercise
-                }
+          if (scheduledDay) {
+            const belongsToSchedule = scheduledDay.exercises.some(
+              ex => ex.id === log.exercise_id || ex.name.toLowerCase() === log.exercise_name?.toLowerCase()
+            );
+            if (!belongsToSchedule) {
+              const belongsToAny = schedule?.some(s =>
+                s.exercises.some(ex => ex.id === log.exercise_id || ex.name.toLowerCase() === log.exercise_name?.toLowerCase())
+              );
+              if (!belongsToAny) {
+                return;
               }
             }
           }
@@ -347,6 +367,17 @@ export const useWorkoutLogs = () => {
           history[log.date].totalExercises += log.total_sets;
           history[log.date].completedExercises += log.sets_completed;
         });
+      }
+
+      // If today is within range and targetTodaySchedule is provided, sync today's live completion
+      if (targetTodaySchedule && startDate <= todayKey && todayKey <= endDate) {
+        const live = calculateTotalProgress(targetTodaySchedule);
+        if (live.total > 0) {
+          history[todayKey] = {
+            totalExercises: live.total,
+            completedExercises: live.completed,
+          };
+        }
       }
 
       return history;
@@ -363,7 +394,8 @@ export const useWorkoutLogs = () => {
     dateKey: string,
     schedule?: DaySchedule[] | null,
     customRoutine?: DaySchedule | null,
-    useSameDaily?: boolean
+    useSameDaily?: boolean,
+    targetSchedule?: DaySchedule | null
   ): Promise<DetailedExerciseLog[]> => {
     // 1. Check local cache
     const cached = getCachedSetsForDate(dateKey);
@@ -412,17 +444,37 @@ export const useWorkoutLogs = () => {
       });
     }
 
-    // Determine the scheduled routine for this specific day of the week
+    // Determine the scheduled routine for this specific day
     let scheduledDay: DaySchedule | undefined;
-    if (dateKey) {
-      const parts = dateKey.split('-');
-      if (parts.length === 3) {
-        const [y, m, d] = parts.map(Number);
-        const dateObj = new Date(y, m - 1, d);
-        const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        if (useSameDaily && customRoutine) {
-          scheduledDay = customRoutine;
-        } else if (schedule) {
+    if (targetSchedule) {
+      scheduledDay = targetSchedule;
+    } else if (dateKey) {
+      const todayKey = getTodayKey();
+      let overrideDay: string | null = null;
+      try {
+        const rawOverrides = localStorage.getItem('yodha_date_routine_overrides');
+        if (rawOverrides) {
+          const overrides = JSON.parse(rawOverrides);
+          if (overrides[dateKey]) overrideDay = overrides[dateKey].toLowerCase();
+        }
+        if (!overrideDay && dateKey === todayKey) {
+          const saved = localStorage.getItem(`yodha_workout_day_${todayKey}`) || sessionStorage.getItem('yodha_today_selected_day');
+          if (saved) overrideDay = saved.toLowerCase();
+        }
+      } catch {
+        // ignore
+      }
+
+      if (overrideDay && schedule) {
+        scheduledDay = schedule.find(s => s.day.toLowerCase() === overrideDay);
+      } else if (useSameDaily && customRoutine) {
+        scheduledDay = customRoutine;
+      } else if (schedule) {
+        const parts = dateKey.split('-');
+        if (parts.length === 3) {
+          const [y, m, d] = parts.map(Number);
+          const dateObj = new Date(y, m - 1, d);
+          const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
           scheduledDay = schedule.find(s => s.day.toLowerCase() === dayOfWeek);
         }
       }
@@ -473,39 +525,10 @@ export const useWorkoutLogs = () => {
     };
 
     if (scheduledDay) {
-      // Strictly use the exercises that belong to this day's scheduled weekly split
       const scheduledExercises = scheduledDay.exercises;
 
-      // Clean up any orphan rows in workout_logs for this day in the background
-      const orphanLogIds = rawLogs
-        .filter(r => !scheduledExercises.some(s => s.id === r.exercise_id || s.name.toLowerCase() === r.exercise_name?.toLowerCase()))
-        .map(r => r.exercise_id);
-      if (orphanLogIds.length > 0 && user) {
-        supabase
-          .from('workout_logs')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('date', dateKey)
-          .in('exercise_id', orphanLogIds)
-          .then(({ error }) => {
-            if (error) console.warn('Cleaned orphan workout log error:', error);
-          });
-      }
-
-      // Also clean up local cache for deleted exercises
-      let cacheModified = false;
-      Object.keys(cached).forEach(exId => {
-        if (!scheduledExercises.some(s => s.id === exId)) {
-          delete cached[exId];
-          cacheModified = true;
-        }
-      });
-      if (cacheModified) {
-        saveCachedSetsForDate(dateKey, cached);
-      }
-
-      if (scheduledExercises.length === 0) {
-        // Scheduled Rest Day
+      if (scheduledExercises.length === 0 && rawLogs.length === 0) {
+        // Scheduled Rest Day with no logged workouts
         return [];
       }
 

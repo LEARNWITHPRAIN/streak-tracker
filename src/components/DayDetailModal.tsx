@@ -1,9 +1,17 @@
-import React from 'react';
-import { X, Dumbbell, TrendingUp, BarChart2, Check, Scale, Flame, Moon } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { X, Dumbbell, TrendingUp, BarChart2, Check, Scale, Flame, Moon, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DailyExerciseSetLog } from '@/types/exercise';
-import { DaySchedule } from '@/hooks/useUserWorkouts';
+import { DaySchedule, getExerciseSets } from '@/hooks/useUserWorkouts';
 
 export interface ExerciseLog {
   exercise_id: string;
@@ -18,10 +26,19 @@ interface DayDetailModalProps {
   date: string; // YYYY-MM-DD
   logs: ExerciseLog[];
   daySchedule?: DaySchedule | null;
+  schedule?: DaySchedule[];
+  onSelectRoutine?: (dayName: string) => void;
   onClose: () => void;
 }
 
-const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule, onClose }) => {
+const DayDetailModal: React.FC<DayDetailModalProps> = ({ 
+  date, 
+  logs, 
+  daySchedule, 
+  schedule, 
+  onSelectRoutine, 
+  onClose 
+}) => {
   if (!date) return null;
 
   const displayDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -31,8 +48,32 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
     day: 'numeric',
   });
 
-  const totalSets = logs.reduce((acc, l) => acc + (l.sets ? l.sets.length : l.total_sets), 0);
-  const completedSets = logs.reduce((acc, l) => {
+  // Ensure planned exercises are displayed even if 0 logs have been recorded yet
+  const effectiveLogs: ExerciseLog[] = useMemo(() => {
+    if (logs && logs.length > 0) return logs;
+    if (!daySchedule || !daySchedule.exercises || daySchedule.exercises.length === 0) return [];
+
+    return daySchedule.exercises.map(ex => {
+      const configured = getExerciseSets(ex);
+      const sets: DailyExerciseSetLog[] = configured.map((s, idx) => ({
+        setNumber: s.setNumber || idx + 1,
+        weight: s.weight !== undefined ? s.weight : (ex.weight ?? null),
+        reps: s.reps || '10',
+        completed: false,
+      }));
+      return {
+        exercise_id: ex.id,
+        exercise_name: ex.name,
+        sets_completed: 0,
+        total_sets: sets.length,
+        weight_kg: ex.weight ?? null,
+        sets,
+      };
+    });
+  }, [logs, daySchedule]);
+
+  const totalSets = effectiveLogs.reduce((acc, l) => acc + (l.sets ? l.sets.length : l.total_sets), 0);
+  const completedSets = effectiveLogs.reduce((acc, l) => {
     if (l.sets && l.sets.length > 0) {
       return acc + l.sets.filter(s => s.completed).length;
     }
@@ -44,7 +85,7 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
   let maxWeightLifted: number | null = null;
   let totalVolume = 0;
 
-  logs.forEach(log => {
+  effectiveLogs.forEach(log => {
     if (log.sets && log.sets.length > 0) {
       log.sets.forEach(s => {
         if (s.completed && s.weight !== null && s.weight > 0) {
@@ -88,16 +129,52 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
               )}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-foreground">{displayDate}</h2>
-                {daySchedule?.title && (
+                
+                {/* Interactive Routine Selector or Badge */}
+                {schedule && onSelectRoutine ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                        title="Click to switch routine for this day"
+                      >
+                        <span>{daySchedule?.title || 'Assign Routine'}</span>
+                        <ChevronDown className="w-3 h-3 text-primary" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 p-1.5 bg-card/95 backdrop-blur-xl border border-border/80 shadow-2xl rounded-xl">
+                      <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1">
+                        Change Routine
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="my-1 bg-border/40" />
+                      {schedule.map(s => {
+                        const isSelected = s.day.toLowerCase() === daySchedule?.day.toLowerCase();
+                        return (
+                          <DropdownMenuItem
+                            key={s.day}
+                            onClick={() => onSelectRoutine(s.day)}
+                            className={`flex items-center justify-between p-2 rounded-lg text-xs font-semibold cursor-pointer ${
+                              isSelected ? 'bg-primary/20 text-primary font-bold' : 'hover:bg-muted/60'
+                            }`}
+                          >
+                            <span className="truncate">{s.title} ({s.shortDay})</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : daySchedule?.title ? (
                   <Badge variant="outline" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/30 uppercase tracking-wider">
                     {daySchedule.title}
                   </Badge>
-                )}
+                ) : null}
               </div>
               <p className="text-xs text-muted-foreground">
-                {daySchedule?.subtitle ? daySchedule.subtitle : 'Weekly Split Routine & Progress'}
+                {daySchedule?.subtitle ? daySchedule.subtitle : 'Workout Routine & Progress'}
               </p>
             </div>
           </div>
@@ -137,7 +214,7 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
 
         {/* Exercise table */}
         <div className="px-5 pb-5 max-h-[55vh] overflow-y-auto">
-          {logs.length === 0 ? (
+          {effectiveLogs.length === 0 ? (
             <div className="py-10 px-4 text-center space-y-3">
               <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                 <Moon className="w-6 h-6" />
@@ -164,7 +241,7 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
                 <span className="text-center">Done</span>
               </div>
 
-              {logs.map((log) => {
+              {effectiveLogs.map((log) => {
                 const effectiveTotal = log.sets ? log.sets.length : log.total_sets;
                 const effectiveDone = log.sets 
                   ? log.sets.filter(s => s.completed).length 
@@ -179,7 +256,7 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
                 if (log.sets && log.sets.length > 0) {
                   const setWeights = log.sets
                     .map(s => s.weight)
-                    .filter((w): w is number => w !== null && w > 0);
+                    .filter((w): w is number => w !== null && w !== undefined && w > 0);
                   if (setWeights.length > 0) {
                     displayWeight = Math.max(...setWeights);
                   }
@@ -237,6 +314,7 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
                           const repsLabel = doneRepsClean 
                             ? (targetRepsClean && doneRepsClean !== targetRepsClean ? `${doneRepsClean}/${targetRepsClean}r` : `${doneRepsClean}r`)
                             : (targetRepsClean ? `${targetRepsClean}r` : '');
+                          const weightLabel = s.weight !== null && s.weight !== undefined && s.weight > 0 ? `${s.weight}kg` : 'BW';
 
                           return (
                             <div
@@ -268,7 +346,7 @@ const DayDetailModal: React.FC<DayDetailModalProps> = ({ date, logs, daySchedule
         </div>
 
         {/* Modal Footer Summary */}
-        {logs.length > 0 && (
+        {effectiveLogs.length > 0 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-border/50 bg-muted/20 text-xs">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Scale className="w-3.5 h-3.5 text-primary" />

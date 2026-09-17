@@ -33,7 +33,18 @@ const Dashboard = () => {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
-  const { schedule, customRoutine, getTodaySchedule, useSameDaily, loading: scheduleLoading, initializePlanSchedule, refetch } = useUserWorkouts();
+  const { 
+    schedule, 
+    customRoutine, 
+    getTodaySchedule, 
+    useSameDaily, 
+    loading: scheduleLoading, 
+    initializePlanSchedule, 
+    refetch,
+    getScheduleForDate,
+    setDateWorkoutDay,
+    selectedWorkoutDay,
+  } = useUserWorkouts();
   const { calculateTotalProgress, fetchCalendarHistory, fetchDayDetailedLogs, loading: progressLoading, refetch: refetchLogs } = useWorkoutLogs();
   const { currentTrack } = useMusicContext();
   const [activeTab, setActiveTab] = useState('today');
@@ -86,7 +97,7 @@ const Dashboard = () => {
 
   const streak = calculateStreak();
 
-  // Get today's schedule - this will update when useSameDaily changes
+  // Get today's schedule - this will update when useSameDaily or selected workout changes
   const todaySchedule = getTodaySchedule();
   const progressData = calculateTotalProgress(todaySchedule);
   const todayProgressPercent = progressData.percentage;
@@ -104,35 +115,46 @@ const Dashboard = () => {
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month + 1, 0).getDate();
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const history = await fetchCalendarHistory(startDate, endDate, schedule, customRoutine, useSameDaily);
+    const activeToday = getTodaySchedule();
+    const history = await fetchCalendarHistory(startDate, endDate, schedule, customRoutine, useSameDaily, activeToday);
     setCalendarHistory(history);
-  }, [currentMonth, fetchCalendarHistory, schedule, customRoutine, useSameDaily]);
+  }, [currentMonth, fetchCalendarHistory, schedule, customRoutine, useSameDaily, getTodaySchedule]);
 
   // Scheduled split for the selected calendar day
   const selectedDaySchedule = useMemo(() => {
     if (!selectedDay) return null;
-    const parts = selectedDay.split('-');
-    if (parts.length !== 3) return null;
-    const [y, m, d] = parts.map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    if (useSameDaily && customRoutine) {
-      return customRoutine;
-    }
-    return schedule.find(s => s.day.toLowerCase() === dayOfWeek) || null;
-  }, [selectedDay, schedule, customRoutine, useSameDaily]);
+    return getScheduleForDate(selectedDay);
+  }, [selectedDay, getScheduleForDate]);
 
   // Fetch detailed logs for a specific day (for modal)
   const handleDayClick = useCallback(async (dateKey: string) => {
     setSelectedDay(dateKey);
     setDayLogs([]);
+    const daySched = getScheduleForDate(dateKey);
     try {
-      const detailed = await fetchDayDetailedLogs(dateKey, schedule, customRoutine, useSameDaily);
+      const detailed = await fetchDayDetailedLogs(dateKey, schedule, customRoutine, useSameDaily, daySched);
       setDayLogs(detailed);
     } catch (err) {
       console.error('Error fetching day logs:', err);
     }
-  }, [fetchDayDetailedLogs, schedule, customRoutine, useSameDaily]);
+  }, [fetchDayDetailedLogs, schedule, customRoutine, useSameDaily, getScheduleForDate]);
+
+  // Handle switching routine for a specific date from DayDetailModal
+  const handleModalSelectRoutine = useCallback(async (newDay: string) => {
+    if (!selectedDay) return;
+    setDateWorkoutDay(selectedDay, newDay);
+    const newSched = schedule.find(s => s.day.toLowerCase() === newDay.toLowerCase()) || null;
+    if (newSched) {
+      toast.success(`Updated routine to ${newSched.title}`);
+      try {
+        const detailed = await fetchDayDetailedLogs(selectedDay, schedule, customRoutine, useSameDaily, newSched);
+        setDayLogs(detailed);
+      } catch (err) {
+        console.error('Error refreshing day logs after routine change:', err);
+      }
+    }
+    loadCalendarHistory();
+  }, [selectedDay, setDateWorkoutDay, schedule, customRoutine, useSameDaily, fetchDayDetailedLogs, loadCalendarHistory]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -166,19 +188,26 @@ const Dashboard = () => {
     }
   }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission]);
 
-  // Listen for progress updates to refresh calendar
+  // Listen for progress and routine selection updates to refresh calendar
   useEffect(() => {
     const handleProgressUpdate = () => {
       refetchLogs();
       loadCalendarHistory();
+      if (selectedDay) {
+        handleDayClick(selectedDay);
+      }
     };
     
     window.addEventListener('workout-progress-updated', handleProgressUpdate);
+    window.addEventListener('today-workout-selected', handleProgressUpdate);
+    window.addEventListener('date-routine-updated', handleProgressUpdate);
     
     return () => {
       window.removeEventListener('workout-progress-updated', handleProgressUpdate);
+      window.removeEventListener('today-workout-selected', handleProgressUpdate);
+      window.removeEventListener('date-routine-updated', handleProgressUpdate);
     };
-  }, [loadCalendarHistory, refetchLogs]);
+  }, [loadCalendarHistory, refetchLogs, selectedDay, handleDayClick]);
 
   // Refetch schedule when switching back to today tab (to get updated custom routine)
   useEffect(() => {
@@ -447,6 +476,7 @@ const Dashboard = () => {
               currentMonth={currentMonth}
               onMonthChange={setCurrentMonth}
               onDayClick={handleDayClick}
+              getScheduleForDate={getScheduleForDate}
             />
           </TabsContent>
 
@@ -520,6 +550,8 @@ const Dashboard = () => {
           date={selectedDay}
           logs={dayLogs}
           daySchedule={selectedDaySchedule}
+          schedule={schedule}
+          onSelectRoutine={handleModalSelectRoutine}
           onClose={() => setSelectedDay(null)}
         />
       )}

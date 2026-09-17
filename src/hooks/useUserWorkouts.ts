@@ -187,9 +187,22 @@ const defaultCustomRoutine: DaySchedule = {
 };
 
 const SELECTED_WORKOUT_DAY_KEY = 'yodha_today_selected_day';
+const DATE_ROUTINE_OVERRIDES_KEY = 'yodha_date_routine_overrides';
+
+const getTodayKey = (): string => new Date().toISOString().split('T')[0];
 
 const getInitialSelectedDay = (): string => {
   try {
+    const todayKey = getTodayKey();
+    const dateSaved = localStorage.getItem(`yodha_workout_day_${todayKey}`);
+    if (dateSaved) return dateSaved.toLowerCase();
+
+    const rawOverrides = localStorage.getItem(DATE_ROUTINE_OVERRIDES_KEY);
+    if (rawOverrides) {
+      const overrides = JSON.parse(rawOverrides);
+      if (overrides[todayKey]) return overrides[todayKey].toLowerCase();
+    }
+
     const saved = sessionStorage.getItem(SELECTED_WORKOUT_DAY_KEY);
     if (saved) return saved.toLowerCase();
   } catch {
@@ -207,13 +220,48 @@ export const useUserWorkouts = () => {
 
   const setSelectedWorkoutDay = useCallback((day: string) => {
     const normalized = day.toLowerCase();
+    const todayKey = getTodayKey();
     setSelectedWorkoutDayState(normalized);
     try {
+      localStorage.setItem(`yodha_workout_day_${todayKey}`, normalized);
       sessionStorage.setItem(SELECTED_WORKOUT_DAY_KEY, normalized);
+
+      const rawOverrides = localStorage.getItem(DATE_ROUTINE_OVERRIDES_KEY);
+      const overrides = rawOverrides ? JSON.parse(rawOverrides) : {};
+      overrides[todayKey] = normalized;
+      localStorage.setItem(DATE_ROUTINE_OVERRIDES_KEY, JSON.stringify(overrides));
     } catch {
       // ignore
     }
     window.dispatchEvent(new CustomEvent('today-workout-selected', { detail: normalized }));
+    window.dispatchEvent(new Event('workout-progress-updated'));
+  }, []);
+
+  const setDateWorkoutDay = useCallback((dateKey: string, day: string) => {
+    const normalized = day.toLowerCase();
+    const todayKey = getTodayKey();
+    try {
+      const rawOverrides = localStorage.getItem(DATE_ROUTINE_OVERRIDES_KEY);
+      const overrides = rawOverrides ? JSON.parse(rawOverrides) : {};
+      overrides[dateKey] = normalized;
+      localStorage.setItem(DATE_ROUTINE_OVERRIDES_KEY, JSON.stringify(overrides));
+    } catch {
+      // ignore
+    }
+
+    if (dateKey === todayKey) {
+      setSelectedWorkoutDayState(normalized);
+      try {
+        localStorage.setItem(`yodha_workout_day_${todayKey}`, normalized);
+        sessionStorage.setItem(SELECTED_WORKOUT_DAY_KEY, normalized);
+      } catch {
+        // ignore
+      }
+      window.dispatchEvent(new CustomEvent('today-workout-selected', { detail: normalized }));
+    }
+
+    window.dispatchEvent(new CustomEvent('date-routine-updated', { detail: { dateKey, day: normalized } }));
+    window.dispatchEvent(new Event('workout-progress-updated'));
   }, []);
 
   // Listen for workout selection changes across components
@@ -224,6 +272,12 @@ export const useUserWorkouts = () => {
         setSelectedWorkoutDayState(customEv.detail.toLowerCase());
       } else {
         try {
+          const todayKey = getTodayKey();
+          const dateSaved = localStorage.getItem(`yodha_workout_day_${todayKey}`);
+          if (dateSaved) {
+            setSelectedWorkoutDayState(dateSaved.toLowerCase());
+            return;
+          }
           const saved = sessionStorage.getItem(SELECTED_WORKOUT_DAY_KEY);
           if (saved) setSelectedWorkoutDayState(saved.toLowerCase());
         } catch {
@@ -439,6 +493,44 @@ export const useUserWorkouts = () => {
     return schedule.find(d => d.day === today) || schedule[0] || null;
   }, [useSameDaily, customRoutine, schedule, selectedWorkoutDay]);
 
+  // Get schedule for any specific date (YYYY-MM-DD), checking overrides, today's selection, and weekly split
+  const getScheduleForDate = useCallback((dateKey: string): DaySchedule | null => {
+    const todayKey = getTodayKey();
+    if (dateKey === todayKey) {
+      return getTodaySchedule();
+    }
+
+    let overrideDay: string | null = null;
+    try {
+      const rawOverrides = localStorage.getItem(DATE_ROUTINE_OVERRIDES_KEY);
+      if (rawOverrides) {
+        const overrides = JSON.parse(rawOverrides);
+        if (overrides[dateKey]) overrideDay = overrides[dateKey].toLowerCase();
+      }
+    } catch {
+      // ignore
+    }
+
+    if (overrideDay) {
+      const match = schedule.find(d => d.day.toLowerCase() === overrideDay);
+      if (match) return match;
+    }
+
+    if (useSameDaily && customRoutine) {
+      return customRoutine;
+    }
+
+    const parts = dateKey.split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts.map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      return schedule.find(d => d.day.toLowerCase() === dayOfWeek) || null;
+    }
+
+    return null;
+  }, [getTodaySchedule, schedule, customRoutine, useSameDaily]);
+
   const getTodayName = (): string => {
     return new Date().toLocaleDateString('en-US', { weekday: 'long' });
   };
@@ -468,6 +560,8 @@ export const useUserWorkouts = () => {
     useSameDaily,
     selectedWorkoutDay,
     setSelectedWorkoutDay,
+    setDateWorkoutDay,
+    getScheduleForDate,
     updateDayWorkout,
     getTodaySchedule,
     getTodayName,
