@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp, ArrowRight } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const { notifPermission, dualReminders } = usePWA();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
+  const { isTrialActive, trialDaysLeft, initiatePayment } = useSubscription();
   const timer = useTimer();
   const { 
     schedule, 
@@ -254,6 +256,25 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
+      {/* Trial Countdown Banner */}
+      {isTrialActive && (
+        <div className="w-full bg-gradient-to-r from-orange-500/20 via-orange-600/15 to-orange-500/20 border-b border-orange-500/30 px-4 py-2.5">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Zap className="w-4 h-4 text-orange-400 shrink-0 animate-pulse" />
+              <span className="text-orange-200/90">
+                <strong className="text-orange-300">{trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} left</strong> in your free trial
+              </span>
+            </div>
+            <button
+              onClick={initiatePayment}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold transition-colors shrink-0"
+            >
+              Upgrade ₹149/mo <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-border/50 w-full max-w-full overflow-hidden">
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5">

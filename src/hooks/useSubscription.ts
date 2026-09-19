@@ -5,18 +5,23 @@ import { toast } from 'sonner';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string;
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID as string;
+const TRIAL_DAYS = 7;
+const SUBSCRIPTION_AMOUNT_PAISE = 14900; // ₹149
 
 export interface SubscriptionState {
   isPremium: boolean;
   isAdmin: boolean;
+  isTrialActive: boolean;
+  trialDaysLeft: number;
   loading: boolean;
-  status: 'pending' | 'active' | 'expired' | null;
+  status: 'trial' | 'active' | 'expired' | null;
   expiresAt: Date | null;
+  trialEndsAt: Date | null;
   refetch: () => Promise<void>;
   initiatePayment: () => Promise<void>;
+  startTrial: () => Promise<void>;
 }
 
-// Dynamically load Razorpay checkout script
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if ((window as any).Razorpay) {
@@ -34,74 +39,63 @@ function loadRazorpayScript(): Promise<boolean> {
 export function useSubscription(): SubscriptionState {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<'pending' | 'active' | 'expired' | null>(null);
+  const [status, setStatus] = useState<'trial' | 'active' | 'expired' | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<Date | null>(null);
 
-  const isAdmin = Boolean(user?.email && user.email === ADMIN_EMAIL);
+  const isAdmin = Boolean(user?.email && ADMIN_EMAIL && user.email === ADMIN_EMAIL);
 
   const fetchSubscription = useCallback(async () => {
     if (!user) {
       setLoading(false);
       setStatus(null);
       setExpiresAt(null);
+      setTrialEndsAt(null);
       return;
     }
 
-    // Admin always has premium — skip DB fetch
     if (isAdmin) {
       setStatus('active');
       setExpiresAt(null);
+      setTrialEndsAt(null);
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      let query = supabase
+      const { data: record, error } = await supabase
         .from('user_subscriptions')
-        .select('id, user_id, user_email, status, expires_at, created_at')
-        .order('created_at', { ascending: false });
-
-      if (user.email) {
-        query = query.or(`user_id.eq.${user.id},user_email.eq.${user.email.toLowerCase()}`);
-      } else {
-        query = query.eq('user_id', user.id);
-      }
-
-      const { data: records, error } = await query;
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (error) throw error;
 
-      if (records && records.length > 0) {
-        const now = new Date();
-        // Check if there is an active unexpired subscription
-        const activeSub = records.find((rec) => {
-          if (rec.status !== 'active') return false;
-          if (!rec.expires_at) return true;
-          return new Date(rec.expires_at) > now;
-        });
+      const now = new Date();
 
-        const chosen = activeSub || records[0];
-        const expiry = chosen.expires_at ? new Date(chosen.expires_at) : null;
-        const effectiveStatus =
-          chosen.status === 'active' && expiry && expiry < now
-            ? 'expired'
-            : (chosen.status as 'pending' | 'active' | 'expired');
-
-        setStatus(effectiveStatus);
-        setExpiresAt(expiry);
-
-        // Opportunistically link user_id if this was an email-only grant
-        if (chosen.id && !chosen.user_id && user.id) {
-          supabase
-            .from('user_subscriptions')
-            .update({ user_id: user.id })
-            .eq('id', chosen.id)
-            .then(() => {});
-        }
-      } else {
+      if (!record) {
+        // No subscription row — user is brand new, haven't started trial yet
         setStatus(null);
         setExpiresAt(null);
+        setTrialEndsAt(null);
+      } else {
+        const trialEnd = record.trial_ends_at ? new Date(record.trial_ends_at) : null;
+        const subExpiry = record.expires_at ? new Date(record.expires_at) : null;
+
+        if (record.status === 'active' && subExpiry && subExpiry > now) {
+          setStatus('active');
+          setExpiresAt(subExpiry);
+          setTrialEndsAt(trialEnd);
+        } else if (record.status === 'trial' && trialEnd && trialEnd > now) {
+          setStatus('trial');
+          setTrialEndsAt(trialEnd);
+          setExpiresAt(null);
+        } else {
+          setStatus('expired');
+          setExpiresAt(subExpiry);
+          setTrialEndsAt(trialEnd);
+        }
       }
     } catch (err) {
       console.error('Error fetching subscription:', err);
@@ -115,11 +109,45 @@ export function useSubscription(): SubscriptionState {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  const isPremium = isAdmin || status === 'active';
+  const now = new Date();
+  const isTrialActive = status === 'trial' && trialEndsAt !== null && trialEndsAt > now;
+  const trialDaysLeft = isTrialActive && trialEndsAt
+    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
+  const isPremium = isAdmin || status === 'active' || isTrialActive;
+
+  const startTrial = useCallback(async () => {
+    if (!user) return;
+    try {
+      const trialStart = new Date();
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
+
+      const { error } = await supabase
+        .from('user_subscriptions')
+        .upsert(
+          {
+            user_id: user.id,
+            user_email: user.email?.toLowerCase() ?? null,
+            status: 'trial',
+            trial_started_at: trialStart.toISOString(),
+            trial_ends_at: trialEnd.toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' }
+        );
+
+      if (error) throw error;
+      await fetchSubscription();
+    } catch (err) {
+      console.error('Error starting trial:', err);
+      toast.error('Failed to start trial. Please try again.');
+    }
+  }, [user, fetchSubscription]);
 
   const initiatePayment = useCallback(async () => {
     if (!user) {
-      toast.error('Please sign in to upgrade');
+      toast.error('Please sign in to subscribe');
       return;
     }
 
@@ -129,20 +157,18 @@ export function useSubscription(): SubscriptionState {
       return;
     }
 
-    const amount = 14900; // ₹149 in paise
-
     const options = {
       key: RAZORPAY_KEY_ID,
-      amount,
+      amount: SUBSCRIPTION_AMOUNT_PAISE,
       currency: 'INR',
       name: 'Yodha Mode',
-      description: 'Yodha Pro — 30 Day Access',
-      image: '/yodha-logo.jpg',
+      description: 'Yodha Mode — 30 Day Premium Access',
+      image: '/yodha-favicon.png',
       prefill: {
         email: user.email ?? '',
       },
       theme: {
-        color: '#a855f7',
+        color: '#f97316',
       },
       modal: {
         ondismiss: () => {
@@ -166,7 +192,7 @@ export function useSubscription(): SubscriptionState {
                 user_email: user.email ? user.email.toLowerCase() : null,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id ?? null,
-                amount_paise: amount,
+                amount_paise: SUBSCRIPTION_AMOUNT_PAISE,
                 status: 'active',
                 paid_at: new Date().toISOString(),
                 expires_at: expiryDate.toISOString(),
@@ -177,7 +203,7 @@ export function useSubscription(): SubscriptionState {
 
           if (error) throw error;
 
-          toast.success('🎉 Welcome to Yodha Pro! All features unlocked.', {
+          toast.success('🎉 Welcome to Yodha Mode Pro! Full access unlocked.', {
             duration: 5000,
           });
           await fetchSubscription();
@@ -199,10 +225,14 @@ export function useSubscription(): SubscriptionState {
   return {
     isPremium,
     isAdmin,
+    isTrialActive,
+    trialDaysLeft,
     loading,
     status,
     expiresAt,
+    trialEndsAt,
     refetch: fetchSubscription,
     initiatePayment,
+    startTrial,
   };
 }
