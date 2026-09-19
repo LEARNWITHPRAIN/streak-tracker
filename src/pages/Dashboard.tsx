@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp, ArrowRight } from 'lucide-react';
-import { useSubscription } from '@/hooks/useSubscription';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
@@ -34,7 +33,6 @@ const Dashboard = () => {
   const { notifPermission, dualReminders } = usePWA();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
-  const { isTrialActive, trialDaysLeft, initiatePayment } = useSubscription();
   const timer = useTimer();
   const { 
     schedule, 
@@ -58,7 +56,7 @@ const Dashboard = () => {
   // Day detail modal
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayLogs, setDayLogs] = useState<ExerciseLog[]>([]);
-  // Skip-animation state: when timer is skipped, circle sweeps from 0 → current %
+  // Skip-animation state: when timer is skipped, circle sweeps from 0 ΓåÆ current %
   const [justSkipped, setJustSkipped] = useState(false);
   const [skipAnimTarget, setSkipAnimTarget] = useState(0);
   const skipAnimTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,7 +181,7 @@ const Dashboard = () => {
         if (!fetchedName) {
           setShowNameModal(true);
         } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-          // Display name present — prompt notifications if not yet configured
+          // Display name present ΓÇö prompt notifications if not yet configured
           setShowNotifModal(true);
         }
       };
@@ -226,10 +224,10 @@ const Dashboard = () => {
     }
   }, [timer.settings.autoStart, timer.startTimer]);
 
-  // Skip timer: reset timer and play 0→% animation on the progress circle
+  // Skip timer: reset timer and play 0ΓåÆ% animation on the progress circle
   const handleSkipTimer = useCallback(() => {
     timer.resetTimer();
-    // Start skip animation: circle goes from 0 → todayProgressPercent
+    // Start skip animation: circle goes from 0 ΓåÆ todayProgressPercent
     setJustSkipped(true);
     setSkipAnimTarget(0);
     requestAnimationFrame(() => setSkipAnimTarget(todayProgressPercent));
@@ -256,25 +254,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden">
-      {/* Trial Countdown Banner */}
-      {isTrialActive && (
-        <div className="w-full bg-gradient-to-r from-orange-500/20 via-orange-600/15 to-orange-500/20 border-b border-orange-500/30 px-4 py-2.5">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Zap className="w-4 h-4 text-orange-400 shrink-0 animate-pulse" />
-              <span className="text-orange-200/90">
-                <strong className="text-orange-300">{trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} left</strong> in your free trial
-              </span>
-            </div>
-            <button
-              onClick={initiatePayment}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold transition-colors shrink-0"
-            >
-              Upgrade ₹149/mo <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      )}
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-border/50 w-full max-w-full overflow-hidden">
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5">
@@ -399,7 +378,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
-              {/* Daily Progress Circle — animates from 0 when timer is skipped */}
+              {/* Daily Progress Circle ΓÇö animates from 0 when timer is skipped */}
               <div className="shrink-0">
                 <ProgressCircle
                   percentage={justSkipped ? skipAnimProgress : animatedDailyProgress}
@@ -422,7 +401,7 @@ const Dashboard = () => {
                       <ShareProgressCard percentage={todayProgressPercent} completed={completed} total={total} />
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                      {completed} of {total} sets completed {todayProgressPercent >= 100 ? '🎉 Full workout crushed!' : ''}
+                      {completed} of {total} sets completed {todayProgressPercent >= 100 ? '≡ƒÄë Full workout crushed!' : ''}
                     </p>
                   </div>
                   <div className="text-sm font-semibold px-3 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 self-start sm:self-auto">
@@ -545,7 +524,7 @@ const Dashboard = () => {
       {/* Footer - add padding when mini player is visible */}
       <footer className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center ${currentTrack && activeTab !== 'music' ? 'pb-24' : ''}`}>
         <p className="text-xs text-muted-foreground">
-          Built with dedication • Yodha Mode
+          Built with dedication ΓÇó Yodha Mode
         </p>
       </footer>
 
@@ -573,7 +552,7 @@ const Dashboard = () => {
         todayProgress={todayProgressPercent}
       />
 
-      {/* Day Detail Modal — shown when user clicks a calendar day */}
+      {/* Day Detail Modal ΓÇö shown when user clicks a calendar day */}
       {selectedDay && (
         <DayDetailModal
           date={selectedDay}
