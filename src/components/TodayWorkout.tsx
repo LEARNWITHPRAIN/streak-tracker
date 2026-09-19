@@ -60,6 +60,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     getTodayName, 
     selectedWorkoutDay,
     setSelectedWorkoutDay,
+    updateDayWorkout,
     loading: scheduleLoading 
   } = useUserWorkouts();
   const { 
@@ -240,6 +241,42 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
       m.id === exercise.id ? { ...m, totalSets: currentSets.length } : m
     );
 
+    await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
+  };
+
+  // Update exercise weight
+  const handleUpdateExerciseWeight = async (exercise: Exercise, setIndex: number, newWeight: number | null) => {
+    if (!todaySchedule) return;
+
+    // 1. Update the overall weekly schedule in Supabase (which trickles down everywhere)
+    const updatedExercises = todaySchedule.exercises.map(ex => {
+      if (ex.id === exercise.id) {
+        let updatedSets = ex.sets ? [...ex.sets] : getExerciseSets(ex);
+        
+        // Update specific set weight
+        if (updatedSets[setIndex]) {
+          updatedSets[setIndex] = { ...updatedSets[setIndex], weight: newWeight };
+        }
+
+        const allWeights = updatedSets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
+        const maxWeight = allWeights.length > 0 ? Math.max(...allWeights) : null;
+        
+        return { ...ex, weight: maxWeight, sets: updatedSets };
+      }
+      return ex;
+    });
+
+    await updateDayWorkout(todaySchedule.day, { exercises: updatedExercises });
+
+    // 2. Update today's logs specifically
+    const currentSets = [...getSetsForExercise(exercise)];
+    if (currentSets[setIndex]) {
+      currentSets[setIndex] = { ...currentSets[setIndex], weight: newWeight };
+    }
+    
+    const allMeta = getAllExercisesMeta().map(m => 
+      m.id === exercise.id ? { ...m, totalSets: currentSets.length } : m
+    );
     await saveExerciseSets(exercise.id, exercise.name, currentSets, allMeta);
   };
 
@@ -478,14 +515,14 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
             <div className="space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-xs sm:text-sm font-bold text-foreground">
-                  Today's Logging: <span className="text-primary underline decoration-primary/50 underline-offset-2">Done Reps Only</span>
+                  Today's Logging
                 </p>
                 <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 font-semibold px-2 py-0">
-                  Target & weights are locked here
+                  Targets locked here
                 </Badge>
               </div>
               <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                Log your completed reps here. To customize exercise names, target weights, sets, or target reps, head over to the <strong>Weekly Split</strong> tab.
+                Log your completed reps and weights here. To customize exercise names, sets, or target reps, head over to the <strong>Weekly Split</strong> tab.
               </p>
             </div>
           </div>
@@ -533,6 +570,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
                 onQuickAdvance={() => handleQuickAdvance(exercise)}
                 onToggleSet={(idx, specificDoneReps) => handleToggleSet(exercise, idx, specificDoneReps)}
                 onUpdateDoneReps={(idx, doneReps) => handleUpdateDoneReps(exercise, idx, doneReps)}
+                onUpdateWeight={(idx, newWeight) => handleUpdateExerciseWeight(exercise, idx, newWeight)}
                 onNavigateToWeekly={onNavigateToWeekly}
               />
             );
@@ -583,6 +621,7 @@ interface ExerciseWorkoutCardProps {
   onQuickAdvance: () => void;
   onToggleSet: (setIndex: number, specificDoneReps?: string) => void;
   onUpdateDoneReps: (setIndex: number, doneReps: string) => void;
+  onUpdateWeight: (setIndex: number, newWeight: number | null) => void;
   onNavigateToWeekly?: () => void;
 }
 
@@ -598,6 +637,7 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
   onQuickAdvance,
   onToggleSet,
   onUpdateDoneReps,
+  onUpdateWeight,
   onNavigateToWeekly,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -688,6 +728,7 @@ const ExerciseWorkoutCard: React.FC<ExerciseWorkoutCardProps> = ({
                   setIndex={idx}
                   onToggle={(doneReps) => onToggleSet(idx, doneReps)}
                   onUpdateDoneReps={(doneReps) => onUpdateDoneReps(idx, doneReps)}
+                  onUpdateWeight={(newWeight) => onUpdateWeight(idx, newWeight)}
                 />
               ))}
             </div>
@@ -720,6 +761,7 @@ interface TodaySetRowProps {
   setIndex: number;
   onToggle: (specificDoneReps?: string) => void;
   onUpdateDoneReps: (doneReps: string) => void;
+  onUpdateWeight: (newWeight: number | null) => void;
 }
 
 const TodaySetRow: React.FC<TodaySetRowProps> = ({
@@ -727,6 +769,7 @@ const TodaySetRow: React.FC<TodaySetRowProps> = ({
   setIndex,
   onToggle,
   onUpdateDoneReps,
+  onUpdateWeight,
 }) => {
   const targetRepsClean = String(set.reps || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
   const initialDone = set.doneReps !== undefined && set.doneReps !== '' 
@@ -734,6 +777,7 @@ const TodaySetRow: React.FC<TodaySetRowProps> = ({
     : (set.completed ? targetRepsClean : '');
   
   const [localDoneReps, setLocalDoneReps] = useState<string>(initialDone);
+  const [localWeight, setLocalWeight] = useState<number | null>(set.weight !== undefined ? set.weight : null);
 
   useEffect(() => {
     if (set.doneReps !== undefined && set.doneReps !== '') {
@@ -744,6 +788,29 @@ const TodaySetRow: React.FC<TodaySetRowProps> = ({
       setLocalDoneReps('');
     }
   }, [set.doneReps, set.completed, targetRepsClean]);
+
+  useEffect(() => {
+    if (set.weight !== undefined) {
+      setLocalWeight(set.weight);
+    }
+  }, [set.weight]);
+
+  const handleWeightChange = (val: string) => {
+    if (val === '') {
+      setLocalWeight(null);
+    } else {
+      const num = parseFloat(val);
+      if (!isNaN(num)) {
+        setLocalWeight(num);
+      }
+    }
+  };
+
+  const handleWeightBlur = () => {
+    if (localWeight !== set.weight) {
+      onUpdateWeight(localWeight);
+    }
+  };
 
   const handleStep = (delta: number) => {
     const currentNum = parseInt(localDoneReps || targetRepsClean, 10) || 0;
@@ -786,15 +853,21 @@ const TodaySetRow: React.FC<TodaySetRowProps> = ({
             S{set.setNumber || setIndex + 1}
           </span>
 
-          <span 
-            className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-1 rounded-lg bg-muted/40 border border-border/40 text-foreground"
-            title="Planned weight from weekly routine (locked)"
+          <div 
+            className="flex items-center gap-1 text-xs font-mono font-medium px-2 py-1 rounded-lg bg-muted/40 border border-border/40 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all text-foreground"
+            title="Edit weight for this exercise/set"
           >
             <Scale className="w-3 h-3 text-primary shrink-0" />
-            <span className="font-semibold truncate">
-              {set.weight !== null ? `${set.weight} kg` : 'Bodyweight'}
-            </span>
-          </span>
+            <input
+              type="number"
+              value={localWeight !== null ? localWeight : ''}
+              onChange={(e) => handleWeightChange(e.target.value)}
+              onBlur={handleWeightBlur}
+              placeholder="BW"
+              className="w-12 min-w-0 bg-transparent text-xs font-semibold text-foreground text-center outline-none px-0.5 placeholder:text-muted-foreground/50"
+            />
+            <span className="text-[10px] text-muted-foreground ml-0.5">kg</span>
+          </div>
         </div>
 
         {/* Target Reps Badge (Routine Target - Read-Only in Today) */}
