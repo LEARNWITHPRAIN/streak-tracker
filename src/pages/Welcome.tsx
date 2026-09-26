@@ -1,6 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { TrialPaywallModal } from '@/components/paywall/TrialPaywallModal';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
@@ -93,12 +94,21 @@ const showcaseItems = [
 const Welcome = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const [showTrialModal, setShowTrialModal] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    // Pop out free trial offer after user enters website
+    const timer = setTimeout(() => {
+      setShowTrialModal(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (loading) {
     return (
@@ -394,6 +404,13 @@ const Welcome = () => {
       </section>
 
       <Footer />
+
+      {/* Pop-out Free Trial modal when someone enters the website */}
+      <TrialPaywallModal
+        isOpen={showTrialModal}
+        isMandatory={false}
+        onClose={() => setShowTrialModal(false)}
+      />
     </div>
   );
 };

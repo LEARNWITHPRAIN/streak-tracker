@@ -24,6 +24,7 @@ import { DisplayNameModal } from '@/components/DisplayNameModal';
 import { toast } from 'sonner';
 import DayDetailModal, { ExerciseLog } from '@/components/DayDetailModal';
 import { usePWA } from '@/hooks/usePWA';
+import { TrialPaywallModal } from '@/components/paywall/TrialPaywallModal';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -609,6 +610,12 @@ const Dashboard = () => {
           onClose={() => setSelectedDay(null)}
         />
       )}
+
+      {/* Mandatory Trial Paywall Modal: pops out if user does not have an active trial or subscription */}
+      <TrialPaywallModal
+        isOpen={!isPremium && !subLoading && !loading}
+        isMandatory={true}
+      />
     </div>
   );
 };
