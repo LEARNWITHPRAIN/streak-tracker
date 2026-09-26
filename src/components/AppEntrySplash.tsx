@@ -5,34 +5,41 @@ export const AppEntrySplash: React.FC = () => {
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
 
-  useEffect(() => {
-    // Show cinematic entrance on page load/app open
-    const timer = setTimeout(() => {
-      setFading(true);
-      const closeTimer = setTimeout(() => {
-        setVisible(false);
-      }, 700); // 700ms fade transition
-      return () => clearTimeout(closeTimer);
-    }, 1800); // Display for 1.8 seconds of glorious animation
+  const dismiss = () => {
+    setFading(true);
+    setTimeout(() => setVisible(false), 600);
+  };
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    // Normal auto-dismiss after 1.8s
+    const fadeTimer = setTimeout(() => {
+      dismiss();
+    }, 1800);
+
+    // Hard fallback: force-clear after 3.5s no matter what (mobile safety net)
+    const hardTimer = setTimeout(() => {
+      setVisible(false);
+    }, 3500);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hardTimer);
+    };
   }, []);
 
   if (!visible) return null;
 
   return (
     <div
-      onClick={() => {
-        setFading(true);
-        setTimeout(() => setVisible(false), 500);
-      }}
-      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#050505] transition-all duration-700 cursor-pointer ${
+      onClick={dismiss}
+      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#050505] transition-all duration-600 cursor-pointer ${
         fading
           ? 'opacity-0 scale-105 pointer-events-none'
           : 'opacity-100 scale-100'
       }`}
       style={{
         transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
       {/* Subtle background solar radial flare */}
@@ -50,3 +57,4 @@ export const AppEntrySplash: React.FC = () => {
 };
 
 export default AppEntrySplash;
+

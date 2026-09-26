@@ -1,8 +1,9 @@
 // Yodha Mode Service Worker
 // Handles: PWA install, background sync, local push notifications
 
-const CACHE_NAME = 'yodha-mode-v3';
-const STATIC_ASSETS = ['/', '/dashboard', '/manifest.json', '/yodha-favicon.png', '/apple-touch-icon.png', '/yodha-logo-square.png'];
+const CACHE_NAME = 'yodha-mode-v4';
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/yodha-favicon.png'];
+
 
 // ── Install: cache static assets ───────────────────────────────────────────
 self.addEventListener('install', (event) => {
@@ -81,6 +82,12 @@ self.addEventListener('notificationclick', (event) => {
 
 // ── Message: schedule local reminder via setTimeout ────────────────────────
 self.addEventListener('message', (event) => {
+  // Skip waiting — activate new SW immediately to flush stale caches
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
   if (event.data?.type === 'SCHEDULE_REMINDER') {
     const { delayMs, title, body } = event.data;
     setTimeout(() => {
