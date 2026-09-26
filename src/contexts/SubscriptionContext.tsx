@@ -3,14 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const ADMIN_EMAILS = [
-  import.meta.env.VITE_ADMIN_EMAIL,
-  'prakharjain2731@gmail.com',
-  'prakhargen2731@gmail.com',
-  'prakrjgen27318@gmail.com',
-]
-  .filter(Boolean)
-  .map((e) => (e as string).toLowerCase().trim());
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || 'prakharjain2731@gmail.com').toLowerCase().trim();
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID as string;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -123,7 +116,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
 
   const isAdmin = Boolean(
-    user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase().trim())
+    user?.email && user.email.toLowerCase().trim() === ADMIN_EMAIL
   );
 
   // ── Fetch subscription from Supabase ──────────────────────────────────────

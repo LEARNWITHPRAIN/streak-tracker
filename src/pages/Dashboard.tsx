@@ -35,6 +35,7 @@ const Dashboard = () => {
   const { notifPermission, dualReminders } = usePWA();
   const { 
     isPremium, 
+    isAdmin,
     status: subStatus, 
     trialEnd, 
     loading: subLoading,
