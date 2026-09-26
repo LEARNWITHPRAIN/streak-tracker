@@ -343,14 +343,34 @@ const Dashboard = () => {
               )}
 
               {!isPremium && !subLoading && (
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs sm:text-sm shadow-md hover:brightness-110 active:scale-95 transition-all shrink-0 cursor-pointer"
-                  title="Start 7-Day Free Trial"
+                <span
+                  className="relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 select-none pointer-events-none overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(251,146,60,0.15) 0%, rgba(245,158,11,0.15) 100%)',
+                    border: '1px solid rgba(251,146,60,0.5)',
+                    color: '#fb923c',
+                    boxShadow: '0 0 12px rgba(251,146,60,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  }}
                 >
-                  <Flame className="w-3.5 h-3.5 fill-white" />
-                  <span className="whitespace-nowrap">Free Trial</span>
-                </button>
+                  {/* shimmer sweep */}
+                  <span
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'freeTrial-shimmer 2.8s ease-in-out infinite',
+                    }}
+                  />
+                  <Flame className="w-3.5 h-3.5 relative z-10" style={{ filter: 'drop-shadow(0 0 4px rgba(251,146,60,0.7))' }} />
+                  <span className="relative z-10">Free Trial</span>
+                  <style>{`
+                    @keyframes freeTrial-shimmer {
+                      0%   { background-position: 200% center; }
+                      60%  { background-position: -200% center; }
+                      100% { background-position: -200% center; }
+                    }
+                  `}</style>
+                </span>
               )}
 
               <button
