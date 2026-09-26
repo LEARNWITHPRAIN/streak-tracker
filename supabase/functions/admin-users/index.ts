@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://czeewwuptywvjdtxvxhv.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "prakhargen2731@gmail.com";
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "prakharjain2731@gmail.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
