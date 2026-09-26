@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp, Sparkles } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp, Sparkles, ShieldCheck } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -388,6 +388,16 @@ const Dashboard = () => {
               >
                 <User className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
               </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/15 flex items-center justify-center hover:bg-primary/25 transition-colors border border-primary/30 shrink-0 group"
+                  title="Admin Dashboard"
+                >
+                  <ShieldCheck className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                </button>
+              )}
               
               <button
                 onClick={handleSignOut}
@@ -615,7 +625,7 @@ const Dashboard = () => {
       {/* Footer - add padding when mini player is visible */}
       <footer className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center ${currentTrack && activeTab !== 'music' ? 'pb-24' : ''}`}>
         <p className="text-xs text-muted-foreground">
-          Built with dedication ΓÇó Yodha Mode
+          build with dedication yodha mode
         </p>
       </footer>
 

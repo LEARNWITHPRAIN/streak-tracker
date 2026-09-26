@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles, CreditCard } from 'lucide-react';
+import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles, CreditCard, ShieldCheck } from 'lucide-react';
 import { SubscriptionStatusCard } from '@/components/SubscriptionCard';
+import { useSubscription } from '@/hooks/useSubscription';
 import { z } from 'zod';
 import { NotificationSettings } from '@/components/NotificationSettings';
 
@@ -15,6 +16,7 @@ const passwordSchema = z.string().min(6, 'Password must be at least 6 characters
 const Profile = () => {
   const navigate = useNavigate();
   const { user, loading, updatePassword } = useAuth();
+  const { isAdmin } = useSubscription();
   const { toast } = useToast();
 
   const [displayName, setDisplayName] = useState('');
@@ -144,6 +146,27 @@ const Profile = () => {
           <h1 className="text-3xl font-bold text-foreground mb-2">Profile Settings</h1>
           <p className="text-muted-foreground">{user.email}</p>
         </div>
+
+        {isAdmin && (
+          <div className="mb-6 p-4 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/20 text-primary">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Admin Portal</h3>
+                <p className="text-xs text-muted-foreground">Manage users & subscriptions</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate('/admin')}
+              size="sm"
+              className="bg-primary text-primary-foreground font-semibold rounded-xl"
+            >
+              Open
+            </Button>
+          </div>
+        )}
 
         <div className="glass rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">

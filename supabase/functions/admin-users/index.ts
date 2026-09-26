@@ -7,7 +7,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://czeewwuptywvjdtxvxhv.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "prakharjain2731@gmail.com";
+const ADMIN_EMAILS = [
+  Deno.env.get("ADMIN_EMAIL"),
+  "prakharjain2731@gmail.com",
+  "prakhargen2731@gmail.com",
+  "prakrjgen27318@gmail.com",
+]
+  .filter(Boolean)
+  .map((e) => (e as string).toLowerCase().trim());
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +53,7 @@ serve(async (req: Request) => {
     }
 
     // ── 2. Gate: only admin email can proceed ──────────────────────────────
-    if (caller.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (!caller.email || !ADMIN_EMAILS.includes(caller.email.toLowerCase().trim())) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
