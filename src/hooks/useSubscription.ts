@@ -258,40 +258,72 @@ export function useSubscription(): SubscriptionState {
           razorpay_subscription_id: string;
           razorpay_signature: string;
         }) => {
-          toast.success(
-            '🏋️ Autopay mandate authorized! Your 7-day free trial has started. Welcome to Yodha Mode!',
-            { duration: 6000 }
-          );
-
-          // Optimistically activate trial immediately so user enters app with 0 delay
-          setSubscription(prev => ({
-            id: prev?.id || 'trial-temp',
+          // ── Optimistically set trialing state IMMEDIATELY ──────────────
+          // User sees app right away; server verification happens in background
+          const optimisticTrialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          setSubscription({
+            id: 'trial-temp',
             status: 'trialing',
             payment_provider: 'razorpay',
             provider_subscription_id: _response.razorpay_subscription_id,
             currency: 'INR',
             amount: 14900,
             trial_start: new Date().toISOString(),
-            trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            trial_end: optimisticTrialEnd.toISOString(),
             current_period_start: null,
             current_period_end: null,
             cancel_at_period_end: false,
             expires_at: null,
             created_at: new Date().toISOString(),
-          }));
+          });
 
-          // Fetch verified state from database
+          toast.success(
+            '🏋️ Welcome to Yodha Mode! Your 7-day free trial has started.',
+            { duration: 6000 }
+          );
+
+          // ── Call Edge Function to write verified status to DB ──────────
+          try {
+            const verifyRes = await fetch(
+              `${SUPABASE_URL}/functions/v1/verify-razorpay-payment`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session!.access_token}`,
+                  'apikey': SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({
+                  razorpay_payment_id:      _response.razorpay_payment_id,
+                  razorpay_subscription_id: _response.razorpay_subscription_id,
+                  razorpay_signature:       _response.razorpay_signature,
+                }),
+              }
+            );
+
+            const verifyResult = await verifyRes.json();
+            if (verifyRes.ok && verifyResult.trial_end) {
+              // Update with accurate server-confirmed trial end date
+              setSubscription(prev => prev ? {
+                ...prev,
+                trial_end: verifyResult.trial_end,
+                id: prev.id === 'trial-temp' ? (verifyResult.id || prev.id) : prev.id,
+              } : prev);
+            }
+          } catch (verifyErr) {
+            console.error('Verify payment call failed (optimistic state kept):', verifyErr);
+          }
+
+          // ── Refresh from DB to get the canonical record ────────────────
           await fetchSubscription();
 
-          // Poll to ensure webhook update is synced
+          // ── Poll a few times to catch any async webhook updates ────────
           let attempts = 0;
           const poll = setInterval(async () => {
             attempts++;
             await fetchSubscription();
-            if (attempts >= 10) {
-              clearInterval(poll);
-            }
-          }, 1500);
+            if (attempts >= 5) clearInterval(poll);
+          }, 2000);
         },
       };
 
