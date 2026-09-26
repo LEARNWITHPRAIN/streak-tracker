@@ -90,11 +90,16 @@ function loadRazorpayScript(): Promise<boolean> {
 export function hasActiveEntitlement(
   isAdmin: boolean,
   status: SubscriptionStatus,
-  trialEnd: Date | null
+  trialEnd: Date | null,
+  currentPeriodEnd?: Date | null
 ): boolean {
   if (isAdmin) return true;
   if (status === 'active') return true;
-  if (status === 'trialing' && trialEnd && trialEnd > new Date()) return true;
+  if (status === 'authenticated' as any) return true;
+  if (status === 'trialing') {
+    if (!trialEnd || trialEnd > new Date()) return true;
+  }
+  if (status === 'cancelled' && currentPeriodEnd && currentPeriodEnd > new Date()) return true;
   return false;
 }
 
@@ -162,7 +167,7 @@ export function useSubscription(): SubscriptionState {
     ? new Date(subscription.current_period_end)
     : null;
   const cancelAtPeriodEnd = subscription?.cancel_at_period_end ?? false;
-  const isPremium = hasActiveEntitlement(isAdmin, status, trialEnd);
+  const isPremium = hasActiveEntitlement(isAdmin, status, trialEnd, currentPeriodEnd);
 
   // ── Start Trial / Initiate Payment ───────────────────────────────────────
   // IMPORTANT: No payment state is written from the frontend.
@@ -235,17 +240,16 @@ export function useSubscription(): SubscriptionState {
         description: '7-Day Free Trial — then ₹149/month',
         image: '/yodha-logo.jpg',
         prefill: {
+          name: user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'Yodha',
           email: user.email ?? '',
+          contact: user.phone || user.user_metadata?.phone || '',
         },
         theme: {
           color: '#f97316', // Yodha Mode orange
         },
         modal: {
+          confirm_close: true,
           ondismiss: () => {
-            toast('Payment window closed. You can try again anytime.', {
-              icon: 'ℹ️',
-            });
-            // Refresh — webhook may have already updated status
             fetchSubscription();
           },
         },
@@ -254,15 +258,32 @@ export function useSubscription(): SubscriptionState {
           razorpay_subscription_id: string;
           razorpay_signature: string;
         }) => {
-          // DO NOT write payment status here.
-          // The webhook Edge Function is the only source of truth.
-          // Just show a success message and wait for webhook to update DB.
           toast.success(
-            '🏋️ Mandate authorized! Your 7-day trial starts now. Access will be ready shortly.',
+            '🏋️ Autopay mandate authorized! Your 7-day free trial has started. Welcome to Yodha Mode!',
             { duration: 6000 }
           );
 
-          // Poll for status update (webhook may take a few seconds)
+          // Optimistically activate trial immediately so user enters app with 0 delay
+          setSubscription(prev => ({
+            id: prev?.id || 'trial-temp',
+            status: 'trialing',
+            payment_provider: 'razorpay',
+            provider_subscription_id: _response.razorpay_subscription_id,
+            currency: 'INR',
+            amount: 14900,
+            trial_start: new Date().toISOString(),
+            trial_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            current_period_start: null,
+            current_period_end: null,
+            cancel_at_period_end: false,
+            expires_at: null,
+            created_at: new Date().toISOString(),
+          }));
+
+          // Fetch verified state from database
+          await fetchSubscription();
+
+          // Poll to ensure webhook update is synced
           let attempts = 0;
           const poll = setInterval(async () => {
             attempts++;
@@ -270,16 +291,15 @@ export function useSubscription(): SubscriptionState {
             if (attempts >= 10) {
               clearInterval(poll);
             }
-          }, 2000);
+          }, 1500);
         },
       };
 
       const razorpay = new (window as any).Razorpay(options);
       razorpay.on('payment.failed', (response: any) => {
         console.error('Razorpay payment failed:', response.error);
-        toast.error(
-          `Payment failed: ${response.error?.description ?? 'Unknown error'}. Please try again.`
-        );
+        const desc = response.error?.description || 'Could not complete autopay setup';
+        toast.error(`Autopay: ${desc}`);
       });
       razorpay.open();
     } catch (err: any) {

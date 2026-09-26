@@ -66,12 +66,12 @@ serve(async (req: Request) => {
     const userId = user.id;
     const userEmail = user.email ?? "";
 
-    // ── 2. Check for existing active/trialing/pending subscription ─────────
+    // ── 2. Check for active or valid trialing subscription ────────────────
     const { data: existingSubs, error: fetchError } = await supabase
       .from("user_subscriptions")
       .select("id, status, provider_subscription_id, trial_end, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
-      .in("status", ["trialing", "active", "pending", "past_due", "paused"])
+      .in("status", ["trialing", "active"])
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -85,13 +85,12 @@ serve(async (req: Request) => {
 
     if (existingSubs && existingSubs.length > 0) {
       const existing = existingSubs[0];
-      // Return existing subscription so frontend can reopen checkout if needed
       return new Response(
         JSON.stringify({
           subscription_id: existing.provider_subscription_id,
           status: existing.status,
           is_existing: true,
-          message: "Existing subscription found",
+          message: "You already have an active subscription",
         }),
         {
           status: 200,
@@ -116,10 +115,10 @@ serve(async (req: Request) => {
 
     const razorpayPayload = {
       plan_id: RAZORPAY_PLAN_ID,
-      total_count: 120,          // 10 years of monthly billing (~infinite)
+      total_count: 120,          // 10 years of monthly billing
       quantity: 1,
       start_at: startAtUnix,    // First charge happens 7 days from now
-      customer_notify: 0,        // We handle notifications
+      customer_notify: 1,        // Complies with RBI mandate notification requirement
       notes: {
         user_id: userId,
         user_email: userEmail,
@@ -148,32 +147,26 @@ serve(async (req: Request) => {
     const razorpaySub = await razorpayRes.json();
     const providerSubscriptionId: string = razorpaySub.id;
 
-    // ── 5. Insert pending subscription record in Supabase ─────────────────
-    // Use upsert on user_id to handle any race conditions
-    const { data: insertedSub, error: insertError } = await supabase
+    // ── 5. Upsert subscription record in Supabase on user_id ──────────────
+    const { error: upsertError } = await supabase
       .from("user_subscriptions")
-      .insert({
+      .upsert({
         user_id: userId,
         user_email: userEmail.toLowerCase(),
         payment_provider: "razorpay",
         provider_subscription_id: providerSubscriptionId,
         provider_plan_id: RAZORPAY_PLAN_ID,
-        status: "pending",           // Will be updated to 'trialing' by webhook
+        status: "pending",           // Updated to 'trialing' by webhook/handler
         currency: "INR",
         amount: 14900,
         trial_start: new Date(trialStartMs).toISOString(),
         trial_end: new Date(trialEndMs).toISOString(),
         cancel_at_period_end: false,
         updated_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+      }, { onConflict: "user_id" });
 
-    if (insertError) {
-      console.error("Error inserting subscription:", insertError);
-      // Subscription created in Razorpay but DB insert failed — log it
-      // Don't fail — Razorpay webhook will sync the state
-      console.warn("Razorpay subscription created but DB insert failed:", providerSubscriptionId);
+    if (upsertError) {
+      console.error("Error upserting subscription:", upsertError);
     }
 
     // ── 6. Return subscription_id to frontend (for Razorpay Checkout) ──────
