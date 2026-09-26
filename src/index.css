@@ -217,74 +217,60 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* ── YODHA LOGO CINEMATIC ENTRANCE & BREATHING ANIMATIONS ── */
-@keyframes yodha-breathe {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 35px rgba(249, 115, 22, 0.4), 0 0 70px rgba(234, 88, 12, 0.2);
-  }
-  50% {
-    transform: scale(1.035);
-    box-shadow: 0 0 60px rgba(249, 115, 22, 0.7), 0 0 120px rgba(245, 158, 11, 0.35);
-  }
-}
-
-@keyframes yodha-aura-pulse {
-  0%, 100% {
-    opacity: 0.45;
-    transform: scale(0.95);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1.15);
-  }
-}
-
-@keyframes yodha-sword-glint {
+/* ── YODHA LOGO SQUARE POP-OUT & SHINE ANIMATIONS ── */
+@keyframes yodha-pop-out {
   0% {
-    transform: translateX(-180%) rotate(25deg);
+    transform: scale(0.45);
     opacity: 0;
   }
-  20% {
+  65% {
+    transform: scale(1.1);
     opacity: 1;
   }
-  50% {
-    transform: translateX(250%) rotate(25deg);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(250%) rotate(25deg);
-    opacity: 0;
-  }
-}
-
-@keyframes yodha-ripple-ring {
-  0% {
+  85% {
     transform: scale(0.96);
-    opacity: 0.8;
   }
-  70% {
-    transform: scale(1.22);
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes yodha-shine-sweep {
+  0% {
+    transform: translateX(-160%) translateY(-160%) rotate(35deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateX(180%) translateY(180%) rotate(35deg);
     opacity: 0;
   }
   100% {
-    transform: scale(1.22);
+    transform: translateX(180%) translateY(180%) rotate(35deg);
     opacity: 0;
   }
 }
 
-.animate-yodha-breathe {
-  animation: yodha-breathe 3.4s ease-in-out infinite;
+@keyframes yodha-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(249, 115, 22, 0.4), 0 0 50px rgba(234, 88, 12, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(249, 115, 22, 0.75), 0 0 85px rgba(245, 158, 11, 0.45);
+  }
 }
 
-.animate-yodha-aura {
-  animation: yodha-aura-pulse 3.4s ease-in-out infinite;
+.animate-yodha-pop {
+  animation: yodha-pop-out 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.animate-yodha-glint {
-  animation: yodha-sword-glint 3.2s ease-in-out infinite;
+.animate-yodha-shine {
+  animation: yodha-shine-sweep 2.4s ease-in-out infinite;
 }
 
-.animate-yodha-ripple {
-  animation: yodha-ripple-ring 3.4s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+.animate-yodha-glow {
+  animation: yodha-glow-pulse 2.8s ease-in-out infinite;
 }

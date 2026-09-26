@@ -14,35 +14,31 @@ export const AnimatedYodhaLogo: React.FC<AnimatedYodhaLogoProps> = ({
   className = '',
   onClick,
 }) => {
-  // Dimension profiles matching the capsule/stadium shape from the mobile splash
+  // Perfect 1:1 square shapes with equal radius all around
   const dimensions = {
     sm: {
-      width: 'w-10',
-      height: 'h-20',
-      rounded: 'rounded-[20px]',
-      fontSize: 'text-xs',
-      glowSize: 'w-20 h-28',
+      box: 'w-12 h-12',
+      rounded: 'rounded-xl',
+      border: 'border',
+      text: 'text-xs',
     },
     md: {
-      width: 'w-24',
-      height: 'h-48',
-      rounded: 'rounded-[36px]',
-      fontSize: 'text-sm',
-      glowSize: 'w-44 h-64',
+      box: 'w-24 h-24',
+      rounded: 'rounded-2xl',
+      border: 'border-2',
+      text: 'text-sm',
     },
     lg: {
-      width: 'w-36',
-      height: 'h-72',
-      rounded: 'rounded-[50px]',
-      fontSize: 'text-base',
-      glowSize: 'w-60 h-96',
+      box: 'w-36 h-36',
+      rounded: 'rounded-3xl',
+      border: 'border-2',
+      text: 'text-base',
     },
     splash: {
-      width: 'w-[160px] sm:w-[190px]',
-      height: 'h-[320px] sm:h-[380px]',
-      rounded: 'rounded-[54px] sm:rounded-[64px]',
-      fontSize: 'text-lg',
-      glowSize: 'w-[280px] sm:w-[340px] h-[420px] sm:h-[500px]',
+      box: 'w-44 h-44 sm:w-52 sm:h-52',
+      rounded: 'rounded-3xl sm:rounded-[32px]',
+      border: 'border-2',
+      text: 'text-lg sm:text-xl',
     },
   }[size];
 
@@ -51,74 +47,49 @@ export const AnimatedYodhaLogo: React.FC<AnimatedYodhaLogoProps> = ({
       onClick={onClick}
       className={`relative flex flex-col items-center justify-center select-none ${className}`}
     >
-      {/* ── AMBIENT WARRIOR AURA (Sunburst / Radial Fire) ── */}
+      {/* ── SQUARE LOGO CONTAINER (POPS OUT + GLOW) ── */}
       <div
-        className={`pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 ${dimensions.glowSize} rounded-full bg-gradient-to-r from-orange-600/30 via-amber-500/40 to-orange-500/25 blur-3xl animate-yodha-aura`}
-      />
-
-      {/* ── EXPANDING ENERGY SHOCKWAVE RING ── */}
-      <div
-        className={`pointer-events-none absolute ${dimensions.width} ${dimensions.height} ${dimensions.rounded} border border-primary/50 animate-yodha-ripple`}
-      />
-
-      {/* ── SECOND RIPPLE RING (Staggered) ── */}
-      <div
-        className={`pointer-events-none absolute ${dimensions.width} ${dimensions.height} ${dimensions.rounded} border border-amber-400/30 animate-yodha-ripple`}
-        style={{ animationDelay: '1.7s' }}
-      />
-
-      {/* ── CAPSULE CONTAINER (Breathing) ── */}
-      <div
-        className={`relative ${dimensions.width} ${dimensions.height} ${dimensions.rounded} overflow-hidden animate-yodha-breathe border border-primary/40 shadow-2xl shadow-primary/30 transition-transform duration-300 group`}
+        className={`relative ${dimensions.box} ${dimensions.rounded} overflow-hidden animate-yodha-pop animate-yodha-glow ${dimensions.border} border-primary/60 bg-black aspect-square shadow-2xl transition-transform`}
         style={{
-          boxShadow:
-            '0 0 30px rgba(249, 115, 22, 0.4), 0 0 60px rgba(234, 88, 12, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.8)',
+          boxShadow: '0 0 35px rgba(249, 115, 22, 0.5), 0 0 70px rgba(234, 88, 12, 0.25)',
         }}
       >
-        {/* Silhouette Image */}
+        {/* Warrior Image */}
         <img
           src={yodhaLogo}
-          alt="Yodha Warrior"
-          className="w-full h-full object-cover object-center pointer-events-none transform transition-transform duration-700 ease-out group-hover:scale-105"
+          alt="Yodha Logo"
+          className="w-full h-full object-cover object-center pointer-events-none"
           draggable={false}
         />
 
-        {/* Sunset Ambient Vignette Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/25 pointer-events-none" />
-
-        {/* Diagonal Golden Sword Glint / Shimmer Beam */}
+        {/* ── SHINING EFFECT (Brilliant light sweep across the square) ── */}
         <div
           className="absolute inset-0 pointer-events-none overflow-hidden"
           style={{ mixBlendMode: 'screen' }}
         >
           <div
-            className="w-[200%] h-full animate-yodha-glint"
+            className="w-[200%] h-[200%] animate-yodha-shine"
             style={{
               background:
-                'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.4) 47%, rgba(255,215,0,0.75) 50%, rgba(255,255,255,0.4) 53%, transparent 75%)',
+                'linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.7) 48%, rgba(255,230,140,0.95) 50%, rgba(255,255,255,0.7) 52%, transparent 70%)',
             }}
           />
         </div>
 
-        {/* Inner Border Rim */}
+        {/* Subtle rim highlight with same uniform radius */}
         <div
-          className={`absolute inset-0 ${dimensions.rounded} border border-white/20 pointer-events-none`}
+          className={`absolute inset-0 ${dimensions.rounded} border border-white/25 pointer-events-none`}
         />
       </div>
 
-      {/* ── OPTIONAL TYPOGRAPHY ── */}
+      {/* ── TEXT BELOW: "Entering YODHA MODE" ── */}
       {showText && (
-        <div className="mt-6 text-center space-y-1.5 animate-fade-in">
-          <h2
-            className="text-lg sm:text-xl font-extrabold tracking-[0.35em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500 font-mono"
-            style={{
-              textShadow: '0 0 25px rgba(249, 115, 22, 0.5)',
-            }}
-          >
-            YODHA MODE
-          </h2>
-          <p className="text-[11px] font-medium tracking-[0.25em] text-muted-foreground uppercase">
-            Build with dedication
+        <div className="mt-6 text-center animate-fade-in">
+          <p className={`${dimensions.text} font-bold tracking-wider text-white flex items-center justify-center gap-1.5`}>
+            <span>Entering</span>
+            <span className="text-primary font-black uppercase text-glow tracking-widest">
+              YODHA MODE
+            </span>
           </p>
         </div>
       )}
