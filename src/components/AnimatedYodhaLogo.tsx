@@ -1,5 +1,5 @@
 import React from 'react';
-import yodhaLogo from '@/assets/yodha-logo.jpg';
+import yodhaLogoSquare from '@/assets/yodha-logo-square.png';
 
 interface AnimatedYodhaLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'splash';
@@ -56,7 +56,7 @@ export const AnimatedYodhaLogo: React.FC<AnimatedYodhaLogoProps> = ({
       >
         {/* Warrior Image */}
         <img
-          src={yodhaLogo}
+          src={yodhaLogoSquare}
           alt="Yodha Logo"
           className="w-full h-full object-cover object-center pointer-events-none"
           draggable={false}

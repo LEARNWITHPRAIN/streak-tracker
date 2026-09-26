@@ -1,8 +1,8 @@
 // Yodha Mode Service Worker
 // Handles: PWA install, background sync, local push notifications
 
-const CACHE_NAME = 'yodha-mode-v1';
-const STATIC_ASSETS = ['/', '/dashboard', '/manifest.json'];
+const CACHE_NAME = 'yodha-mode-v3';
+const STATIC_ASSETS = ['/', '/dashboard', '/manifest.json', '/yodha-favicon.png', '/apple-touch-icon.png', '/yodha-logo-square.png'];
 
 // ── Install: cache static assets ───────────────────────────────────────────
 self.addEventListener('install', (event) => {
