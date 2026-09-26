@@ -168,6 +168,7 @@ const Profile = () => {
           </div>
         )}
 
+        {/* 1. Display Name */}
         <div className="glass rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-primary" />
@@ -204,7 +205,26 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-6">
+        {/* 2. Subscription Status */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-primary" />
+            Subscription Status
+          </h2>
+          <SubscriptionStatusCard />
+        </div>
+
+        {/* 3. Notifications & Reminder Settings */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Notification Center & Reminders
+          </h2>
+          <NotificationSettings />
+        </div>
+
+        {/* 4. Change Password */}
+        <div className="glass rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" />
             Change Password
@@ -267,24 +287,6 @@ const Profile = () => {
               )}
             </Button>
           </div>
-        </div>
-
-        {/* Subscription Status */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-primary" />
-            Subscription
-          </h2>
-          <SubscriptionStatusCard />
-        </div>
-
-        {/* Notifications & Install App */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            App Settings
-          </h2>
-          <NotificationSettings />
         </div>
 
         {/* Feedback Card */}

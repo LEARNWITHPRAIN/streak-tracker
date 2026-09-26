@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bell, Clock, CheckCircle2, AlertCircle, Download, Smartphone, Dumbbell, Send } from 'lucide-react';
-import { usePWA, HOUR_OPTIONS, MINUTE_OPTIONS, formatTime } from '@/hooks/usePWA';
+import { usePWA, HOUR_OPTIONS, MINUTE_OPTIONS, formatTime, getStoredTodayWorkoutProgress } from '@/hooks/usePWA';
 
 export const NotificationSettings: React.FC = () => {
   const {
