@@ -8,6 +8,7 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { MusicProvider } from "@/contexts/MusicContext";
 import { FuelProvider } from "@/contexts/FuelContext";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { AppEntrySplash } from "@/components/AppEntrySplash";
 import Welcome from "./pages/Welcome";
 import Auth from "./pages/Auth";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -54,6 +55,7 @@ const App = () => (
             </AuthProvider>
           </BrowserRouter>
           <PWAInstallBanner />
+          <AppEntrySplash />
         </FuelProvider>
       </MusicProvider>
     </TooltipProvider>

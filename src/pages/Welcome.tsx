@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { TrialPaywallModal } from '@/components/paywall/TrialPaywallModal';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
+import { AnimatedYodhaLogo } from '@/components/AnimatedYodhaLogo';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
 import { Dumbbell, Timer, Music2, Flame, Calendar, Zap, ArrowRight, Sparkles, CheckCircle2, ShieldCheck, CreditCard } from 'lucide-react';
 import customRoutinesImg from '@/assets/screenshots/custom-routines.webp';
@@ -104,8 +105,8 @@ const Welcome = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <AnimatedYodhaLogo size="md" showText={true} />
       </div>
     );
   }

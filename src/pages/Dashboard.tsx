@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import DayDetailModal, { ExerciseLog } from '@/components/DayDetailModal';
 import { usePWA } from '@/hooks/usePWA';
 import { TrialPaywallModal } from '@/components/paywall/TrialPaywallModal';
+import { AnimatedYodhaLogo } from '@/components/AnimatedYodhaLogo';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -277,8 +278,8 @@ const Dashboard = () => {
 
   if (loading || scheduleLoading || progressLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <AnimatedYodhaLogo size="md" showText={true} />
       </div>
     );
   }
