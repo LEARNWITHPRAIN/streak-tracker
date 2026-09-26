@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import yodhaLogo from '@/assets/yodha-logo.jpg';
-import { Dumbbell, Timer, Music2, Flame, Calendar, Zap, ArrowRight, Sparkles } from 'lucide-react';
+import { Dumbbell, Timer, Music2, Flame, Calendar, Zap, ArrowRight, Sparkles, CheckCircle2, ShieldCheck, CreditCard } from 'lucide-react';
 import customRoutinesImg from '@/assets/screenshots/custom-routines.webp';
 import trackProgressImg from '@/assets/screenshots/track-progress.webp';
 import restTimersImg from '@/assets/screenshots/rest-timers.webp';
@@ -294,12 +294,83 @@ const Welcome = () => {
             <p>Upload your audio files and listen to your favourite songs while training — create the perfect workout atmosphere without switching apps.</p>
           </div>
           <div>
-            <h2 className="text-base font-semibold text-foreground mb-2">Fuel Your Motivation</h2>
-            <p>Save your favourite motivational Instagram Reels and YouTube Shorts. When you need a boost, revisit the content that inspires you most.</p>
-          </div>
-          <div>
             <h2 className="text-base font-semibold text-foreground mb-2">Complete Workout Journey</h2>
             <p>Exercises, custom routines, workout completion, daily consistency, and overall progress — all organized in one place with Yodha Mode.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING & 7-DAY FREE TRIAL SECTION ── */}
+      <section className="w-full py-20 px-6 sm:px-10 lg:px-16 border-t border-border/40 relative overflow-hidden bg-gradient-to-b from-background via-card/40 to-background">
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/10 rounded-full blur-[120px]" />
+        
+        <div className="max-w-4xl mx-auto relative space-y-12">
+          <div className="text-center space-y-3">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary/15 border border-primary/30 text-primary">
+              <Sparkles className="w-3.5 h-3.5" />
+              Transparent Pricing
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
+              Start with a 7-Day Free Trial
+            </h2>
+            <p className="text-muted-foreground text-base max-w-xl mx-auto">
+              Experience the complete private gym workspace. Cancel anytime before trial ends without paying a single rupee.
+            </p>
+          </div>
+
+          <div className="max-w-md mx-auto rounded-3xl border-2 border-primary/40 bg-gradient-to-b from-card/90 via-card/70 to-card/95 p-8 shadow-2xl shadow-primary/15 relative backdrop-blur-xl">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-primary/30">
+              7-Day Free Trial Included
+            </div>
+
+            <div className="text-center space-y-2 pt-2 mb-6">
+              <div className="flex items-baseline justify-center gap-1.5">
+                <span className="text-5xl font-black text-primary">₹149</span>
+                <span className="text-muted-foreground text-sm font-semibold">/ month</span>
+              </div>
+              <p className="text-xs text-muted-foreground font-medium">
+                Recurring monthly subscription after 7 days free. Cancel anytime.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-8">
+              {[
+                'Unlimited Custom Workout Routines & Splits',
+                'Auto Rest Timer with Audio Beeps',
+                'Built-in Offline Workout Music Player',
+                'Daily Progress Wheel & Streak Consistency Tracker',
+                'Visual Calendar History & Set Details',
+                'Fuel Motivation Reel / Short Saver',
+                'Cloud Sync Across All Devices',
+              ].map((feat) => (
+                <div key={feat} className="flex items-center gap-3 text-sm text-foreground/90 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                  <span>{feat}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => navigate('/auth?mode=signup')}
+              size="lg"
+              className="w-full h-13 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all rounded-xl flex items-center justify-center gap-2"
+            >
+              <Flame className="w-5 h-5" />
+              <span>Start 7-Day Free Trial</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+
+            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/80 mt-4 pt-4 border-t border-border/40">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                Razorpay Secured
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <CreditCard className="w-3.5 h-3.5 text-primary" />
+                UPI & Cards Supported
+              </span>
+            </div>
           </div>
         </div>
       </section>

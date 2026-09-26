@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, User, Lock, Loader2, Eye, EyeOff, Save, MessageSquareHeart, ChevronRight, Sparkles, CreditCard } from 'lucide-react';
+import { SubscriptionStatusCard } from '@/components/SubscriptionCard';
 import { z } from 'zod';
 import { NotificationSettings } from '@/components/NotificationSettings';
 
@@ -243,6 +244,15 @@ const Profile = () => {
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Subscription Status */}
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-primary" />
+            Subscription
+          </h2>
+          <SubscriptionStatusCard />
         </div>
 
         {/* Notifications & Install App */}

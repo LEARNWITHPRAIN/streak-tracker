@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp } from 'lucide-react';
+import { Dumbbell, Flame, LogOut, Headphones, Zap, ZapOff, Calendar, Clock, LayoutGrid, User, MessageSquareHeart, TrendingUp, Sparkles } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useUserWorkouts } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useMusicContext } from '@/contexts/MusicContext';
@@ -31,6 +32,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const { notifPermission, dualReminders } = usePWA();
+  const { isPremium, status: subStatus, trialEnd, loading: subLoading } = useSubscription();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
@@ -97,6 +99,13 @@ const Dashboard = () => {
   }, [calendarHistory]);
 
   const streak = calculateStreak();
+
+  const trialDaysLeft = useMemo(() => {
+    if (subStatus === 'trialing' && trialEnd) {
+      return Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    }
+    return null;
+  }, [subStatus, trialEnd]);
 
   // Get today's schedule - this will update when useSameDaily or selected workout changes
   const todaySchedule = getTodaySchedule();
@@ -281,6 +290,43 @@ const Dashboard = () => {
                 </div>
               )}
 
+              {/* Subscription / Trial Status Badge */}
+              {subStatus === 'trialing' && trialDaysLeft !== null && (
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 transition-all shrink-0 cursor-pointer"
+                  title="Trial Active — Manage in Profile"
+                >
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  <span className="text-xs sm:text-sm font-bold whitespace-nowrap">
+                    Trial ({trialDaysLeft}d)
+                  </span>
+                </button>
+              )}
+
+              {subStatus === 'active' && (
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-all shrink-0 cursor-pointer"
+                  title="Yodha Pro Active"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="text-xs sm:text-sm font-bold whitespace-nowrap">
+                    PRO
+                  </span>
+                </button>
+              )}
+
+              {!isPremium && !subLoading && (
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs sm:text-sm shadow-md hover:brightness-110 active:scale-95 transition-all shrink-0 cursor-pointer"
+                  title="Start 7-Day Free Trial"
+                >
+                  <Flame className="w-3.5 h-3.5 fill-white" />
+                  <span className="whitespace-nowrap">Free Trial</span>
+                </button>
+              )}
 
               <button
                 onClick={() => navigate('/feedback')}

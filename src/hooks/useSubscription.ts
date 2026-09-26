@@ -3,20 +3,67 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string;
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL as string | undefined;
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID as string;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-export interface SubscriptionState {
-  isPremium: boolean;
-  isAdmin: boolean;
-  loading: boolean;
-  status: 'pending' | 'active' | 'expired' | null;
-  expiresAt: Date | null;
-  refetch: () => Promise<void>;
-  initiatePayment: () => Promise<void>;
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'pending'
+  | 'past_due'
+  | 'halted'
+  | 'cancelled'
+  | 'expired'
+  | 'paused'
+  | null;
+
+export interface SubscriptionRecord {
+  id: string;
+  status: SubscriptionStatus;
+  payment_provider: string;
+  provider_subscription_id: string | null;
+  currency: string;
+  amount: number;
+  trial_start: string | null;
+  trial_end: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  expires_at: string | null;
+  created_at: string;
 }
 
-// Dynamically load Razorpay checkout script
+export interface SubscriptionState {
+  /** User has full access (admin, active, or in-trial) */
+  isPremium: boolean;
+  /** User is the admin */
+  isAdmin: boolean;
+  /** Loading initial subscription data */
+  loading: boolean;
+  /** Raw subscription status from DB */
+  status: SubscriptionStatus;
+  /** Full subscription record */
+  subscription: SubscriptionRecord | null;
+  /** Trial end date (while trialing) */
+  trialEnd: Date | null;
+  /** Next billing date (while active) */
+  currentPeriodEnd: Date | null;
+  /** True if user has scheduled cancellation */
+  cancelAtPeriodEnd: boolean;
+  /** Refetch subscription from DB */
+  refetch: () => Promise<void>;
+  /** Start 7-day free trial — opens Razorpay mandate authorization */
+  initiatePayment: () => Promise<void>;
+  /** Cancel subscription at end of period */
+  cancelSubscription: () => Promise<void>;
+}
+
+// ── Razorpay script loader ────────────────────────────────────────────────────
+
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if ((window as any).Razorpay) {
@@ -31,81 +78,73 @@ function loadRazorpayScript(): Promise<boolean> {
   });
 }
 
-export function useSubscription(): SubscriptionState {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<'pending' | 'active' | 'expired' | null>(null);
-  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+// ── Entitlement check ─────────────────────────────────────────────────────────
 
-  const isAdmin = Boolean(user?.email && user.email === ADMIN_EMAIL);
+/**
+ * Returns true if the user currently has active access.
+ * - Admin: always true
+ * - status === 'active': always true
+ * - status === 'trialing': true if trial has not expired
+ * - All other states: false
+ */
+export function hasActiveEntitlement(
+  isAdmin: boolean,
+  status: SubscriptionStatus,
+  trialEnd: Date | null
+): boolean {
+  if (isAdmin) return true;
+  if (status === 'active') return true;
+  if (status === 'trialing' && trialEnd && trialEnd > new Date()) return true;
+  return false;
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
+export function useSubscription(): SubscriptionState {
+  const { user, session } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionRecord | null>(null);
+
+  const isAdmin = Boolean(
+    user?.email && ADMIN_EMAIL && user.email === ADMIN_EMAIL
+  );
+
+  // ── Fetch subscription from Supabase ──────────────────────────────────────
 
   const fetchSubscription = useCallback(async () => {
     if (!user) {
       setLoading(false);
-      setStatus(null);
-      setExpiresAt(null);
+      setSubscription(null);
       return;
     }
 
-    // Admin always has premium ΓÇö skip DB fetch
+    // Admin always has access — skip DB fetch
     if (isAdmin) {
-      setStatus('active');
-      setExpiresAt(null);
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      let query = supabase
+
+      const { data, error } = await supabase
         .from('user_subscriptions')
-        .select('id, user_id, user_email, status, expires_at, created_at')
-        .order('created_at', { ascending: false });
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (user.email) {
-        query = query.or(`user_id.eq.${user.id},user_email.eq.${user.email.toLowerCase()}`);
-      } else {
-        query = query.eq('user_id', user.id);
+      if (error) {
+        console.error('Error fetching subscription:', error);
+        setSubscription(null);
+        return;
       }
 
-      const { data: records, error } = await query;
-
-      if (error) throw error;
-
-      if (records && records.length > 0) {
-        const now = new Date();
-        // Check if there is an active unexpired subscription
-        const activeSub = records.find((rec) => {
-          if (rec.status !== 'active') return false;
-          if (!rec.expires_at) return true;
-          return new Date(rec.expires_at) > now;
-        });
-
-        const chosen = activeSub || records[0];
-        const expiry = chosen.expires_at ? new Date(chosen.expires_at) : null;
-        const effectiveStatus =
-          chosen.status === 'active' && expiry && expiry < now
-            ? 'expired'
-            : (chosen.status as 'pending' | 'active' | 'expired');
-
-        setStatus(effectiveStatus);
-        setExpiresAt(expiry);
-
-        // Opportunistically link user_id if this was an email-only grant
-        if (chosen.id && !chosen.user_id && user.id) {
-          supabase
-            .from('user_subscriptions')
-            .update({ user_id: user.id })
-            .eq('id', chosen.id)
-            .then(() => {});
-        }
-      } else {
-        setStatus(null);
-        setExpiresAt(null);
-      }
+      setSubscription(data as SubscriptionRecord | null);
     } catch (err) {
-      console.error('Error fetching subscription:', err);
-      setStatus(null);
+      console.error('Unexpected error fetching subscription:', err);
+      setSubscription(null);
     } finally {
       setLoading(false);
     }
@@ -115,11 +154,26 @@ export function useSubscription(): SubscriptionState {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  const isPremium = isAdmin || status === 'active';
+  // ── Derived state ─────────────────────────────────────────────────────────
+
+  const status: SubscriptionStatus = subscription?.status ?? null;
+  const trialEnd = subscription?.trial_end ? new Date(subscription.trial_end) : null;
+  const currentPeriodEnd = subscription?.current_period_end
+    ? new Date(subscription.current_period_end)
+    : null;
+  const cancelAtPeriodEnd = subscription?.cancel_at_period_end ?? false;
+  const isPremium = hasActiveEntitlement(isAdmin, status, trialEnd);
+
+  // ── Start Trial / Initiate Payment ───────────────────────────────────────
+  // IMPORTANT: No payment state is written from the frontend.
+  // This function only:
+  //   1. Calls the Edge Function to create a Razorpay subscription (server-side)
+  //   2. Opens Razorpay Checkout for mandate authorization
+  // The webhook Edge Function updates subscription status.
 
   const initiatePayment = useCallback(async () => {
-    if (!user) {
-      toast.error('Please sign in to upgrade');
+    if (!user || !session) {
+      toast.error('Please sign in to start your free trial');
       return;
     }
 
@@ -129,80 +183,174 @@ export function useSubscription(): SubscriptionState {
       return;
     }
 
-    const amount = 14900; // Γé╣149 in paise
+    if (!RAZORPAY_KEY_ID) {
+      toast.error('Payment system not configured. Please contact support.');
+      return;
+    }
 
-    const options = {
-      key: RAZORPAY_KEY_ID,
-      amount,
-      currency: 'INR',
-      name: 'Yodha Mode',
-      description: 'Yodha Pro ΓÇö 30 Day Access',
-      image: '/yodha-logo.jpg',
-      prefill: {
-        email: user.email ?? '',
-      },
-      theme: {
-        color: '#a855f7',
-      },
-      modal: {
-        ondismiss: () => {
-          toast('Payment cancelled');
-        },
-      },
-      handler: async (response: {
-        razorpay_payment_id: string;
-        razorpay_order_id?: string;
-        razorpay_signature?: string;
-      }) => {
-        try {
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 30);
+    try {
+      toast.loading('Setting up your free trial…', { id: 'trial-init' });
 
-          const { error } = await supabase
-            .from('user_subscriptions')
-            .upsert(
-              {
-                user_id: user.id,
-                user_email: user.email ? user.email.toLowerCase() : null,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id ?? null,
-                amount_paise: amount,
-                status: 'active',
-                paid_at: new Date().toISOString(),
-                expires_at: expiryDate.toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: 'user_id' }
-            );
-
-          if (error) throw error;
-
-          toast.success('≡ƒÄë Welcome to Yodha Pro! All features unlocked.', {
-            duration: 5000,
-          });
-          await fetchSubscription();
-        } catch (err) {
-          console.error('Error saving subscription:', err);
-          toast.error('Payment received but activation failed. Please contact support.');
+      // Call Edge Function to create Razorpay subscription server-side
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/create-razorpay-subscription`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
         }
-      },
-    };
+      );
 
-    const razorpay = new (window as any).Razorpay(options);
-    razorpay.on('payment.failed', (response: any) => {
-      console.error('Razorpay payment failed:', response.error);
-      toast.error(`Payment failed: ${response.error?.description ?? 'Unknown error'}`);
-    });
-    razorpay.open();
-  }, [user, fetchSubscription]);
+      const result = await response.json();
+      toast.dismiss('trial-init');
+
+      if (!response.ok) {
+        toast.error(result.error || 'Failed to initialize trial. Please try again.');
+        return;
+      }
+
+      const { subscription_id, is_existing } = result;
+
+      if (!subscription_id) {
+        toast.error('Failed to create subscription. Please try again.');
+        return;
+      }
+
+      // If subscription already exists and is active/trialing, just refresh
+      if (is_existing && (result.status === 'trialing' || result.status === 'active')) {
+        toast.success('You already have an active subscription!');
+        await fetchSubscription();
+        return;
+      }
+
+      // Open Razorpay Checkout in subscription mode
+      // This lets the user authorize the recurring mandate
+      const options = {
+        key: RAZORPAY_KEY_ID,
+        subscription_id,
+        name: 'Yodha Mode',
+        description: '7-Day Free Trial — then ₹149/month',
+        image: '/yodha-logo.jpg',
+        prefill: {
+          email: user.email ?? '',
+        },
+        theme: {
+          color: '#f97316', // Yodha Mode orange
+        },
+        modal: {
+          ondismiss: () => {
+            toast('Payment window closed. You can try again anytime.', {
+              icon: 'ℹ️',
+            });
+            // Refresh — webhook may have already updated status
+            fetchSubscription();
+          },
+        },
+        handler: async (_response: {
+          razorpay_payment_id: string;
+          razorpay_subscription_id: string;
+          razorpay_signature: string;
+        }) => {
+          // DO NOT write payment status here.
+          // The webhook Edge Function is the only source of truth.
+          // Just show a success message and wait for webhook to update DB.
+          toast.success(
+            '🏋️ Mandate authorized! Your 7-day trial starts now. Access will be ready shortly.',
+            { duration: 6000 }
+          );
+
+          // Poll for status update (webhook may take a few seconds)
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            await fetchSubscription();
+            if (attempts >= 10) {
+              clearInterval(poll);
+            }
+          }, 2000);
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.on('payment.failed', (response: any) => {
+        console.error('Razorpay payment failed:', response.error);
+        toast.error(
+          `Payment failed: ${response.error?.description ?? 'Unknown error'}. Please try again.`
+        );
+      });
+      razorpay.open();
+    } catch (err: any) {
+      toast.dismiss('trial-init');
+      console.error('Error initiating payment:', err);
+      toast.error('Something went wrong. Please try again.');
+    }
+  }, [user, session, fetchSubscription]);
+
+  // ── Cancel Subscription ───────────────────────────────────────────────────
+
+  const cancelSubscription = useCallback(async () => {
+    if (!user || !session) {
+      toast.error('Please sign in to manage your subscription');
+      return;
+    }
+
+    if (!subscription?.provider_subscription_id) {
+      toast.error('No active subscription found');
+      return;
+    }
+
+    try {
+      toast.loading('Cancelling subscription…', { id: 'cancel-sub' });
+
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/cancel-razorpay-subscription`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+        }
+      );
+
+      const result = await response.json();
+      toast.dismiss('cancel-sub');
+
+      if (!response.ok) {
+        toast.error(result.error || 'Failed to cancel subscription. Please try again.');
+        return;
+      }
+
+      toast.success(
+        result.access_until
+          ? `Subscription cancelled. Access continues until ${new Date(result.access_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+          : 'Subscription cancelled successfully.',
+        { duration: 7000 }
+      );
+
+      await fetchSubscription();
+    } catch (err: any) {
+      toast.dismiss('cancel-sub');
+      console.error('Error cancelling subscription:', err);
+      toast.error('Something went wrong. Please try again or contact support.');
+    }
+  }, [user, session, subscription, fetchSubscription]);
 
   return {
     isPremium,
     isAdmin,
     loading,
     status,
-    expiresAt,
+    subscription,
+    trialEnd,
+    currentPeriodEnd,
+    cancelAtPeriodEnd,
     refetch: fetchSubscription,
     initiatePayment,
+    cancelSubscription,
   };
 }
