@@ -198,7 +198,7 @@ export const useWorkoutLogs = () => {
   /**
    * Save full set details for an exercise (sets with individual weights and completion)
    */
-  const saveExerciseSets = async (
+  const saveExerciseSets = useCallback(async (
     exerciseId: string,
     exerciseName: string,
     sets: DailyExerciseSetLog[],
@@ -208,24 +208,29 @@ export const useWorkoutLogs = () => {
     const completedCount = sets.filter(s => s.completed).length;
     const totalCount = sets.length;
 
-    // Update local state
-    const nextTodaySets = {
-      ...todaySets,
-      [exerciseId]: sets,
-    };
-    setTodaySets(nextTodaySets);
-    saveCachedSetsForDate(todayKey, nextTodaySets);
+    // Use functional updater to avoid stale closure over todaySets
+    let nextTodaySets: TodaySetsMap = {};
+    setTodaySets(prev => {
+      nextTodaySets = { ...prev, [exerciseId]: sets };
+      return nextTodaySets;
+    });
+
+    // Persist to cache immediately using the merged map
+    // (nextTodaySets is set synchronously inside the updater above)
+    const mergedForCache = { [exerciseId]: sets };
+    saveCachedSetsForDate(todayKey, mergedForCache);
 
     // Sync to workout_logs
     await updateSetProgress(exerciseId, exerciseName, completedCount, totalCount, allExercises);
 
-    // Sync detailed sets to cloud
+    // Sync detailed sets to cloud — read fresh from cache to get the full merged map
+    const fullCached = getCachedSetsForDate(todayKey);
     const metaList = (allExercises || [{ id: exerciseId, name: exerciseName, totalSets: totalCount }]).map(e => ({
       id: e.id,
       name: e.name,
     }));
-    await syncSetsToCloud(todayKey, nextTodaySets, metaList);
-  };
+    await syncSetsToCloud(todayKey, fullCached, metaList);
+  }, [saveCachedSetsForDate, getCachedSetsForDate, syncSetsToCloud, updateSetProgress]);
 
   // Reset all progress for today
   const resetTodayProgress = async () => {
@@ -724,18 +729,9 @@ export const useWorkoutLogs = () => {
     fetchTodayLogs();
   }, [fetchTodayLogs]);
 
-  useEffect(() => {
-    const handleProgressUpdate = () => {
-      const todayKey = getTodayKey();
-      const cached = getCachedSetsForDate(todayKey);
-      setTodaySets(cached);
-    };
-
-    window.addEventListener('workout-progress-updated', handleProgressUpdate);
-    return () => {
-      window.removeEventListener('workout-progress-updated', handleProgressUpdate);
-    };
-  }, [getCachedSetsForDate]);
+  // NOTE: We intentionally do NOT listen to 'workout-progress-updated' for todaySets
+  // because saveExerciseSets uses a functional state updater and the event-based
+  // overwrite would race against and revert optimistic UI updates.
 
   return {
     todayProgress,

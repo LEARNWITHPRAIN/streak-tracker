@@ -168,7 +168,12 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
         ? existing[idx].completed 
         : idx < completedCount;
 
-      const targetReps = String(s.reps || parseReps(exercise.setsReps) || '10').replace(/^[0-9]+\s*[*xX×]\s*/, '');
+      // Normalize reps to a single integer string (no ranges, no "3×" prefix)
+      const rawReps = String(s.reps || parseReps(exercise.setsReps) || '10')
+        .replace(/^[0-9]+\s*[*xX×]\s*/, '')  // strip "3×" prefix
+        .replace(/^(\d+)\s*[-–]\s*\d+/, '$1'); // collapse range to first number
+      const targetReps = rawReps.match(/^\d+/) ? rawReps.match(/^(\d+)/)?.[1] ?? rawReps : rawReps;
+
       const doneReps = existing && existing[idx] !== undefined && existing[idx].doneReps !== undefined
         ? String(existing[idx].doneReps)
         : (isCompleted ? targetReps : '');

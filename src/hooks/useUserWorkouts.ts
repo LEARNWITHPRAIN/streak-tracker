@@ -129,11 +129,20 @@ export const parseSets = (setsReps: string): number | null => {
 
 export const parseReps = (setsReps: string): string => {
   if (!setsReps) return '10';
+  let raw = setsReps;
   const match = setsReps.match(/^\d+\s*[×xX*]\s*(.+)/);
   if (match) {
-    return match[1].trim();
+    raw = match[1].trim();
   }
-  return setsReps;
+  // Normalize any range like "10-12" or "10–12" to just the first number
+  const rangeMatch = raw.match(/^(\d+)\s*[-–]\s*\d+/);
+  if (rangeMatch) {
+    return rangeMatch[1];
+  }
+  // Strip any non-numeric suffix, keep first number only
+  const numMatch = raw.match(/^(\d+)/);
+  if (numMatch) return numMatch[1];
+  return raw;
 };
 
 /**
