@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserWorkouts, Exercise, DaySchedule, ExerciseSet, getExerciseSets, parseReps, formatExerciseSetsReps } from '@/hooks/useUserWorkouts';
+import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
 
 const dayIcons: Record<string, React.ReactNode> = {
@@ -37,7 +38,8 @@ interface ExerciseFormState {
 }
 
 export const WeeklySchedule: React.FC = () => {
-  const { schedule, loading: scheduleLoading, updateDayWorkout } = useUserWorkouts();
+  const { schedule, loading: scheduleLoading, updateDayWorkout, setSelectedWorkoutDay } = useUserWorkouts();
+  const { isPremium, openPaywall } = useSubscription();
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editDayForm, setEditDayForm] = useState({ title: '', subtitle: '' });
 
@@ -55,13 +57,34 @@ export const WeeklySchedule: React.FC = () => {
   
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
+  // Start doing workout from weekly split
+  const handleDoWorkout = (day: DaySchedule) => {
+    if (!isPremium) {
+      openPaywall('start and do this workout');
+      return;
+    }
+    if (setSelectedWorkoutDay) {
+      setSelectedWorkoutDay(day.day);
+    }
+    window.dispatchEvent(new CustomEvent('today-workout-selected', { detail: day.day }));
+    window.dispatchEvent(new CustomEvent('switch-dashboard-tab', { detail: 'today' }));
+  };
+
   // Day header edit
   const startEditDay = (day: DaySchedule) => {
+    if (!isPremium) {
+      openPaywall('edit your weekly workout routine');
+      return;
+    }
     setEditDayForm({ title: day.title, subtitle: day.subtitle });
     setEditingDay(day.day);
   };
 
   const saveEditDay = async (dayName: string) => {
+    if (!isPremium) {
+      openPaywall('save routine changes');
+      return;
+    }
     const day = schedule.find(d => d.day === dayName);
     if (day) {
       await updateDayWorkout(dayName, { ...day, title: editDayForm.title, subtitle: editDayForm.subtitle });
@@ -71,6 +94,10 @@ export const WeeklySchedule: React.FC = () => {
 
   // Start adding a new exercise
   const startAddExercise = (dayName: string) => {
+    if (!isPremium) {
+      openPaywall('add new exercises to your routine');
+      return;
+    }
     setAddingToDay(dayName);
     setEditingExerciseId(null);
     setExerciseForm({
@@ -85,6 +112,10 @@ export const WeeklySchedule: React.FC = () => {
 
   // Start editing an existing exercise
   const startEditExercise = (exercise: Exercise) => {
+    if (!isPremium) {
+      openPaywall('edit exercises, sets, and reps');
+      return;
+    }
     setEditingExerciseId(exercise.id);
     setAddingToDay(null);
     const existingSets = getExerciseSets(exercise);
@@ -138,6 +169,10 @@ export const WeeklySchedule: React.FC = () => {
 
   // Save the exercise (either create new or update existing)
   const handleSaveExercise = async (dayName: string) => {
+    if (!isPremium) {
+      openPaywall('save custom exercises and routines');
+      return;
+    }
     const name = exerciseForm.name.trim();
     if (!name) {
       toast.error('Please enter an exercise name');
@@ -192,6 +227,10 @@ export const WeeklySchedule: React.FC = () => {
 
   // Delete exercise
   const deleteExercise = async (dayName: string, exerciseId: string) => {
+    if (!isPremium) {
+      openPaywall('delete exercises from your routine');
+      return;
+    }
     const day = schedule.find(d => d.day === dayName);
     if (day) {
       const updatedExercises = day.exercises.filter(e => e.id !== exerciseId);
@@ -284,15 +323,27 @@ export const WeeklySchedule: React.FC = () => {
                     <p className="text-xs md:text-sm text-muted-foreground">{day.subtitle}</p>
                   </div>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => startEditDay(day)}
-                  className="rounded-xl text-xs"
-                >
-                  <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                  Edit Day
-                </Button>
+                <div className="flex items-center gap-2">
+                  {day.exercises.length > 0 && day.day !== 'sunday' && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleDoWorkout(day)}
+                      className="rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20"
+                    >
+                      <Flame className="w-3.5 h-3.5 mr-1.5" />
+                      Do Workout
+                    </Button>
+                  )}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => startEditDay(day)}
+                    className="rounded-xl text-xs"
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                    Edit Day
+                  </Button>
+                </div>
               </div>
             )}
 

@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 import { Headphones, Upload, Play, Pause, SkipBack, SkipForward, Trash2, Music } from 'lucide-react';
 import { useMusicContext } from '@/contexts/MusicContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 import { SpotifySection } from '@/components/SpotifySection';
 
@@ -14,6 +15,7 @@ const formatTime = (seconds: number): string => {
 
 export const MusicPlayer: React.FC = () => {
   const { requireAuth } = useAuth();
+  const { isPremium, openPaywall } = useSubscription();
   const {
     tracks,
     currentTrack,
@@ -33,8 +35,29 @@ export const MusicPlayer: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
+  const handlePlayTrack = useCallback((index: number) => {
+    if (!isPremium) {
+      openPaywall('listen to workout music and beats');
+      return;
+    }
+    playTrack(index);
+  }, [isPremium, openPaywall, playTrack]);
+
+  const handleTogglePlayPause = useCallback(() => {
+    if (!isPremium) {
+      openPaywall('listen to workout music and beats');
+      return;
+    }
+    togglePlayPause();
+  }, [isPremium, openPaywall, togglePlayPause]);
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!requireAuth(undefined, 'Create a free account to upload and personalize your workout playlist.')) {
+      e.target.value = '';
+      return;
+    }
+    if (!isPremium) {
+      openPaywall('upload custom workout tracks');
       e.target.value = '';
       return;
     }
@@ -42,7 +65,7 @@ export const MusicPlayer: React.FC = () => {
       addTracks(e.target.files);
       e.target.value = '';
     }
-  }, [addTracks, requireAuth]);
+  }, [addTracks, requireAuth, isPremium, openPaywall]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -52,10 +75,14 @@ export const MusicPlayer: React.FC = () => {
     if (!requireAuth(undefined, 'Create a free account to upload and personalize your workout playlist.')) {
       return;
     }
+    if (!isPremium) {
+      openPaywall('upload custom workout tracks');
+      return;
+    }
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       addTracks(e.dataTransfer.files);
     }
-  }, [addTracks, requireAuth]);
+  }, [addTracks, requireAuth, isPremium, openPaywall]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -155,7 +182,7 @@ export const MusicPlayer: React.FC = () => {
                   )}
                 >
                   <button
-                    onClick={() => playTrack(index)}
+                    onClick={() => handlePlayTrack(index)}
                     className={cn(
                       "w-11 h-11 rounded-xl flex items-center justify-center transition-all shrink-0",
                       index === currentTrackIndex && isPlaying
@@ -239,7 +266,13 @@ export const MusicPlayer: React.FC = () => {
                 {/* Controls */}
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={playPrevious}
+                    onClick={() => {
+                      if (!isPremium) {
+                        openPaywall('listen to workout music and beats');
+                        return;
+                      }
+                      playPrevious();
+                    }}
                     disabled={tracks.length === 0}
                     className="w-10 h-10 rounded-xl bg-muted/60 hover:bg-muted flex items-center justify-center transition-all disabled:opacity-50"
                   >
@@ -247,7 +280,7 @@ export const MusicPlayer: React.FC = () => {
                   </button>
                   
                   <button
-                    onClick={togglePlayPause}
+                    onClick={handleTogglePlayPause}
                     disabled={tracks.length === 0}
                     className="w-12 h-12 rounded-xl bg-primary hover:bg-primary/90 flex items-center justify-center transition-all disabled:opacity-50 shadow-lg shadow-primary/30"
                   >
@@ -259,7 +292,13 @@ export const MusicPlayer: React.FC = () => {
                   </button>
                   
                   <button
-                    onClick={playNext}
+                    onClick={() => {
+                      if (!isPremium) {
+                        openPaywall('listen to workout music and beats');
+                        return;
+                      }
+                      playNext();
+                    }}
                     disabled={tracks.length === 0}
                     className="w-10 h-10 rounded-xl bg-muted/60 hover:bg-muted flex items-center justify-center transition-all disabled:opacity-50"
                   >

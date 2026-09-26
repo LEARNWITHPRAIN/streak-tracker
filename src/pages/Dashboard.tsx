@@ -33,7 +33,15 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const { notifPermission, dualReminders } = usePWA();
-  const { isPremium, status: subStatus, trialEnd, loading: subLoading } = useSubscription();
+  const { 
+    isPremium, 
+    status: subStatus, 
+    trialEnd, 
+    loading: subLoading,
+    isPaywallOpen,
+    paywallReason,
+    closePaywall,
+  } = useSubscription();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const timer = useTimer();
@@ -178,26 +186,42 @@ const Dashboard = () => {
       loadCalendarHistory();
       // Fetch display name from profile
       const fetchDisplayName = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('user_id', user.id)
-          .single();
-        
-        const fetchedName = data?.display_name?.trim() || null;
-        setDisplayName(fetchedName);
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          const fetchedName = data?.display_name?.trim() || null;
+          setDisplayName(fetchedName);
 
-        // If user has not configured their display name yet, prompt them first
-        if (!fetchedName) {
+          // If user has not configured their display name yet, prompt them first
+          if (!fetchedName) {
+            setShowNameModal(true);
+          } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
+            // Display name present — prompt notifications if not yet configured
+            setShowNotifModal(true);
+          }
+        } catch (err) {
+          console.error('Error fetching display name:', err);
           setShowNameModal(true);
-        } else if (!dualReminders.hasPromptedOnboarding && notifPermission !== 'denied') {
-          // Display name present ΓÇö prompt notifications if not yet configured
-          setShowNotifModal(true);
         }
       };
       fetchDisplayName();
     }
   }, [user, loadCalendarHistory, dualReminders.hasPromptedOnboarding, notifPermission]);
+
+  // Listen for programmatic tab switch events (e.g. from Weekly tab "Do Workout")
+  useEffect(() => {
+    const handleSwitchTab = (e: any) => {
+      if (e.detail) {
+        setActiveTab(e.detail);
+      }
+    };
+    window.addEventListener('switch-dashboard-tab', handleSwitchTab);
+    return () => window.removeEventListener('switch-dashboard-tab', handleSwitchTab);
+  }, []);
 
   // Listen for progress and routine selection updates to refresh calendar
   useEffect(() => {
@@ -611,10 +635,12 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Mandatory Trial Paywall Modal: pops out if user does not have an active trial or subscription */}
+      {/* Trial Paywall Modal: pops out when user tries to perform actions without an active trial or subscription */}
       <TrialPaywallModal
-        isOpen={!isPremium && !subLoading && !loading}
-        isMandatory={true}
+        isOpen={isPaywallOpen && !isPremium}
+        isMandatory={false}
+        reason={paywallReason}
+        onClose={closePaywall}
       />
     </div>
   );

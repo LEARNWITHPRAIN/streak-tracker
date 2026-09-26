@@ -53,6 +53,8 @@ export const DisplayNameModal: React.FC<DisplayNameModalProps> = ({
 
       if (error) throw error;
 
+      localStorage.setItem('yodha_display_name', trimmed);
+
       toast({
         title: `Welcome aboard, ${trimmed}! 🔥`,
         description: "Your name has been set across your dashboard and streak records.",

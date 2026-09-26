@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { Flame, Trash2, Video, Link, HardDrive, RotateCcw, ExternalLink, Play, Sparkles } from 'lucide-react';
 import { useFuelContext } from '@/contexts/FuelContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { extractInstagramId, extractYouTubeId, isValidInstagramUrl, isValidYouTu
 
 export const FuelPlayer: React.FC = () => {
   const { requireAuth } = useAuth();
+  const { isPremium, openPaywall } = useSubscription();
   const {
     items,
     currentItemIndex,
@@ -52,6 +54,11 @@ export const FuelPlayer: React.FC = () => {
         e.target.value = '';
         return;
       }
+      if (!isPremium) {
+        openPaywall('upload offline motivation videos');
+        e.target.value = '';
+        return;
+      }
       if (e.target.files && e.target.files.length > 0) {
         addLocalVideo(e.target.files);
         e.target.value = '';
@@ -62,7 +69,7 @@ export const FuelPlayer: React.FC = () => {
         });
       }
     },
-    [addLocalVideo, requireAuth, toast]
+    [addLocalVideo, requireAuth, toast, isPremium, openPaywall]
   );
 
   const handleDrop = useCallback(
@@ -74,6 +81,10 @@ export const FuelPlayer: React.FC = () => {
       if (!requireAuth(undefined, 'Create a free account to upload offline workout motivation videos.')) {
         return;
       }
+      if (!isPremium) {
+        openPaywall('upload offline motivation videos');
+        return;
+      }
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         addLocalVideo(e.dataTransfer.files);
@@ -83,7 +94,7 @@ export const FuelPlayer: React.FC = () => {
         });
       }
     },
-    [addLocalVideo, requireAuth, toast]
+    [addLocalVideo, requireAuth, toast, isPremium, openPaywall]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -133,6 +144,10 @@ export const FuelPlayer: React.FC = () => {
 
   const handleAddUrl = async (overrideUrl?: string) => {
     if (!requireAuth(undefined, 'Create a free account to save custom workout motivation reels and videos.')) {
+      return;
+    }
+    if (!isPremium) {
+      openPaywall('save custom workout motivation reels and shorts');
       return;
     }
     const targetUrl = (overrideUrl || videoUrl).trim();

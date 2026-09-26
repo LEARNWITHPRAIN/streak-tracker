@@ -19,6 +19,7 @@ import {
 import { useUserWorkouts, parseReps, getExerciseSets, Exercise, DaySchedule } from '@/hooks/useUserWorkouts';
 import { useWorkoutLogs } from '@/hooks/useWorkoutLogs';
 import { useAnimatedProgress } from '@/hooks/useAnimatedProgress';
+import { useSubscription } from '@/hooks/useSubscription';
 import { DailyExerciseSetLog } from '@/types/exercise';
 
 const dayIcons: Record<string, React.ReactNode> = {
@@ -71,6 +72,7 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
     calculateTotalProgress, 
     loading: progressLoading 
   } = useWorkoutLogs();
+  const { isPremium, openPaywall } = useSubscription();
   
   const todayName = getTodayName();
   const todayDayKey = useMemo(() => {
@@ -196,6 +198,10 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
 
   // Toggle completion of a specific set, optionally saving user-specified done reps
   const handleToggleSet = async (exercise: Exercise, setIndex: number, specificDoneReps?: string) => {
+    if (!isPremium) {
+      openPaywall('complete exercises and track sets');
+      return;
+    }
     const currentSets = [...getSetsForExercise(exercise)];
     if (!currentSets[setIndex]) return;
 
@@ -229,6 +235,10 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
 
   // Update done reps directly for a set
   const handleUpdateDoneReps = async (exercise: Exercise, setIndex: number, doneReps: string) => {
+    if (!isPremium) {
+      openPaywall('log and edit repetitions');
+      return;
+    }
     const currentSets = [...getSetsForExercise(exercise)];
     if (!currentSets[setIndex]) return;
 
@@ -246,6 +256,10 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
 
   // Update exercise weight
   const handleUpdateExerciseWeight = async (exercise: Exercise, setIndex: number, newWeight: number | null) => {
+    if (!isPremium) {
+      openPaywall('update target and lifted weights');
+      return;
+    }
     if (!todaySchedule) return;
 
     // 1. Update the overall weekly schedule in Supabase (which trickles down everywhere)
@@ -282,6 +296,10 @@ export const TodayWorkout: React.FC<TodayWorkoutProps> = ({
 
   // Quick card click: completes next pending set, or resets all sets if already 100%
   const handleQuickAdvance = async (exercise: Exercise) => {
+    if (!isPremium) {
+      openPaywall('complete exercises and track sets');
+      return;
+    }
     const currentSets = [...getSetsForExercise(exercise)];
     const nextPendingIdx = currentSets.findIndex(s => !s.completed);
 

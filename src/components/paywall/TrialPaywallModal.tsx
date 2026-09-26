@@ -24,20 +24,34 @@ import { useSubscription } from '@/hooks/useSubscription';
 interface TrialPaywallModalProps {
   isOpen: boolean;
   isMandatory?: boolean;
+  reason?: string | null;
   onClose?: () => void;
 }
 
 export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
   isOpen,
-  isMandatory = true,
+  isMandatory = false,
+  reason,
   onClose,
 }) => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { initiatePayment, loading: subLoading } = useSubscription();
+  const { initiatePayment, loading: subLoading, paywallReason } = useSubscription();
   const [starting, setStarting] = useState(false);
 
+  // Close on Escape key if not mandatory
+  useEffect(() => {
+    if (!isOpen || isMandatory || !onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isMandatory, onClose]);
+
   if (!isOpen) return null;
+
+  const activeReason = reason || paywallReason;
 
   const handleStartTrial = async () => {
     if (!user) {
@@ -100,11 +114,19 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={() => {
+        if (!isMandatory && onClose) onClose();
+      }}
+    >
       {/* Background glow */}
       <div className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-primary/20 rounded-full blur-[130px]" />
 
-      <div className="relative w-full max-w-md max-h-[94dvh] sm:max-h-[90vh] flex flex-col rounded-3xl border border-primary/30 bg-gradient-to-b from-card/98 via-card/95 to-background/98 shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden text-foreground">
+      <div 
+        className="relative w-full max-w-md max-h-[94dvh] sm:max-h-[90vh] flex flex-col rounded-3xl border border-primary/30 bg-gradient-to-b from-card/98 via-card/95 to-background/98 shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden text-foreground"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Optional close button if not mandatory */}
         {!isMandatory && onClose && (
@@ -127,9 +149,15 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground leading-tight">
               Start Your Free Trial
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Unlock Yodha Mode — Your Complete Gym Buddy
-            </p>
+            {activeReason ? (
+              <p className="text-xs text-primary font-semibold mt-1">
+                To {activeReason}, start your free trial below:
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Unlock Yodha Mode — Your Complete Gym Buddy
+              </p>
+            )}
           </div>
 
           {/* Value Comparison Callout */}

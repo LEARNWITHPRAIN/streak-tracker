@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ProgressCircle } from './ProgressCircle';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   Dialog,
   DialogContent,
@@ -44,8 +45,25 @@ export const RestTimer: React.FC<RestTimerProps> = ({
   onReset,
   onUpdateSettings,
 }) => {
+  const { isPremium, openPaywall } = useSubscription();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempDuration, setTempDuration] = useState(settings.restDuration);
+
+  const handleStart = () => {
+    if (!isPremium) {
+      openPaywall('use the automatic workout rest timer');
+      return;
+    }
+    onStart();
+  };
+
+  const handleResume = () => {
+    if (!isPremium) {
+      openPaywall('use the automatic workout rest timer');
+      return;
+    }
+    onResume();
+  };
 
   const handleSaveSettings = () => {
     onUpdateSettings({ restDuration: tempDuration });
@@ -177,7 +195,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
         {/* Controls */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
           {!isRunning && timeRemaining === settings.restDuration && (
-            <Button onClick={onStart} size="lg" className="btn-primary-glow px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none shadow-lg shadow-primary/30">
+            <Button onClick={handleStart} size="lg" className="btn-primary-glow px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none shadow-lg shadow-primary/30">
               <Play className="w-5 h-5 mr-2" />
               Start Timer
             </Button>
@@ -191,7 +209,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({
           )}
 
           {!isRunning && timeRemaining < settings.restDuration && timeRemaining > 0 && (
-            <Button onClick={onResume} size="lg" className="btn-primary-glow px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none shadow-lg shadow-primary/30">
+            <Button onClick={handleResume} size="lg" className="btn-primary-glow px-8 h-12 rounded-xl text-base font-bold flex-1 sm:flex-none shadow-lg shadow-primary/30">
               <Play className="w-5 h-5 mr-2" />
               Resume
             </Button>

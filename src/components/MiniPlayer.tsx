@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { useMusicContext } from '@/contexts/MusicContext';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface MiniPlayerProps {
   hidden?: boolean;
@@ -8,6 +9,7 @@ interface MiniPlayerProps {
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ hidden = false }) => {
   const { currentTrack, isPlaying, togglePlayPause, playNext, playPrevious, currentTime, duration } = useMusicContext();
+  const { isPremium, openPaywall } = useSubscription();
 
   // Don't show if no track is playing or loaded, or if hidden
   if (!currentTrack || hidden) {
@@ -49,7 +51,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ hidden = false }) => {
             </button>
             
             <button
-              onClick={togglePlayPause}
+              onClick={() => {
+                if (!isPremium) {
+                  openPaywall('listen to workout music and beats');
+                  return;
+                }
+                togglePlayPause();
+              }}
               className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors shadow-lg shadow-primary/30"
             >
               {isPlaying ? (

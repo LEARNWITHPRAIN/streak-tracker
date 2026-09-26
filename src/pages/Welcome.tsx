@@ -102,14 +102,6 @@ const Welcome = () => {
     }
   }, [user, loading, navigate]);
 
-  useEffect(() => {
-    // Pop out free trial offer after user enters website
-    const timer = setTimeout(() => {
-      setShowTrialModal(true);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
