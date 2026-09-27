@@ -92,7 +92,8 @@ export function msUntilNextTime(hour: number, minute: number): number {
 }
 
 /**
- * Generates user-customized motivating notification text
+ * Generates user-personalized, motivating notification text based on
+ * the user's display name and today's workout completion percentage.
  */
 export function getMotivatingWorkoutMessage(customName?: string | null): { title: string; body: string } {
   const name =
@@ -102,16 +103,67 @@ export function getMotivatingWorkoutMessage(customName?: string | null): { title
 
   const pct = getStoredTodayWorkoutProgress();
 
-  const title = `Hey ${name}, your workout timing is now here! 💪`;
-  let body = `Time to crush today's workout! Step in and keep your warrior streak alive 🔥`;
-
-  if (pct > 0 && pct < 100) {
-    body = `You have completed ${pct}% of today's workout! Step in, finish strong and crush your goals 🔥`;
-  } else if (pct >= 100) {
-    body = `You crushed 100% of today's workout! Outstanding dedication, warrior 🔥`;
+  // ── Not started yet (0%) ───────────────────────────────────────────────────
+  if (pct === 0) {
+    const zeroMessages = [
+      {
+        title: `Hey ${name} — Time to Move! 🏋️`,
+        body: `You haven't started today's workout yet. Get in there, show up strong, and build that streak! 🔥`,
+      },
+      {
+        title: `Hey ${name} — Your body is waiting! 💪`,
+        body: `0% done so far. The hardest part is starting — lace up and go! Build your streak, one session at a time. 🔥`,
+      },
+      {
+        title: `Hey ${name}, Rise & Grind! ⚡`,
+        body: `Your workout is ready and waiting. Get it done today — keep your warrior streak alive! 🔥`,
+      },
+    ];
+    return zeroMessages[new Date().getMinutes() % zeroMessages.length];
   }
 
-  return { title, body };
+  // ── In progress: 1 – 49% ───────────────────────────────────────────────────
+  if (pct > 0 && pct < 50) {
+    const lowMessages = [
+      {
+        title: `Hey ${name} — ${pct}% done, keep going! 💪`,
+        body: `You've completed ${pct}% of today's workout. Don't stop now — finish strong and crush it completely! Build your streak 🔥`,
+      },
+      {
+        title: `Hey ${name} — You started, now finish! 🏋️`,
+        body: `${pct}% complete. You've got the momentum — step back in, crush the rest, and protect your streak! 🔥`,
+      },
+    ];
+    return lowMessages[new Date().getMinutes() % lowMessages.length];
+  }
+
+  // ── Halfway or more: 50 – 99% ─────────────────────────────────────────────
+  if (pct >= 50 && pct < 100) {
+    const midMessages = [
+      {
+        title: `Hey ${name} — ${pct}% done! So close! 🔥`,
+        body: `You have completed ${pct}% of today's workout. You're THIS close — crush it completely and build your streak! 💪`,
+      },
+      {
+        title: `Hey ${name} — Almost there! ${pct}% ⚡`,
+        body: `${pct}% in the bag. Finish what you started — complete your workout and make today's streak count! 🔥`,
+      },
+    ];
+    return midMessages[new Date().getMinutes() % midMessages.length];
+  }
+
+  // ── Fully completed: 100% ─────────────────────────────────────────────────
+  const doneMessages = [
+    {
+      title: `Hey ${name} — You absolutely crushed it! 🏆`,
+      body: `100% of today's workout done! Incredible work — your streak is getting stronger every single day. Keep going! 🔥`,
+    },
+    {
+      title: `Hey ${name} — LEGEND! 100% Complete! 🔥`,
+      body: `Full workout done. You showed up, you crushed it, your streak is unbreakable. See you tomorrow, Warrior! 💪`,
+    },
+  ];
+  return doneMessages[new Date().getMinutes() % doneMessages.length];
 }
 
 /**
