@@ -1,60 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { AnimatedYodhaLogo } from './AnimatedYodhaLogo';
+import yodhaLogo from '@/assets/yodha-logo.jpg';
 
 export const AppEntrySplash: React.FC = () => {
-  const [visible, setVisible] = useState(true);
-  const [fading, setFading] = useState(false);
-
-  const dismiss = () => {
-    setFading(true);
-    setTimeout(() => setVisible(false), 600);
-  };
+  const [phase, setPhase] = useState<'enter' | 'hold' | 'exit' | 'gone'>('enter');
 
   useEffect(() => {
-    // Normal auto-dismiss after 1.8s
-    const fadeTimer = setTimeout(() => {
-      dismiss();
-    }, 1800);
-
-    // Hard fallback: force-clear after 3.5s no matter what (mobile safety net)
-    const hardTimer = setTimeout(() => {
-      setVisible(false);
-    }, 3500);
+    // Phase: enter (scale + fade in) → 350ms
+    const holdTimer = setTimeout(() => setPhase('hold'), 350);
+    // Phase: hold → 400ms
+    const exitTimer = setTimeout(() => setPhase('exit'), 750);
+    // Phase: exit (fade out) → 300ms, then unmount
+    const goneTimer = setTimeout(() => setPhase('gone'), 1050);
 
     return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(hardTimer);
+      clearTimeout(holdTimer);
+      clearTimeout(exitTimer);
+      clearTimeout(goneTimer);
     };
   }, []);
 
-  if (!visible) return null;
+  if (phase === 'gone') return null;
 
   return (
     <div
-      onClick={dismiss}
-      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#050505] transition-all duration-600 cursor-pointer ${
-        fading
-          ? 'opacity-0 scale-105 pointer-events-none'
-          : 'opacity-100 scale-100'
-      }`}
+      className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#050505]"
       style={{
-        transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-        WebkitTapHighlightColor: 'transparent',
+        opacity: phase === 'exit' ? 0 : 1,
+        transition: phase === 'enter'
+          ? 'opacity 280ms ease-out'
+          : phase === 'exit'
+          ? 'opacity 300ms cubic-bezier(0.4, 0, 1, 1)'
+          : undefined,
       }}
     >
-      {/* Subtle background solar radial flare */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
+      {/* Subtle warm glow behind logo */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%)',
+          filter: 'blur(20px)',
+        }}
+      />
 
-      {/* The Animated Yodha Capsule Logo */}
-      <AnimatedYodhaLogo size="splash" showText={true} />
+      {/* Logo + wordmark — matches auth page size exactly */}
+      <div
+        style={{
+          transform: phase === 'enter' ? 'scale(0.88)' : 'scale(1)',
+          opacity: phase === 'enter' ? 0 : 1,
+          transition: 'transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 280ms ease-out',
+        }}
+        className="flex flex-col items-center gap-3"
+      >
+        {/* Logo — same 64px size as auth page */}
+        <div
+          className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg"
+          style={{
+            boxShadow: '0 0 0 2px rgba(249,115,22,0.5), 0 8px 24px rgba(249,115,22,0.25)',
+          }}
+        >
+          <img
+            src={yodhaLogo}
+            alt="Yodha Mode"
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+        </div>
 
-      {/* Tap hint on mobile */}
-      <p className="absolute bottom-10 text-[10px] uppercase tracking-[0.2em] text-white/30 font-mono animate-pulse">
-        Tap anywhere to enter
-      </p>
+        {/* Brand name */}
+        <span
+          className="text-sm font-semibold tracking-wider uppercase"
+          style={{ color: 'hsl(25, 95%, 53%)' }}
+        >
+          Yodha Mode
+        </span>
+      </div>
     </div>
   );
 };
 
 export default AppEntrySplash;
-
