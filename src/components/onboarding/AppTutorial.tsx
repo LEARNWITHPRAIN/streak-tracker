@@ -107,7 +107,7 @@ const STEPS: TutorialStep[] = [
     liveBadge: 'Live: Gym Music Player',
     title: 'Add Music & Pump-Up Playlists',
     description:
-      "Your screen switched to the Music tab. Build your workout soundtrack using curated gym presets, search for songs, or paste custom YouTube / Spotify links.",
+      "Your screen switched to the Music tab. Build your workout soundtrack using curated gym presets, search for songs, or paste custom YouTube links.",
     bullets: [
       'Curated playlists: Phonk, Heavy Rock, Hip Hop, Cyberpunk',
       'Paste any YouTube track or playlist link to add it directly',
