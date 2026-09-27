@@ -94,10 +94,14 @@ export function hasActiveEntitlement(
   isAdmin: boolean,
   status: SubscriptionStatus,
   trialEnd: Date | null,
-  currentPeriodEnd?: Date | null
+  currentPeriodEnd?: Date | null,
+  expiresAt?: Date | null
 ): boolean {
   if (isAdmin) return true;
-  if (status === 'active') return true;
+  if (status === 'active') {
+    if (expiresAt && expiresAt <= new Date()) return false;
+    return true;
+  }
   if (status === ('authenticated' as any)) return true;
   if (status === 'trialing') {
     if (!trialEnd || trialEnd > new Date()) return true;
@@ -135,10 +139,17 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
+        .select('*');
+
+      if (user.email) {
+        query = query.or(`user_id.eq.${user.id},user_email.eq.${user.email.toLowerCase().trim()}`);
+      } else {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -147,6 +158,15 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
         console.error('Error fetching subscription:', error);
         setSubscription(null);
         return;
+      }
+
+      // Link user_id if granted by email prior to user sign-in
+      if (data && !data.user_id && user.id) {
+        supabase
+          .from('user_subscriptions')
+          .update({ user_id: user.id })
+          .eq('id', data.id)
+          .then();
       }
 
       setSubscription(data as SubscriptionRecord | null);
@@ -168,8 +188,9 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
   const currentPeriodEnd = subscription?.current_period_end
     ? new Date(subscription.current_period_end)
     : null;
+  const expiresAt = subscription?.expires_at ? new Date(subscription.expires_at) : null;
   const cancelAtPeriodEnd = subscription?.cancel_at_period_end ?? false;
-  const isPremium = hasActiveEntitlement(isAdmin, status, trialEnd, currentPeriodEnd);
+  const isPremium = hasActiveEntitlement(isAdmin, status, trialEnd, currentPeriodEnd, expiresAt);
 
   // If user becomes premium, ensure paywall is closed
   useEffect(() => {
@@ -374,8 +395,13 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
       return;
     }
 
+    if (subscription?.status === 'active') {
+      toast.error('Active Pro plan subscriptions cannot be cancelled.');
+      return;
+    }
+
     if (!subscription?.provider_subscription_id) {
-      toast.error('No active subscription found');
+      toast.error('No cancellable subscription found');
       return;
     }
 

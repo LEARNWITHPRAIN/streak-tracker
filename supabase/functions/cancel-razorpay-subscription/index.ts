@@ -84,6 +84,13 @@ serve(async (req: Request) => {
 
     const sub = subs[0];
 
+    if (sub.status === "active") {
+      return new Response(
+        JSON.stringify({ error: "Active Pro plan subscriptions cannot be cancelled." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (sub.cancel_at_period_end) {
       return new Response(
         JSON.stringify({

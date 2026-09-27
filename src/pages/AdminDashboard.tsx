@@ -219,18 +219,24 @@ export const AdminDashboard: React.FC = () => {
         .eq('user_email', targetEmail)
         .maybeSingle();
 
+      const matchedUser = users.find((u) => u.email?.toLowerCase().trim() === targetEmail);
+      const userId = existingSub?.user_id || matchedUser?.id;
+
       const payload: any = {
         user_email: targetEmail,
         status: 'active',
         amount: 14900,
         paid_at: new Date().toISOString(),
         expires_at: expiry.toISOString(),
+        cancel_at_period_end: false,
         updated_at: new Date().toISOString(),
       };
 
       if (existingSub?.id) {
         payload.id = existingSub.id;
-        if (existingSub.user_id) payload.user_id = existingSub.user_id;
+      }
+      if (userId) {
+        payload.user_id = userId;
       }
 
       const { error } = await supabase.from('user_subscriptions').upsert(payload);
