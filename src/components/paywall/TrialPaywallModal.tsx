@@ -234,12 +234,20 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
         {/* ── FIXED FOOTER ── */}
         <div className="shrink-0 p-4 pt-3 bg-card/95 border-t border-border/50 shadow-2xl space-y-2.5">
 
-          {/* What happens after 7 days — transparent, builds trust */}
-          <div className="flex items-start gap-2 px-1">
-            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-            <p className="text-[10.5px] text-muted-foreground leading-snug">
-              After 7 days, you choose to continue. <span className="text-foreground font-semibold">Cancel anytime in 1 click</span> — no hidden charges, no hassle.
-            </p>
+          {/* Pricing — clear and transparent */}
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-primary">₹0 Today</span>
+                <span className="text-xs text-muted-foreground font-semibold">(7 days free)</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Then ₹149/month recurring • Cancel anytime
+              </p>
+            </div>
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-400 border border-green-500/30">
+              Zero Risk
+            </span>
           </div>
 
           {/* Primary CTA */}
