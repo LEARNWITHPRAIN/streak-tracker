@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
-import { Flame, Loader2, ShieldCheck, AlertTriangle, X, CheckCircle2, CreditCard, Calendar, RefreshCw, Sparkles } from 'lucide-react';
+import { Flame, Loader2, ShieldCheck, AlertTriangle, X, CheckCircle2, CreditCard, Calendar, RefreshCw, Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
+import { YEARLY_PLAN_ID, PlanType, PLANS } from '@/config/plans';
 
 // ── Trial / Signup Card ───────────────────────────────────────────────────────
 
 interface TrialCardProps {
-  onStart: () => Promise<void>;
+  onStart: (plan?: PlanType | string) => Promise<void>;
   loading?: boolean;
 }
 
 export function TrialCard({ onStart, loading = false }: TrialCardProps) {
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
   const [starting, setStarting] = useState(false);
 
   const handleStart = async () => {
     setStarting(true);
     try {
-      await onStart();
+      await onStart(selectedPlan);
     } finally {
       setStarting(false);
     }
   };
 
   const isLoading = loading || starting;
+  const planConfig = PLANS[selectedPlan];
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-orange-950/60 via-card/80 to-card/60 p-6 shadow-xl shadow-primary/10">
@@ -36,12 +39,12 @@ export function TrialCard({ onStart, loading = false }: TrialCardProps) {
         </div>
         <div>
           <h2 className="text-xl font-extrabold text-foreground tracking-tight">YODHA MODE</h2>
-          <p className="text-xs text-muted-foreground font-medium">Your Private Gym</p>
+          <p className="text-xs text-muted-foreground font-medium">Your Private Gym • 7-Day Free Trial</p>
         </div>
       </div>
 
       {/* Features */}
-      <ul className="space-y-2 mb-6">
+      <ul className="space-y-2 mb-5">
         {[
           'Unlimited custom workout routines',
           'Auto rest timers & music player',
@@ -55,14 +58,99 @@ export function TrialCard({ onStart, loading = false }: TrialCardProps) {
         ))}
       </ul>
 
-      {/* Pricing */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 mb-5 space-y-1">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-black text-primary">₹149</span>
-          <span className="text-sm text-muted-foreground">/month</span>
+      {/* Plan Selector */}
+      <div className="space-y-2 mb-5">
+        <p className="text-[11px] uppercase tracking-wider font-extrabold text-muted-foreground">
+          Choose Your Plan (7 Days 100% Free):
+        </p>
+
+        {/* Yearly Plan - Best Value */}
+        <div
+          onClick={() => setSelectedPlan('yearly')}
+          className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+            selectedPlan === 'yearly'
+              ? 'border-primary bg-primary/15 shadow-md shadow-primary/20 ring-1 ring-primary/40'
+              : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40 opacity-75'
+          }`}
+        >
+          <div className="absolute -top-2.5 right-3 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+            <Sparkles className="w-2.5 h-2.5 fill-black" />
+            SAVE 50% • BEST VALUE
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                selectedPlan === 'yearly' ? 'border-primary bg-primary' : 'border-muted-foreground/50'
+              }`}>
+                {selectedPlan === 'yearly' && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+              </div>
+              <div>
+                <p className="text-xs font-black text-foreground">Yearly Plan</p>
+                <p className="text-[10px] text-muted-foreground">
+                  ₹899/yr <span className="line-through text-muted-foreground/60">₹1,788</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="flex items-baseline justify-end gap-0.5">
+                <span className="text-base font-black text-primary">₹75</span>
+                <span className="text-[10px] text-muted-foreground">/mo</span>
+              </div>
+              <p className="text-[10px] font-bold text-emerald-400">Save ₹889/yr (50% OFF)</p>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          After your 7-day free trial. Cancel anytime.
+
+        {/* Monthly Plan */}
+        <div
+          onClick={() => setSelectedPlan('monthly')}
+          className={`relative p-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+            selectedPlan === 'monthly'
+              ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+              : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40 opacity-70'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                selectedPlan === 'monthly' ? 'border-primary bg-primary' : 'border-muted-foreground/50'
+              }`}>
+                {selectedPlan === 'monthly' && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-foreground">Monthly Plan</p>
+                <p className="text-[10px] text-muted-foreground">Billed monthly</p>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="flex items-baseline justify-end gap-0.5">
+                <span className="text-sm font-extrabold text-foreground">₹149</span>
+                <span className="text-[10px] text-muted-foreground">/mo</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Standard rate</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing summary */}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 mb-4 text-center">
+        <p className="text-xs text-foreground font-semibold">
+          {selectedPlan === 'yearly' ? (
+            <>
+              ₹0 today • Then <span className="text-primary font-bold">₹899/year (just ₹75/mo)</span> after 7 days
+            </>
+          ) : (
+            <>
+              ₹0 today • Then <span className="text-primary font-bold">₹149/month</span> after 7 days
+            </>
+          )}
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          Cancel anytime before trial ends with zero charge.
         </p>
       </div>
 
@@ -71,25 +159,31 @@ export function TrialCard({ onStart, loading = false }: TrialCardProps) {
         id="start-trial-btn"
         onClick={handleStart}
         disabled={isLoading}
-        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5 active:translate-y-0 transition-all"
+        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Setting up your trial…
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Setting up your trial…</span>
           </>
         ) : (
           <>
-            <Flame className="w-5 h-5 mr-2" />
-            Start 7-Day Free Trial
+            <Flame className="w-5 h-5" />
+            <span>
+              {selectedPlan === 'yearly'
+                ? 'Start 7-Day Free Trial (₹75/mo)'
+                : 'Start 7-Day Free Trial (₹149/mo)'}
+            </span>
+            <ArrowRight className="w-4 h-4" />
           </>
         )}
       </Button>
 
       {/* Disclaimer */}
       <p className="text-[11px] text-muted-foreground text-center mt-3 leading-relaxed px-2">
-        Full access for 7 days. Recurring payment of <strong>₹149/month</strong> begins after trial.
-        You must explicitly authorize the recurring mandate. Cancel before trial ends and you won't be charged.
+        Full access for 7 days. Recurring payment of{' '}
+        <strong>{selectedPlan === 'yearly' ? '₹899/year (₹75/mo)' : '₹149/month'}</strong> begins after trial.
+        Cancel before trial ends and you won't be charged.
       </p>
     </div>
   );
@@ -163,6 +257,8 @@ export function SubscriptionStatusCard() {
   }
 
   // ── TRIALING ───────────────────────────────────────────────────────────────
+  const isYearlyPlan = subscription?.amount === 89900 || subscription?.provider_plan_id === YEARLY_PLAN_ID;
+
   if (status === 'trialing' && trialEnd) {
     const daysLeft = Math.max(
       0,
@@ -183,12 +279,12 @@ export function SubscriptionStatusCard() {
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/15 text-primary border border-primary/30 uppercase tracking-wide">
-            Trial
+            {isYearlyPlan ? 'Trial (Yearly Plan)' : 'Trial (Monthly Plan)'}
           </span>
         </div>
         <div className="text-xs text-muted-foreground space-y-1">
           <p>Trial ends: <span className="text-foreground font-medium">{trialEnd.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span></p>
-          <p>Then: <span className="text-foreground font-medium">₹149/month recurring</span></p>
+          <p>Then: <span className="text-foreground font-medium">{isYearlyPlan ? '₹899/year (only ₹75/month) recurring' : '₹149/month recurring'}</span></p>
         </div>
         {!cancelAtPeriodEnd && (
           <Button
@@ -226,11 +322,15 @@ export function SubscriptionStatusCard() {
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground">Yodha Mode Pro</p>
+              <p className="text-sm font-bold text-foreground">
+                {isYearlyPlan ? 'Yodha Mode Pro (Yearly • ₹75/mo)' : 'Yodha Mode Pro (Monthly)'}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {isGranted
                   ? 'Special Pro Access Granted'
-                  : 'Active Pro Subscription'}
+                  : isYearlyPlan
+                  ? 'Active Annual Subscription (50% Off)'
+                  : 'Active Monthly Subscription'}
               </p>
             </div>
           </div>
@@ -355,7 +455,7 @@ export function SubscriptionStatusCard() {
           className="w-full h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold"
         >
           {starting ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Flame className="w-3.5 h-3.5 mr-1.5" />}
-          Resubscribe — ₹149/month
+          Resubscribe — from ₹75/mo (₹899/yr)
         </Button>
       </div>
     );

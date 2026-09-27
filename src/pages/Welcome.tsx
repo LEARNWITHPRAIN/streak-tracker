@@ -96,6 +96,7 @@ const Welcome = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [billingInterval, setBillingInterval] = useState<'yearly' | 'monthly'>('yearly');
 
   useEffect(() => {
     if (!loading && user) {
@@ -321,21 +322,78 @@ const Welcome = () => {
             <p className="text-muted-foreground text-base max-w-xl mx-auto">
               Experience the complete private gym workspace. Cancel anytime before trial ends without paying a single rupee.
             </p>
+
+            {/* Plan Switcher Toggle */}
+            <div className="flex items-center justify-center pt-2">
+              <div className="inline-flex items-center p-1 rounded-2xl bg-card border border-border shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setBillingInterval('yearly')}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    billingInterval === 'yearly'
+                      ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Yearly (₹75/mo)</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    billingInterval === 'yearly' ? 'bg-black text-amber-300' : 'bg-emerald-500/20 text-emerald-400'
+                  }`}>
+                    50% OFF
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setBillingInterval('monthly')}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    billingInterval === 'monthly'
+                      ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Monthly (₹149/mo)
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="max-w-md mx-auto rounded-3xl border-2 border-primary/40 bg-gradient-to-b from-card/90 via-card/70 to-card/95 p-8 shadow-2xl shadow-primary/15 relative backdrop-blur-xl">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-primary/30">
-              7-Day Free Trial Included
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-black text-xs font-black px-4 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-primary/30 flex items-center gap-1">
+              <Flame className="w-3.5 h-3.5 fill-black" />
+              {billingInterval === 'yearly' ? 'BEST VALUE • 7-Day Free Trial' : '7-Day Free Trial Included'}
             </div>
 
             <div className="text-center space-y-2 pt-2 mb-6">
               <div className="flex items-baseline justify-center gap-1.5">
-                <span className="text-5xl font-black text-primary">₹149</span>
+                <span className="text-5xl font-black text-primary">
+                  {billingInterval === 'yearly' ? '₹75' : '₹149'}
+                </span>
                 <span className="text-muted-foreground text-sm font-semibold">/ month</span>
               </div>
-              <p className="text-xs text-muted-foreground font-medium">
-                Recurring monthly subscription after 7 days free. Cancel anytime.
-              </p>
+              {billingInterval === 'yearly' ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-foreground font-bold">
+                    Billed ₹899/year <span className="line-through text-muted-foreground font-normal">₹1,788</span>
+                  </p>
+                  <p className="text-xs text-emerald-400 font-extrabold">
+                    🎉 You save ₹889/year (50% OFF) with annual billing!
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    7 days 100% free, then ₹899/year. Cancel anytime.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Recurring monthly subscription of ₹149/mo after 7 days free. Cancel anytime.
+                  </p>
+                  <p className="text-xs text-amber-400 font-semibold">
+                    💡 Tip: Switch to yearly to get it for just ₹75/mo (50% off)!
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 mb-8">
@@ -356,12 +414,16 @@ const Welcome = () => {
             </div>
 
             <Button
-              onClick={() => navigate('/auth?mode=signup')}
+              onClick={() => navigate(`/auth?mode=signup&plan=${billingInterval}`)}
               size="lg"
-              className="w-full h-13 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all rounded-xl flex items-center justify-center gap-2"
+              className="w-full h-13 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer"
             >
               <Flame className="w-5 h-5" />
-              <span>Start 7-Day Free Trial</span>
+              <span>
+                {billingInterval === 'yearly'
+                  ? 'Start 7-Day Free Trial (₹75/mo)'
+                  : 'Start 7-Day Free Trial (₹149/mo)'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </Button>
 

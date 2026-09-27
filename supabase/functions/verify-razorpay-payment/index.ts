@@ -142,6 +142,10 @@ serve(async (req: Request) => {
       ? new Date(rzpSub.start_at * 1000)                        // Razorpay start_at = first charge date
       : new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
+    const resolvedPlanId = rzpSub.plan_id || "plan_TgakKXEKRZYOJg";
+    const isYearly = resolvedPlanId === "plan_Th1lVp9Rvq3SxO" || rzpSub?.notes?.plan_type === "yearly";
+    const planAmount = isYearly ? 89900 : 14900;
+
     // ── 6. Upsert subscription record ──────────────────────────────────────
     const { error: upsertError } = await supabase
       .from("user_subscriptions")
@@ -151,10 +155,10 @@ serve(async (req: Request) => {
           user_email:               userEmail,
           payment_provider:         "razorpay",
           provider_subscription_id: razorpay_subscription_id,
-          provider_plan_id:         rzpSub.plan_id || "plan_TgYAtltfpEFbio",
+          provider_plan_id:         resolvedPlanId,
           status:                   "trialing",
           currency:                 "INR",
-          amount:                   14900,
+          amount:                   planAmount,
           trial_start:              now.toISOString(),
           trial_end:                trialEndDate.toISOString(),
           cancel_at_period_end:     false,
@@ -173,10 +177,10 @@ serve(async (req: Request) => {
           user_email:               userEmail,
           payment_provider:         "razorpay",
           provider_subscription_id: razorpay_subscription_id,
-          provider_plan_id:         rzpSub.plan_id || "plan_TgYAtltfpEFbio",
+          provider_plan_id:         resolvedPlanId,
           status:                   "trialing",
           currency:                 "INR",
-          amount:                   14900,
+          amount:                   planAmount,
           trial_start:              now.toISOString(),
           trial_end:                trialEndDate.toISOString(),
           cancel_at_period_end:     false,

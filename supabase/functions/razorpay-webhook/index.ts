@@ -362,6 +362,9 @@ async function upsertSubscriptionFromRazorpay(
     return;
   }
 
+  const isYearly = subscriptionEntity.plan_id === "plan_Th1lVp9Rvq3SxO" || notes.plan_type === "yearly";
+  const subAmount = isYearly ? 89900 : 14900;
+
   await supabase.from("user_subscriptions").upsert(
     {
       user_id: userId,
@@ -370,7 +373,7 @@ async function upsertSubscriptionFromRazorpay(
       provider_subscription_id: subscriptionEntity.id,
       provider_plan_id: subscriptionEntity.plan_id,
       currency: "INR",
-      amount: 14900,
+      amount: subAmount,
       ...extraFields,
     },
     { onConflict: "provider_subscription_id" }

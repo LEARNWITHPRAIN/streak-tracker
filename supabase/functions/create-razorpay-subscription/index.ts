@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") || "rzp_live_TgafeietEr0S3D";
 const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") || "nsYdrYbG3l0kwBgxTtIcAVEw";
 const RAZORPAY_PLAN_ID = Deno.env.get("RAZORPAY_PLAN_ID") || "plan_TgakKXEKRZYOJg";
+const RAZORPAY_YEARLY_PLAN_ID = Deno.env.get("RAZORPAY_YEARLY_PLAN_ID") || "plan_Th1lVp9Rvq3SxO";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://czeewwuptywvjdtxvxhv.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
@@ -108,20 +109,38 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── 4. Create Razorpay subscription (start_at = now + 7 days) ─────────
+    // ── 4. Parse request body for plan selection ──────────────────────────
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const requestedPlanId = body.plan_id || "";
+    const isYearly =
+      requestedPlanId === RAZORPAY_YEARLY_PLAN_ID ||
+      body.plan_type === "yearly";
+
+    const targetPlanId = isYearly ? RAZORPAY_YEARLY_PLAN_ID : (requestedPlanId || RAZORPAY_PLAN_ID);
+    const planAmount = isYearly ? 89900 : 14900;
+    const totalCount = isYearly ? 10 : 120; // 10 years of yearly billing, or 10 years of monthly billing
+
+    // ── 5. Create Razorpay subscription (start_at = now + 7 days) ─────────
     const trialStartMs = Date.now();
     const trialEndMs = trialStartMs + TRIAL_DAYS * 24 * 60 * 60 * 1000;
     const startAtUnix = Math.floor(trialEndMs / 1000); // Razorpay uses Unix seconds
 
     const razorpayPayload = {
-      plan_id: RAZORPAY_PLAN_ID,
-      total_count: 120,          // 10 years of monthly billing
+      plan_id: targetPlanId,
+      total_count: totalCount,
       quantity: 1,
       start_at: startAtUnix,    // First charge happens 7 days from now
       customer_notify: 1,        // Complies with RBI mandate notification requirement
       notes: {
         user_id: userId,
         user_email: userEmail,
+        plan_type: isYearly ? "yearly" : "monthly",
         source: "yodha_mode_trial",
       },
     };
@@ -147,7 +166,7 @@ serve(async (req: Request) => {
     const razorpaySub = await razorpayRes.json();
     const providerSubscriptionId: string = razorpaySub.id;
 
-    // ── 5. Upsert subscription record in Supabase on user_id ──────────────
+    // ── 6. Upsert subscription record in Supabase on user_id ──────────────
     const { error: upsertError } = await supabase
       .from("user_subscriptions")
       .upsert({
@@ -155,10 +174,10 @@ serve(async (req: Request) => {
         user_email: userEmail.toLowerCase(),
         payment_provider: "razorpay",
         provider_subscription_id: providerSubscriptionId,
-        provider_plan_id: RAZORPAY_PLAN_ID,
+        provider_plan_id: targetPlanId,
         status: "pending",           // Updated to 'trialing' by webhook/handler
         currency: "INR",
-        amount: 14900,
+        amount: planAmount,
         trial_start: new Date(trialStartMs).toISOString(),
         trial_end: new Date(trialEndMs).toISOString(),
         cancel_at_period_end: false,
@@ -169,10 +188,13 @@ serve(async (req: Request) => {
       console.error("Error upserting subscription:", upsertError);
     }
 
-    // ── 6. Return subscription_id to frontend (for Razorpay Checkout) ──────
+    // ── 7. Return subscription_id to frontend (for Razorpay Checkout) ──────
     return new Response(
       JSON.stringify({
         subscription_id: providerSubscriptionId,
+        plan_id: targetPlanId,
+        plan_type: isYearly ? "yearly" : "monthly",
+        amount: planAmount,
         status: "pending",
         trial_end: new Date(trialEndMs).toISOString(),
         is_existing: false,

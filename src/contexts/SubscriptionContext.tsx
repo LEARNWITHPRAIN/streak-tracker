@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { MONTHLY_PLAN_ID, YEARLY_PLAN_ID, PlanType, PLANS } from '@/config/plans';
 
 const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || 'prakharjain2731@gmail.com').toLowerCase().trim();
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID as string;
@@ -57,7 +58,7 @@ export interface SubscriptionContextType {
   /** Refetch subscription from DB */
   refetch: () => Promise<void>;
   /** Start 7-day free trial — opens Razorpay mandate authorization */
-  initiatePayment: () => Promise<void>;
+  initiatePayment: (plan?: 'monthly' | 'yearly' | string) => Promise<void>;
   /** Cancel subscription at end of period */
   cancelSubscription: () => Promise<void>;
   /** Paywall modal open state */
@@ -221,7 +222,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, [isPremium, openPaywall]);
 
   // ── Start Trial / Initiate Payment ───────────────────────────────────────
-  const initiatePayment = useCallback(async () => {
+  const initiatePayment = useCallback(async (selectedPlan: PlanType | string = 'yearly') => {
     if (!user || !session) {
       toast.error('Please sign in to start your free trial');
       return;
@@ -238,8 +239,11 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
       return;
     }
 
+    const isYearly = selectedPlan === 'yearly' || selectedPlan === YEARLY_PLAN_ID;
+    const planConfig = isYearly ? PLANS.yearly : PLANS.monthly;
+
     try {
-      toast.loading('Setting up your free trial…', { id: 'trial-init' });
+      toast.loading(`Setting up your free trial (${planConfig.name})…`, { id: 'trial-init' });
 
       // Call Edge Function to create Razorpay subscription server-side
       const response = await fetch(
@@ -251,6 +255,10 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
             'Authorization': `Bearer ${session.access_token}`,
             'apikey': SUPABASE_ANON_KEY,
           },
+          body: JSON.stringify({
+            plan_id: planConfig.planId,
+            plan_type: planConfig.id,
+          }),
         }
       );
 
@@ -282,7 +290,9 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
         key: RAZORPAY_KEY_ID,
         subscription_id,
         name: 'Yodha Mode',
-        description: '7-Day Free Trial — then ₹149/month',
+        description: isYearly
+          ? '7-Day Free Trial — then ₹899/year (₹75/mo)'
+          : '7-Day Free Trial — then ₹149/month',
         image: '/yodha-logo.jpg',
         prefill: {
           name: user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'Yodha',
@@ -311,7 +321,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
             payment_provider: 'razorpay',
             provider_subscription_id: _response.razorpay_subscription_id,
             currency: 'INR',
-            amount: 14900,
+            amount: planConfig.amountPaise,
             trial_start: new Date().toISOString(),
             trial_end: optimisticTrialEnd.toISOString(),
             current_period_start: null,
@@ -326,7 +336,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
           setPaywallReason(null);
 
           toast.success(
-            '🏋️ Welcome to Yodha Mode! Your 7-day free trial has started.',
+            `🏋️ Welcome to Yodha Mode! Your 7-day free trial on the ${planConfig.name} has started.`,
             { duration: 6000 }
           );
 
