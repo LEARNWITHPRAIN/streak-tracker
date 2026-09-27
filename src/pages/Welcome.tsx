@@ -103,18 +103,7 @@ const Welcome = () => {
     }
   }, [user, loading, navigate]);
 
-  // Auto-show paywall after splash clears — once per session
-  useEffect(() => {
-    if (loading || user) return;
-    const seen = sessionStorage.getItem('yodha_trial_modal_shown');
-    if (seen) return;
-    // Splash ends at ~1050ms; wait a beat so user sees the landing page first
-    const timer = setTimeout(() => {
-      sessionStorage.setItem('yodha_trial_modal_shown', '1');
-      setShowTrialModal(true);
-    }, 1400);
-    return () => clearTimeout(timer);
-  }, [loading, user]);
+
 
   if (loading) {
     return (

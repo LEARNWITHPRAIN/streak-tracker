@@ -42,6 +42,7 @@ const Dashboard = () => {
     loading: subLoading,
     isPaywallOpen,
     paywallReason,
+    openPaywall,
     closePaywall,
   } = useSubscription();
   const [showNotifModal, setShowNotifModal] = useState(false);
@@ -224,6 +225,20 @@ const Dashboard = () => {
     window.addEventListener('switch-dashboard-tab', handleSwitchTab);
     return () => window.removeEventListener('switch-dashboard-tab', handleSwitchTab);
   }, []);
+
+  // Auto-show paywall 5 seconds after login — once per session, only for non-premium users
+  useEffect(() => {
+    // Wait until auth and subscription have both finished loading
+    if (loading || subLoading || !user || isPremium || isAdmin) return;
+    const seen = sessionStorage.getItem('yodha_dashboard_paywall_shown');
+    if (seen) return;
+    const timer = setTimeout(() => {
+      sessionStorage.setItem('yodha_dashboard_paywall_shown', '1');
+      openPaywall();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [loading, subLoading, user, isPremium, isAdmin, openPaywall]);
+
 
   // Listen for progress and routine selection updates to refresh calendar
   useEffect(() => {
