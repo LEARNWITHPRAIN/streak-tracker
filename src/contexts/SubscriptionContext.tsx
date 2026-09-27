@@ -245,10 +245,10 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
     try {
       toast.loading(`Setting up your free trial (${planConfig.name})…`, { id: 'trial-init' });
 
-      // Call Edge Function to create Razorpay subscription server-side
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/create-razorpay-subscription`,
-        {
+      // Call Cloudflare Pages API endpoint first (ensures latest deployed code with correct plan IDs), fallback to Supabase function
+      let response: Response;
+      try {
+        response = await fetch('/api/create-razorpay-subscription', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -259,8 +259,42 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
             plan_id: planConfig.planId,
             plan_type: planConfig.id,
           }),
+        });
+
+        if (response.status === 404 || response.status === 405) {
+          response = await fetch(
+            `${SUPABASE_URL}/functions/v1/create-razorpay-subscription`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': SUPABASE_ANON_KEY,
+              },
+              body: JSON.stringify({
+                plan_id: planConfig.planId,
+                plan_type: planConfig.id,
+              }),
+            }
+          );
         }
-      );
+      } catch {
+        response = await fetch(
+          `${SUPABASE_URL}/functions/v1/create-razorpay-subscription`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              plan_id: planConfig.planId,
+              plan_type: planConfig.id,
+            }),
+          }
+        );
+      }
 
       const result = await response.json();
       toast.dismiss('trial-init');
