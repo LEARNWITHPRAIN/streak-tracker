@@ -226,17 +226,14 @@ const Dashboard = () => {
     return () => window.removeEventListener('switch-dashboard-tab', handleSwitchTab);
   }, []);
 
-  // Auto-show paywall 5 seconds after login — once per session, only for non-premium users
+  // Auto-show paywall 5 seconds after every login/signup — only for non-premium users
   useEffect(() => {
     // Wait until auth and subscription have both finished loading
     if (loading || subLoading || !user || isPremium || isAdmin) return;
-    const seen = sessionStorage.getItem('yodha_dashboard_paywall_shown');
-    if (seen) return;
-    const timer = setTimeout(() => {
-      sessionStorage.setItem('yodha_dashboard_paywall_shown', '1');
+    const t = setTimeout(() => {
       openPaywall();
     }, 5000);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [loading, subLoading, user, isPremium, isAdmin, openPaywall]);
 
 
