@@ -14,8 +14,9 @@ import {
   Loader2, 
   LogOut,
   X,
-  CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  Lock,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,17 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
   const { user, signOut } = useAuth();
   const { initiatePayment, loading: subLoading, paywallReason } = useSubscription();
   const [starting, setStarting] = useState(false);
+  const [pulse, setPulse] = useState(false);
+
+  // Pulse the CTA button every few seconds to draw attention
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 600);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   // Close on Escape key if not mandatory
   useEffect(() => {
@@ -77,38 +89,38 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
   const features = [
     {
       icon: <Dumbbell className="w-3.5 h-3.5 text-orange-400" />,
-      title: 'Track your workouts with this website',
-      desc: 'Build custom routines, sets, reps, and manage full weekly splits.',
+      title: 'Custom workout routines & splits',
+      desc: 'Build your full weekly plan with sets, reps, progressive overload tracking.',
     },
     {
       icon: <TrendingUp className="w-3.5 h-3.5 text-orange-400" />,
-      title: 'Track your progress',
-      desc: 'Progressive overload tracking, weight records, and visual completion rings.',
+      title: 'Track your progress visually',
+      desc: 'Completion rings, weight PRs, and daily streak counters keep you hooked.',
     },
     {
       icon: <Headphones className="w-3.5 h-3.5 text-orange-400" />,
-      title: 'Add your music & listen to your music',
-      desc: 'Upload audio files and play your favourite training tracks inside the app.',
+      title: 'Your music — inside your workout',
+      desc: 'Upload audio files and train to your own playlist without switching apps.',
     },
     {
       icon: <Zap className="w-3.5 h-3.5 text-orange-400" />,
-      title: 'Add motivational shorts',
-      desc: 'Save and replay inspiring YouTube Shorts and Instagram Reels anytime.',
+      title: 'Motivational fuel on demand',
+      desc: 'Replay your favourite YouTube Shorts & Reels between sets for that extra push.',
     },
     {
       icon: <Timer className="w-3.5 h-3.5 text-orange-400" />,
-      title: 'Automatic rest timers after completing your workout',
-      desc: 'Rest timer auto-starts after completing each set with audio beeps.',
+      title: 'Auto rest timers after every set',
+      desc: 'Rest timer fires the moment you log a set — no manual tapping needed.',
     },
     {
       icon: <Calendar className="w-3.5 h-3.5 text-orange-400" />,
-      title: 'Check your tricks or calendar',
-      desc: 'Daily streak counters and full calendar workout history.',
+      title: 'Full calendar & streak history',
+      desc: 'See every session, build streaks, and stay accountable to your journey.',
     },
     {
       icon: <Sparkles className="w-3.5 h-3.5 text-amber-400" />,
-      title: 'All of that in just one app: your complete gym buddy',
-      desc: 'A dedicated, distraction-free environment engineered for champions.',
+      title: 'Everything in one gym-grade app',
+      desc: 'A distraction-free environment built specifically for serious lifters.',
       highlight: true,
     },
   ];
@@ -128,54 +140,57 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         
-        {/* Optional close button if not mandatory */}
+        {/* Close button — always visible, clearly not mandatory */}
         {!isMandatory && onClose && (
           <button
             onClick={onClose}
             className="absolute top-3 right-3 z-10 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+            title="Browse first, decide later"
           >
             <X className="w-5 h-5" />
           </button>
         )}
 
-        {/* ── HEADER (Non-shrinking) ── */}
-        <div className="shrink-0 pt-4 pb-2 px-5 text-center space-y-2 border-b border-border/30">
+        {/* ── HEADER ── */}
+        <div className="shrink-0 pt-5 pb-3 px-5 text-center space-y-2.5 border-b border-border/30">
+
+          {/* Trial badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-primary/15 border border-primary/30 text-primary">
             <Flame className="w-3.5 h-3.5 fill-primary animate-pulse" />
-            7-Day Free Trial
+            7-Day Free Trial — No Payment Today
           </div>
 
           <div>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground leading-tight">
-              Start Your Free Trial
+              Start Your 7-Day Free Trial
             </h2>
             {activeReason ? (
               <p className="text-xs text-primary font-semibold mt-1">
-                To {activeReason}, start your free trial below:
+                To {activeReason}, activate your free trial below:
               </p>
             ) : (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Unlock Yodha Mode — Your Complete Gym Buddy
+                Your complete private gym — in one app
               </p>
             )}
           </div>
 
-          {/* Value Comparison Callout */}
-          <div className="rounded-xl border border-primary/30 bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/15 p-2.5 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-xs sm:text-sm">
-              <Zap className="w-3.5 h-3.5 fill-primary shrink-0" />
-              <span>The minimum fee for a gym is ₹500</span>
+          {/* Safety / trust hook — replaces the old ₹149 callout */}
+          <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-green-500/8 to-emerald-500/10 p-2.5 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-bold text-xs sm:text-sm">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>You are completely safe</span>
             </div>
-            <p className="text-[11px] sm:text-xs font-semibold text-foreground/95 mt-0.5 leading-snug">
-              Get Yodha Mode for <span className="text-primary font-extrabold underline decoration-primary/50">just ₹149/month</span> — utilize it!
+            <p className="text-[11px] sm:text-xs text-foreground/80 mt-0.5 leading-snug font-medium">
+              7 full days, zero charges, zero commitment — explore everything freely.
             </p>
           </div>
         </div>
 
-        {/* ── SCROLLABLE FEATURES AREA ── */}
+        {/* ── SCROLLABLE FEATURES ── */}
         <div className="flex-1 overflow-y-auto px-4 py-2.5 space-y-2 min-h-0 scrollbar-thin">
           <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground/80 px-1">
-            Everything Included in Your Trial:
+            Everything Unlocked During Your Trial:
           </p>
           {features.map((feat, idx) => (
             <div
@@ -197,66 +212,76 @@ export const TrialPaywallModal: React.FC<TrialPaywallModalProps> = ({
                   {feat.desc}
                 </p>
               </div>
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
             </div>
           ))}
+
+          {/* Social proof nudge */}
+          <div className="flex items-center gap-2 pt-1 px-1">
+            <div className="flex -space-x-1.5">
+              {['🏋️', '💪', '🔥', '⚡', '🏆'].map((emoji, i) => (
+                <div key={i} className="w-6 h-6 rounded-full bg-muted border border-border/60 flex items-center justify-center text-[10px]">
+                  {emoji}
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              <span className="text-foreground font-bold">Warriors</span> are already tracking their gains
+            </p>
+          </div>
         </div>
 
-        {/* ── FIXED BOTTOM FOOTER (Always 100% visible on mobile) ── */}
+        {/* ── FIXED FOOTER ── */}
         <div className="shrink-0 p-4 pt-3 bg-card/95 border-t border-border/50 shadow-2xl space-y-2.5">
-          {/* Price Bar */}
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl sm:text-2xl font-black text-primary">₹0 Today</span>
-                <span className="text-xs text-muted-foreground font-semibold">(7 days free)</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Then ₹149/month recurring • Cancel anytime
-              </p>
-            </div>
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-500/15 text-green-400 border border-green-500/30">
-              Zero Risk
-            </span>
+
+          {/* What happens after 7 days — transparent, builds trust */}
+          <div className="flex items-start gap-2 px-1">
+            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-[10.5px] text-muted-foreground leading-snug">
+              After 7 days, you choose to continue. <span className="text-foreground font-semibold">Cancel anytime in 1 click</span> — no hidden charges, no hassle.
+            </p>
           </div>
 
-          {/* Primary CTA Button */}
+          {/* Primary CTA */}
           <Button
             id="paywall-start-trial-btn"
             onClick={handleStartTrial}
             disabled={isLoading}
             size="lg"
-            className="w-full h-12 text-sm sm:text-base font-extrabold text-primary-foreground bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30 active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+            className={`w-full h-12 text-sm sm:text-base font-extrabold text-primary-foreground bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30 active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer ${
+              pulse ? 'scale-[1.02] shadow-primary/50' : ''
+            }`}
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Opening Razorpay Autopay…</span>
+                <span>Setting up your trial…</span>
               </>
             ) : (
               <>
                 <Flame className="w-4 h-4 fill-primary-foreground" />
-                <span>Start 7-Day Free Trial</span>
+                <span>Start My Free 7-Day Trial</span>
                 <ArrowRight className="w-4 h-4 ml-0.5" />
               </>
             )}
           </Button>
 
-          {/* Trust badges */}
-          <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/80">
+          {/* Trust row */}
+          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground/80">
             <span className="flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-primary" />
-              Razorpay Secured Autopay
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              Razorpay Secured
             </span>
             <span>•</span>
             <span className="flex items-center gap-1">
-              <CreditCard className="w-3 h-3 text-primary" />
-              UPI & Cards
+              <Star className="w-3 h-3 text-amber-400" />
+              Zero Charges Today
             </span>
             <span>•</span>
-            <span>Cancel 1-Click</span>
+            <span>Cancel Anytime</span>
           </div>
 
-          {/* Sign Out Option (if mandatory & user is logged in) */}
+          {/* Sign Out Option if mandatory and logged in */}
           {isMandatory && user && (
             <div className="text-center pt-1">
               <button
