@@ -28,86 +28,54 @@ export interface DaySchedule {
   exercises: Exercise[];
 }
 
+// Helper to identify legacy hardcoded seed exercises from the initial template
+export const isLegacyDefaultExercise = (ex: Exercise): boolean => {
+  if (!ex || !ex.id) return false;
+  return /^(mon|tue|wed|thu|fri|sat)-\d+$/.test(ex.id);
+};
+
 export const defaultSchedule: DaySchedule[] = [
   {
     day: 'monday',
     shortDay: 'Mon',
     title: 'Push Day',
     subtitle: 'Chest · Shoulders · Triceps',
-    exercises: [
-      { id: 'mon-1', name: 'Barbell Bench Press', setsReps: '3×8-10', weight: 60 },
-      { id: 'mon-2', name: 'Incline Dumbbell Press', setsReps: '3×10', weight: 22 },
-      { id: 'mon-3', name: 'Overhead Shoulder Press', setsReps: '3×10', weight: 40 },
-      { id: 'mon-4', name: 'Dumbbell Lateral Raises', setsReps: '3×12', weight: 10 },
-      { id: 'mon-5', name: 'Tricep Rope Pushdowns', setsReps: '3×12', weight: 25 },
-    ],
+    exercises: [],
   },
   {
     day: 'tuesday',
     shortDay: 'Tue',
     title: 'Pull Day',
     subtitle: 'Back · Biceps · Rear Delts',
-    exercises: [
-      { id: 'tue-1', name: 'Lat Pulldown / Pull-ups', setsReps: '3×8-10', weight: 55 },
-      { id: 'tue-2', name: 'Barbell Bent-Over Rows', setsReps: '3×10', weight: 50 },
-      { id: 'tue-3', name: 'Seated Cable Rows', setsReps: '3×10', weight: 45 },
-      { id: 'tue-4', name: 'Face Pulls', setsReps: '3×15', weight: 20 },
-      { id: 'tue-5', name: 'Barbell Bicep Curls', setsReps: '3×12', weight: 25 },
-      { id: 'tue-6', name: 'Dumbbell Hammer Curls', setsReps: '3×12', weight: 12 },
-    ],
+    exercises: [],
   },
   {
     day: 'wednesday',
     shortDay: 'Wed',
     title: 'Legs Day',
     subtitle: 'Quads · Hamstrings · Calves',
-    exercises: [
-      { id: 'wed-1', name: 'Barbell Back Squats', setsReps: '3×8-10', weight: 70 },
-      { id: 'wed-2', name: 'Romanian Deadlifts (RDL)', setsReps: '3×10', weight: 60 },
-      { id: 'wed-3', name: 'Leg Press', setsReps: '3×12', weight: 110 },
-      { id: 'wed-4', name: 'Hamstring Leg Curls', setsReps: '3×12', weight: 40 },
-      { id: 'wed-5', name: 'Standing Calf Raises', setsReps: '4×15', weight: 35 },
-    ],
+    exercises: [],
   },
   {
     day: 'thursday',
     shortDay: 'Thu',
-    title: 'Push Day (Focus)',
+    title: 'Push Day',
     subtitle: 'Chest · Shoulders · Triceps',
-    exercises: [
-      { id: 'thu-1', name: 'Incline Barbell Bench Press', setsReps: '3×8-10', weight: 50 },
-      { id: 'thu-2', name: 'Seated Dumbbell Shoulder Press', setsReps: '3×10', weight: 20 },
-      { id: 'thu-3', name: 'Chest Dips', setsReps: '3×10', weight: null },
-      { id: 'thu-4', name: 'Cable Chest Flyes', setsReps: '3×12', weight: 15 },
-      { id: 'thu-5', name: 'Overhead Tricep Extension', setsReps: '3×12', weight: 20 },
-    ],
+    exercises: [],
   },
   {
     day: 'friday',
     shortDay: 'Fri',
-    title: 'Pull Day (Focus)',
+    title: 'Pull Day',
     subtitle: 'Back · Biceps · Rear Delts',
-    exercises: [
-      { id: 'fri-1', name: 'Deadlifts (Conventional)', setsReps: '3×6', weight: 80 },
-      { id: 'fri-2', name: 'Close-Grip Lat Pulldown', setsReps: '3×10', weight: 50 },
-      { id: 'fri-3', name: 'Single-Arm Dumbbell Rows', setsReps: '3×10', weight: 24 },
-      { id: 'fri-4', name: 'Rear Delt Flyes', setsReps: '3×15', weight: 8 },
-      { id: 'fri-5', name: 'Incline Dumbbell Curls', setsReps: '3×12', weight: 12 },
-    ],
+    exercises: [],
   },
   {
     day: 'saturday',
     shortDay: 'Sat',
-    title: 'Legs & Core Day',
+    title: 'Legs & Core',
     subtitle: 'Quads · Glutes · Abs',
-    exercises: [
-      { id: 'sat-1', name: 'Front Squats / Goblet Squats', setsReps: '3×10', weight: 40 },
-      { id: 'sat-2', name: 'Bulgarian Split Squats', setsReps: '3×10', weight: 14 },
-      { id: 'sat-3', name: 'Leg Extensions', setsReps: '3×12', weight: 45 },
-      { id: 'sat-4', name: 'Seated Calf Raises', setsReps: '4×15', weight: 30 },
-      { id: 'sat-5', name: 'Hanging Knee / Leg Raises', setsReps: '3×15', weight: null },
-      { id: 'sat-6', name: 'Plank Hold', setsReps: '3×45s', weight: null },
-    ],
+    exercises: [],
   },
   {
     day: 'sunday',
@@ -351,12 +319,15 @@ export const useUserWorkouts = () => {
         const dbSchedule = defaultSchedule.map(defaultDay => {
           const dbDay = data.find(d => d.day === defaultDay.day);
           if (dbDay) {
+            let dayExercises = (dbDay.exercises as unknown as Exercise[]) || [];
+            // Filter out any legacy pre-seeded default exercises
+            dayExercises = dayExercises.filter(ex => !isLegacyDefaultExercise(ex));
             return {
               day: dbDay.day,
               shortDay: dbDay.short_day,
               title: dbDay.title,
               subtitle: dbDay.subtitle,
-              exercises: dbDay.exercises as unknown as Exercise[],
+              exercises: dayExercises,
             };
           }
           return defaultDay;

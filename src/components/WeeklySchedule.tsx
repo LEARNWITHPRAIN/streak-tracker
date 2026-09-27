@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Dumbbell, Heart, Zap, Target, Footprints, Flame, Moon, Check, Pencil, 
-  Trash2, Plus, X, Scale, ChevronDown, ChevronUp
+  Trash2, Plus, X, Scale, ChevronDown, ChevronUp, Sparkles, BookOpen
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUserWorkouts, Exercise, DaySchedule, ExerciseSet, getExerciseSets, parseReps, formatExerciseSetsReps } from '@/hooks/useUserWorkouts';
 import { useSubscription } from '@/hooks/useSubscription';
+import { AddExerciseModal } from '@/components/workout/AddExerciseModal';
 import { toast } from 'sonner';
 
 const dayIcons: Record<string, React.ReactNode> = {
@@ -43,6 +44,10 @@ export const WeeklySchedule: React.FC = () => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editDayForm, setEditDayForm] = useState({ title: '', subtitle: '' });
 
+  // Add Exercise Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [modalTargetDay, setModalTargetDay] = useState('monday');
+
   // Multi-set Exercise Editor State
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const [addingToDay, setAddingToDay] = useState<string | null>(null);
@@ -56,6 +61,46 @@ export const WeeklySchedule: React.FC = () => {
   });
   
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const [activeTabDay, setActiveTabDay] = useState(today);
+
+  // Open modal
+  const handleOpenAddModal = (dayName?: string) => {
+    if (!isPremium) {
+      openPaywall('add new exercises to your routine');
+      return;
+    }
+    setModalTargetDay(dayName || activeTabDay);
+    setIsAddModalOpen(true);
+  };
+
+  // Add from modal handler
+  const handleExerciseAddedFromModal = async (dayName: string, newEx: Exercise) => {
+    const day = schedule.find(d => d.day === dayName);
+    if (!day) return;
+    const updatedExercises = [...day.exercises, newEx];
+    await updateDayWorkout(dayName, { ...day, exercises: updatedExercises });
+  };
+
+  // Quick add demo exercise
+  const handleAddDemoExercise = async (dayName: string) => {
+    if (!isPremium) {
+      openPaywall('add exercises to your workout');
+      return;
+    }
+    const demoEx: Exercise = {
+      id: `${dayName}-demo-${Date.now()}`,
+      name: 'Incline Dumbbell Bench Press',
+      setsReps: '3×10',
+      weight: 24,
+      sets: [
+        { setNumber: 1, weight: 20, reps: '10' },
+        { setNumber: 2, weight: 22, reps: '10' },
+        { setNumber: 3, weight: 24, reps: '8' },
+      ],
+    };
+    await handleExerciseAddedFromModal(dayName, demoEx);
+    toast.success(`Added Incline Dumbbell Bench Press to ${dayName.toUpperCase()}`);
+  };
 
   // Start doing workout from weekly split
   const handleDoWorkout = (day: DaySchedule) => {
@@ -249,29 +294,24 @@ export const WeeklySchedule: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-2">
+      {/* Top Header with Add Exercise Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
         <div>
-          <h2 className="text-lg font-bold text-foreground">Weekly Workout Split</h2>
-          <p className="text-xs text-muted-foreground">Your structured training program with custom sets and weights</p>
+          <h2 className="text-xl font-extrabold text-foreground tracking-tight">Weekly Workout Split</h2>
+          <p className="text-xs text-muted-foreground">Your custom workout split with progressive overload tracking</p>
         </div>
+        <Button
+          id="top-add-exercise-btn"
+          onClick={() => handleOpenAddModal(activeTabDay)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs sm:text-sm rounded-xl px-4 py-2.5 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all flex items-center gap-2 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Exercise</span>
+        </Button>
       </div>
 
-      {/* Default Routine Banner with Edit Notice */}
-      <div className="flex items-start sm:items-center gap-3 p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-xs text-foreground/90">
-        <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-          <Dumbbell className="w-4 h-4" />
-        </div>
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="font-bold text-primary text-xs sm:text-sm">Default Workout Program 💪</p>
-          <p className="text-muted-foreground text-[11px] sm:text-xs leading-relaxed">
-            This is your default workout program. You can edit any exercise, change target weights, or add sets to create a fully personalized experience tailored to your goals.
-          </p>
-        </div>
-      </div>
-
-      <Tabs defaultValue={today} className="w-full">
+      <Tabs value={activeTabDay} onValueChange={setActiveTabDay} className="w-full">
         <TabsList className="w-full grid grid-cols-7 gap-1.5 bg-card/60 p-1.5 rounded-2xl border border-border/50 h-auto">
-
           {schedule.map((day) => (
             <TabsTrigger
               key={day.day}
@@ -349,83 +389,155 @@ export const WeeklySchedule: React.FC = () => {
 
             {/* Exercises Grid */}
             {day.exercises.length > 0 || addingToDay === day.day ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {day.exercises.map((exercise) => {
-                  const isEditingThis = editingExerciseId === exercise.id;
-                  
-                  if (isEditingThis) {
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {day.exercises.map((exercise) => {
+                    const isEditingThis = editingExerciseId === exercise.id;
+                    
+                    if (isEditingThis) {
+                      return (
+                        <WeeklyExerciseEditorCard
+                          key={exercise.id}
+                          form={exerciseForm}
+                          onNameChange={(name) => setExerciseForm({ ...exerciseForm, name })}
+                          onAddSet={handleAddSetToForm}
+                          onRemoveSet={handleRemoveSetFromForm}
+                          onUpdateWeight={handleUpdateSetWeightInForm}
+                          onUpdateReps={handleUpdateSetRepsInForm}
+                          onSave={() => handleSaveExercise(day.day)}
+                          onCancel={() => setEditingExerciseId(null)}
+                        />
+                      );
+                    }
+
+                    const sets = getExerciseSets(exercise);
+                    const weights = sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
+                    const topWeight = weights.length > 0 ? Math.max(...weights) : (exercise.weight ?? null);
+
                     return (
-                      <WeeklyExerciseEditorCard
+                      <WeeklyExerciseViewCard
                         key={exercise.id}
-                        form={exerciseForm}
-                        onNameChange={(name) => setExerciseForm({ ...exerciseForm, name })}
-                        onAddSet={handleAddSetToForm}
-                        onRemoveSet={handleRemoveSetFromForm}
-                        onUpdateWeight={handleUpdateSetWeightInForm}
-                        onUpdateReps={handleUpdateSetRepsInForm}
-                        onSave={() => handleSaveExercise(day.day)}
-                        onCancel={() => setEditingExerciseId(null)}
+                        exercise={exercise}
+                        sets={sets}
+                        topWeight={topWeight}
+                        dayColor={dayColors[day.day]}
+                        onEdit={() => startEditExercise(exercise)}
+                        onDelete={() => deleteExercise(day.day, exercise.id)}
                       />
                     );
-                  }
+                  })}
 
-                  const sets = getExerciseSets(exercise);
-                  const weights = sets.map(s => s.weight).filter((w): w is number => w !== null && w > 0);
-                  const topWeight = weights.length > 0 ? Math.max(...weights) : (exercise.weight ?? null);
-
-                  return (
-                    <WeeklyExerciseViewCard
-                      key={exercise.id}
-                      exercise={exercise}
-                      sets={sets}
-                      topWeight={topWeight}
-                      dayColor={dayColors[day.day]}
-                      onEdit={() => startEditExercise(exercise)}
-                      onDelete={() => deleteExercise(day.day, exercise.id)}
+                  {/* Add Exercise Multi-Set Editor */}
+                  {addingToDay === day.day && (
+                    <WeeklyExerciseEditorCard
+                      form={exerciseForm}
+                      isNew
+                      onNameChange={(name) => setExerciseForm({ ...exerciseForm, name })}
+                      onAddSet={handleAddSetToForm}
+                      onRemoveSet={handleRemoveSetFromForm}
+                      onUpdateWeight={handleUpdateSetWeightInForm}
+                      onUpdateReps={handleUpdateSetRepsInForm}
+                      onSave={() => handleSaveExercise(day.day)}
+                      onCancel={() => setAddingToDay(null)}
                     />
-                  );
-                })}
+                  )}
+                </div>
 
-                {/* Add Exercise Multi-Set Editor */}
-                {addingToDay === day.day && (
-                  <WeeklyExerciseEditorCard
-                    form={exerciseForm}
-                    isNew
-                    onNameChange={(name) => setExerciseForm({ ...exerciseForm, name })}
-                    onAddSet={handleAddSetToForm}
-                    onRemoveSet={handleRemoveSetFromForm}
-                    onUpdateWeight={handleUpdateSetWeightInForm}
-                    onUpdateReps={handleUpdateSetRepsInForm}
-                    onSave={() => handleSaveExercise(day.day)}
-                    onCancel={() => setAddingToDay(null)}
-                  />
+                {/* Add Exercise Button at bottom of day list */}
+                {addingToDay !== day.day && !editingExerciseId && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => handleOpenAddModal(day.day)}
+                    className="w-full border-dashed rounded-2xl py-5 border-border hover:border-primary/50 text-sm font-semibold"
+                  >
+                    <Plus className="w-4 h-4 mr-2 text-primary" />
+                    Add Exercise to {day.title}
+                  </Button>
                 )}
               </div>
-            ) : day.day === 'sunday' ? (
-              <Card className="bg-card/30 border-dashed rounded-2xl p-8 text-center">
-                <CardContent className="space-y-2">
-                  <Moon className="w-10 h-10 mx-auto text-muted-foreground/60" />
-                  <p className="text-base font-semibold text-muted-foreground">Take time to rest and recover</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Your muscles grow and rebuild during rest!</p>
-                </CardContent>
-              </Card>
-            ) : null}
+            ) : (
+              /* Demo Exercise Preview Card when no exercises are added */
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-dashed border-primary/40 bg-gradient-to-br from-primary/5 via-card/70 to-card/50 p-5 space-y-4">
+                  {/* Demo Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-extrabold text-foreground flex items-center gap-2">
+                          <span>Demo Exercise Preview</span>
+                          <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/25 font-bold uppercase tracking-wider">
+                            UI Preview
+                          </Badge>
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground">
+                          Here is how an added exercise looks on your UI once scheduled for {day.title}
+                        </p>
+                      </div>
+                    </div>
 
-            {/* Add Exercise Button */}
-            {addingToDay !== day.day && !editingExerciseId && (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => startAddExercise(day.day)}
-                className="w-full border-dashed rounded-2xl py-5 border-border hover:border-primary/50 text-sm font-semibold"
-              >
-                <Plus className="w-4 h-4 mr-2 text-primary" />
-                Add Exercise to {day.title}
-              </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddDemoExercise(day.day)}
+                      className="h-8 text-xs font-bold rounded-xl bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground border border-primary/30 shrink-0 self-start sm:self-auto"
+                    >
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      Add Demo to {day.shortDay}
+                    </Button>
+                  </div>
+
+                  {/* Demo Card UI */}
+                  <div className="max-w-md mx-auto">
+                    <WeeklyExerciseViewCard
+                      exercise={{
+                        id: `demo-${day.day}`,
+                        name: 'Incline Dumbbell Bench Press',
+                        setsReps: '3×10',
+                        weight: 24,
+                      }}
+                      sets={[
+                        { setNumber: 1, weight: 20, reps: '10' },
+                        { setNumber: 2, weight: 22, reps: '10' },
+                        { setNumber: 3, weight: 24, reps: '8' },
+                      ]}
+                      topWeight={24}
+                      dayColor={dayColors[day.day]}
+                      onEdit={() => handleOpenAddModal(day.day)}
+                      onDelete={() => toast.info('This is a demo preview card. Add your own exercises using the button below!')}
+                    />
+                  </div>
+
+                  {/* Bottom CTA */}
+                  <div className="pt-2 text-center space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      No exercises in this workout yet. Tap below to choose Bodyweight or Gym Equipment movements!
+                    </p>
+                    <Button
+                      onClick={() => handleOpenAddModal(day.day)}
+                      className="rounded-xl text-xs font-bold px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add Exercise to {day.title}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* ── Add Exercise Modal (Bodyweight & Equipment, Manual & Template) ── */}
+      <AddExerciseModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        targetDay={modalTargetDay}
+        onExerciseAdded={handleExerciseAddedFromModal}
+        daysList={schedule.map((d) => ({ day: d.day, shortDay: d.shortDay, title: d.title }))}
+      />
     </div>
   );
 };
